@@ -10,7 +10,14 @@ cd agent-skills
 ./agent-skills install-local   # symlinks skills into ~/.claude/skills and ~/.codex/skills
 ```
 
-Requires `jq` (`brew install jq`) and Node.js / `npx` (for external skills via [`npx skills`](https://github.com/vercel-labs/skills)).
+Requires `jq` (`brew install jq`) and Node.js / `npx`.
+
+External skills are installed via the [`skills`](https://github.com/vercel-labs/skills) CLI ([skills.sh](https://skills.sh)):
+
+```bash
+npx skills add <owner/repo>        # install from GitHub
+npx skills add -g <owner/repo>     # install globally across all agents
+```
 
 ## What's Included
 
