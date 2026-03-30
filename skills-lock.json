@@ -6,9 +6,9 @@
       "sourceType": "github",
       "sourceUrl": "https://github.com/vercel-labs/agent-browser.git",
       "skillPath": "skills/agent-browser/SKILL.md",
-      "skillFolderHash": "c05134c73b2b1446146ba90f9a980a30ba139298",
+      "skillFolderHash": "eb296e896859b1a8e32bcdf470646ba1f0e66ed8",
       "installedAt": "2026-01-25T01:53:48.486Z",
-      "updatedAt": "2026-03-30T03:04:02.968Z"
+      "updatedAt": "2026-03-30T19:13:35.647Z"
     },
     "frontend-design": {
       "source": "anthropics/skills",
@@ -69,9 +69,9 @@
       "sourceType": "github",
       "sourceUrl": "https://github.com/vercel-labs/agent-skills.git",
       "skillPath": "skills/react-best-practices/SKILL.md",
-      "skillFolderHash": "bd8feeee219216aac928d1d8e5c61a928dba23dc",
+      "skillFolderHash": "8742a4cab28092d0de41acbd817e6935e8192569",
       "installedAt": "2026-01-25T01:48:09.516Z",
-      "updatedAt": "2026-03-25T20:04:28.688Z"
+      "updatedAt": "2026-03-30T19:13:33.685Z"
     },
     "web-design-guidelines": {
       "source": "vercel-labs/agent-skills",
