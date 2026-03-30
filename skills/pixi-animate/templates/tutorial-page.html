@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <!-- CUSTOMIZE: Replace title -->
+  <title>CUSTOMIZE: Topic — Interactive Explanation</title>
+  <script src="https://pixijs.download/v7.3.2/pixi-legacy.min.js"></script>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; }
+    body { margin: 0; font-family: system-ui, -apple-system, sans-serif;
+      line-height: 1.6; color: #1a1a2e; background: #fafafa; }
+    article { max-width: 700px; margin: 0 auto; padding: 2rem 1rem; }
+    h1, h2, h3 { line-height: 1.2; }
+    figure.interactive { margin: 2rem -1rem; position: relative; }
+    figure.interactive canvas { display: block; width: 100%; }
+    .controls { display: flex; flex-wrap: wrap; gap: 0.75rem; padding: 0.5rem 1rem;
+      font-size: 0.875rem; }
+    .controls label { display: flex; align-items: center; gap: 0.5rem; }
+    .controls input[type="range"] { width: 120px; }
+    figcaption { font-size: 0.8rem; color: #666; text-align: center; padding: 0.25rem; }
+    .loading-spinner { display: flex; justify-content: center; align-items: center;
+      height: 100%; color: #999; }
+    .loading-spinner::after { content: ""; width: 32px; height: 32px; border: 3px solid #ddd;
+      border-top-color: #666; border-radius: 50%; animation: spin 0.8s linear infinite; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    @media (prefers-reduced-motion: reduce) {
+      .controls, .annotation { transition: none !important; }
+    }
+  </style>
+</head>
+<body>
+  <article>
+    <!-- CUSTOMIZE: Replace heading -->
+    <h1>CUSTOMIZE: Topic Title</h1>
+
+    <script id="shared">
+      // --- Reduced Motion ---
+      const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+      // --- Colorblind-Friendly Palette ---
+      const PALETTE = {
+        green:  0x04bf8a,
+        red:    0xf22233,
+        blue:   0x0072b2,
+        orange: 0xd55e00,
+        yellow: 0xe69f00,
+        grey:   0xdddddd,
+        dark:   0x555555,
+      };
+
+      // --- Color Interpolation ---
+      function lerpColor(a, b, t) {
+        const r1 = (a >> 16) & 0xff, g1 = (a >> 8) & 0xff, b1 = a & 0xff;
+        const r2 = (b >> 16) & 0xff, g2 = (b >> 8) & 0xff, b2 = b & 0xff;
+        const r = Math.round(r1 + (r2 - r1) * t);
+        const g = Math.round(g1 + (g2 - g1) * t);
+        const bl = Math.round(b1 + (b2 - b1) * t);
+        return (r << 16) | (g << 8) | bl;
+      }
+
+      // --- Entity Base Class ---
+      class Entity extends PIXI.Graphics {
+        constructor(simulation) {
+          super();
+          this.simulation = simulation;
+          this.destroyed = false;
+        }
+        update(delta) { /* override per entity */ }
+        remove() {
+          this.destroyed = true;
+          if (this.parent) this.parent.removeChild(this);
+          this.destroy();
+        }
+      }
+
+      // --- Simulation (extends PIXI.Application) ---
+      class Simulation extends PIXI.Application {
+        constructor({ element }) {
+          super({
+            backgroundAlpha: 0,
+            resizeTo: element,
+            antialias: true,
+            autoDensity: true,
+            resolution: window.devicePixelRatio || 1,
+            forceCanvas: true,
+            autoStart: false,
+          });
+          element.appendChild(this.view);
+          this.element = element;
+          this.entities = [];
+          const spinner = element.querySelector('.loading-spinner');
+          if (spinner) spinner.remove();
+          this.ticker.add((delta) => this.update(delta));
+        }
+        addEntity(entity) { this.entities.push(entity); this.stage.addChild(entity); }
+        update(delta) {
+          this.entities = this.entities.filter(e => !e.destroyed);
+          for (const entity of this.entities) entity.update(delta);
+        }
+        start() { this.ticker.start(); }
+        stop()  { this.ticker.stop(); }
+      }
+
+      // --- Off-Screen Pausing ---
+      function observeVisibility(sim) {
+        const obs = new IntersectionObserver((entries) => {
+          for (const entry of entries) {
+            entry.isIntersecting ? sim.ticker.start() : sim.ticker.stop();
+          }
+        }, { threshold: 0 });
+        obs.observe(sim.element);
+        return obs;
+      }
+
+      // --- Cross-Figure Reactive State ---
+      const shared = new EventTarget();
+      shared.set = (key, val) => {
+        shared[key] = val;
+        shared.dispatchEvent(new CustomEvent('change', { detail: { key, val } }));
+      };
+    </script>
+
+    <!-- CUSTOMIZE: Replace prose and figures below with your planned content. -->
+
+    <!-- FIGURE: Replace with your planned figures -->
+    <p>CUSTOMIZE: prose introducing this figure.</p>
+    <figure class="interactive" id="fig-NAME" style="height: 300px;">
+      <div class="loading-spinner"></div>
+      <div class="controls"><!-- Add controls if needed --></div>
+      <figcaption>Figure N: description</figcaption>
+    </figure>
+    <script>
+    ;(() => {
+      const el = document.getElementById('fig-NAME');
+      const sim = new Simulation({ element: el });
+      // 1. Define Entity subclasses here
+      // 2. Create entities and add via sim.addEntity()
+      // 3. Wire HTML controls to simulation parameters
+      // 4. Handle prefersReducedMotion (show static final state)
+      observeVisibility(sim);
+    })();
+    </script>
+
+  </article>
+</body>
+</html>

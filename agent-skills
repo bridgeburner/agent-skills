@@ -1,0 +1,555 @@
+#!/bin/bash
+
+# Git-synced skills manager for Claude Code
+# Wraps `npx skills` to sync skills across machines via git
+
+set -e
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+LOCK_FILE="$SCRIPT_DIR/skills-lock.json"
+SYSTEM_LOCK_FILE="$HOME/.agents/.skill-lock.json"
+LOCAL_SKILLS_DIR="$SCRIPT_DIR/skills"
+PERSONAL_SKILLS_DIR="$SCRIPT_DIR/skills-personal"
+
+CLAUDE_DIR="$HOME/.claude"
+CODEX_DIR="$HOME/.codex"
+AGENTS_DIR="$HOME/.agents"
+CLAUDE_SKILLS_DIR="$CLAUDE_DIR/skills"
+CODEX_SKILLS_DIR="$CODEX_DIR/skills"
+
+# Colors for output
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[0;33m'
+BLUE='\033[0;34m'
+NC='\033[0m' # No Color
+
+usage() {
+    cat <<EOF
+Usage: ./agent-skills <command> [options]
+
+Commands:
+  add <repo> [--skill <name>]   Install skill, update lock file, commit and push
+  sync                          Pull repo, install missing skills, and link local skills
+  list                          Show local and external skills
+  install-local                 Link local skills and CLAUDE/AGENTS files
+  update                        Update external skills, export lock file, and link local skills
+  remove <name>                 Remove skill from manifest and disk, commit and push
+  export                        Copy current system lock file to repo
+
+Examples:
+  ./agent-skills add vercel-labs/agent-skills --skill react-best-practices
+  ./agent-skills add vercel-labs/agent-browser
+  ./agent-skills sync
+  ./agent-skills list
+  ./agent-skills install-local
+  ./agent-skills update
+  ./agent-skills remove agent-browser
+  ./agent-skills export
+EOF
+}
+
+check_jq() {
+    if ! command -v jq &> /dev/null; then
+        echo -e "${RED}Error: jq is required but not installed.${NC}"
+        echo "Install with: brew install jq"
+        exit 1
+    fi
+}
+
+merge_lock_with_system() {
+    local output_file="$1"
+
+    if [[ ! -f "$SYSTEM_LOCK_FILE" ]]; then
+        if [[ -f "$LOCK_FILE" ]]; then
+            cp "$LOCK_FILE" "$output_file"
+        fi
+        return 0
+    fi
+
+    if [[ ! -f "$LOCK_FILE" ]]; then
+        cp "$SYSTEM_LOCK_FILE" "$output_file"
+        return 0
+    fi
+
+    jq -s '
+        {
+            version: ((.[0].version // 3)),
+            skills: (.[0].skills // {}) + (.[1].skills // {})
+        }
+    ' "$LOCK_FILE" "$SYSTEM_LOCK_FILE" > "$output_file"
+}
+
+# Extract skill name from skillPath (e.g., "skills/react-best-practices/SKILL.md" -> "react-best-practices")
+get_skill_name_from_path() {
+    echo "$1" | sed -E 's|.*/([^/]+)/SKILL\.md|\1|'
+}
+
+link_file() {
+    local source="$1"
+    local target="$2"
+
+    if [ -L "$target" ]; then
+        echo "Updating symlink: $target"
+        rm "$target"
+    elif [ -e "$target" ]; then
+        echo "Warning: $target exists and is not a symlink, skipping"
+        return 0
+    fi
+    ln -s "$source" "$target"
+    echo "Linked: $source -> $target"
+}
+
+cmd_install_local() {
+    mkdir -p "$CLAUDE_SKILLS_DIR" "$CODEX_SKILLS_DIR" "$AGENTS_DIR"
+
+    link_file "$SCRIPT_DIR/config/CLAUDE.md" "$CLAUDE_DIR/CLAUDE.md"
+    link_file "$SCRIPT_DIR/config/CLAUDE.md" "$CODEX_DIR/AGENTS.md"
+    link_file "$SCRIPT_DIR/config/CLAUDE.md" "$AGENTS_DIR/AGENTS.md"
+
+    # Clean up dangling symlinks pointing into this repo's skills dir
+    for skills_dir in "$CLAUDE_SKILLS_DIR" "$CODEX_SKILLS_DIR"; do
+        for link in "$skills_dir"/*/; do
+            if [[ -L "${link%/}" ]] && [[ ! -e "${link%/}" ]]; then
+                local target
+                target=$(readlink "${link%/}")
+                if [[ "$target" == "$LOCAL_SKILLS_DIR"* ]] || [[ "$target" == "$PERSONAL_SKILLS_DIR"* ]]; then
+                    echo -e "${YELLOW}Removing dangling symlink: ${link%/}${NC}"
+                    rm "${link%/}"
+                fi
+            fi
+        done
+    done
+
+    for skill_path in "$LOCAL_SKILLS_DIR"/*/; do
+        if [[ ! -d "$skill_path" ]]; then
+            continue
+        fi
+        local skill_name
+        skill_name=$(basename "$skill_path")
+        link_file "$skill_path" "$CLAUDE_SKILLS_DIR/$skill_name"
+        link_file "$skill_path" "$CODEX_SKILLS_DIR/$skill_name"
+    done
+
+    # Link personal (gitignored) skills if present
+    if [[ -d "$PERSONAL_SKILLS_DIR" ]]; then
+        for skill_path in "$PERSONAL_SKILLS_DIR"/*/; do
+            if [[ ! -d "$skill_path" ]]; then
+                continue
+            fi
+            local skill_name
+            skill_name=$(basename "$skill_path")
+            link_file "$skill_path" "$CLAUDE_SKILLS_DIR/$skill_name"
+            link_file "$skill_path" "$CODEX_SKILLS_DIR/$skill_name"
+        done
+    fi
+
+    echo -e "${GREEN}Done!${NC}"
+}
+
+cmd_list() {
+    local local_skills=()
+    local has_local=0
+
+    if [[ -d "$LOCAL_SKILLS_DIR" ]]; then
+        for skill_path in "$LOCAL_SKILLS_DIR"/*/; do
+            if [[ -d "$skill_path" ]]; then
+                local_skills+=("$(basename "$skill_path")")
+            fi
+        done
+    fi
+
+    if [[ ${#local_skills[@]} -gt 0 ]]; then
+        has_local=1
+        echo -e "${BLUE}Local skills in repo:${NC}"
+        for skill_name in "${local_skills[@]}"; do
+            echo -e "  ${GREEN}$skill_name${NC}"
+        done
+        echo ""
+    else
+        echo -e "${YELLOW}No local skills found in $LOCAL_SKILLS_DIR${NC}"
+        echo ""
+    fi
+
+    local personal_skills=()
+    if [[ -d "$PERSONAL_SKILLS_DIR" ]]; then
+        for skill_path in "$PERSONAL_SKILLS_DIR"/*/; do
+            if [[ -d "$skill_path" ]]; then
+                personal_skills+=("$(basename "$skill_path")")
+            fi
+        done
+    fi
+
+    if [[ ${#personal_skills[@]} -gt 0 ]]; then
+        echo -e "${BLUE}Personal skills (gitignored):${NC}"
+        for skill_name in "${personal_skills[@]}"; do
+            echo -e "  ${GREEN}$skill_name${NC}"
+        done
+        echo ""
+    fi
+
+    if [[ ! -f "$LOCK_FILE" ]]; then
+        echo -e "${YELLOW}No skills-lock.json found. Run './agent-skills export' first for external skills.${NC}"
+        return 0
+    fi
+
+    if ! command -v jq &> /dev/null; then
+        echo -e "${YELLOW}jq is required to list external skills. Install with: brew install jq${NC}"
+        return 0
+    fi
+
+    echo -e "${BLUE}External skills in lock file:${NC}"
+    echo ""
+
+    jq -r '.skills | to_entries[] | "\(.key)|\(.value.source)|\(.value.skillPath)"' "$LOCK_FILE" | while IFS='|' read -r name source path; do
+        skill_name=$(get_skill_name_from_path "$path")
+        echo -e "  ${GREEN}$name${NC}"
+        echo "    Source: $source"
+        echo "    Skill:  $skill_name"
+        echo ""
+    done
+
+    total=$(jq '.skills | length' "$LOCK_FILE")
+    echo -e "${BLUE}Total: $total skills${NC}"
+
+    if [[ $has_local -eq 1 ]]; then
+        local overlaps=0
+        for skill_name in "${local_skills[@]}"; do
+            if jq -e ".skills[\"$skill_name\"]" "$LOCK_FILE" > /dev/null 2>&1; then
+                if [[ $overlaps -eq 0 ]]; then
+                    echo ""
+                    echo -e "${YELLOW}Name collisions detected (local wins):${NC}"
+                    overlaps=1
+                fi
+                echo -e "  ${YELLOW}$skill_name${NC}"
+            fi
+        done
+    fi
+}
+
+cmd_export() {
+    if ! command -v jq &> /dev/null; then
+        echo -e "${RED}Error: jq is required to sync external skills.${NC}"
+        echo "Install with: brew install jq"
+        echo -e "${BLUE}Linking local skills anyway...${NC}"
+        cmd_install_local
+        exit 1
+    fi
+
+    if [[ ! -f "$SYSTEM_LOCK_FILE" ]]; then
+        echo -e "${RED}Error: System lock file not found at $SYSTEM_LOCK_FILE${NC}"
+        echo "Install some skills first with: npx skills add <repo>"
+        exit 1
+    fi
+
+    if [[ -f "$LOCK_FILE" ]]; then
+        local merged_lock
+        merged_lock="$(mktemp)"
+        merge_lock_with_system "$merged_lock"
+        mv "$merged_lock" "$LOCK_FILE"
+    else
+        cp "$SYSTEM_LOCK_FILE" "$LOCK_FILE"
+    fi
+    echo -e "${GREEN}Exported lock file to skills-lock.json${NC}"
+
+    # Show what was exported
+    total=$(jq '.skills | length' "$LOCK_FILE")
+    echo -e "Exported $total skills."
+}
+
+cmd_add() {
+    check_jq
+
+    local repo=""
+    local skill=""
+
+    # Parse arguments
+    while [[ $# -gt 0 ]]; do
+        case $1 in
+            --skill)
+                skill="$2"
+                shift 2
+                ;;
+            -*)
+                echo -e "${RED}Unknown option: $1${NC}"
+                usage
+                exit 1
+                ;;
+            *)
+                repo="$1"
+                shift
+                ;;
+        esac
+    done
+
+    if [[ -z "$repo" ]]; then
+        echo -e "${RED}Error: Repository required${NC}"
+        usage
+        exit 1
+    fi
+
+    # Build npx skills command
+    local cmd="npx skills add $repo -g -y"
+    if [[ -n "$skill" ]]; then
+        cmd="$cmd --skill $skill"
+    fi
+
+    echo -e "${BLUE}Installing skill...${NC}"
+    echo "> $cmd"
+    eval "$cmd"
+
+    # Export the updated lock file
+    echo ""
+    echo -e "${BLUE}Updating lock file...${NC}"
+    if [[ -f "$LOCK_FILE" ]]; then
+        local merged_lock
+        merged_lock="$(mktemp)"
+        merge_lock_with_system "$merged_lock"
+        mv "$merged_lock" "$LOCK_FILE"
+    else
+        cp "$SYSTEM_LOCK_FILE" "$LOCK_FILE"
+    fi
+
+    # Commit and push
+    echo ""
+    echo -e "${BLUE}Committing changes...${NC}"
+    cd "$SCRIPT_DIR"
+    git add skills-lock.json
+
+    local commit_msg="Add skill: ${skill:-$repo}"
+    git commit -m "$commit_msg"
+
+    echo ""
+    echo -e "${BLUE}Pushing to remote...${NC}"
+    git push
+
+    echo ""
+    echo -e "${GREEN}Done! Skill added and synced to git.${NC}"
+}
+
+cmd_remove() {
+    check_jq
+
+    local name="$1"
+    local merged_lock
+    local local_lock
+
+    if [[ -z "$name" ]]; then
+        echo -e "${RED}Error: Skill name required${NC}"
+        usage
+        exit 1
+    fi
+
+    if [[ ! -f "$LOCK_FILE" ]]; then
+        echo -e "${RED}Error: No skills-lock.json found${NC}"
+        exit 1
+    fi
+
+    if [[ -f "$LOCK_FILE" ]]; then
+        merged_lock="$(mktemp)"
+        merge_lock_with_system "$merged_lock"
+        local_lock="$merged_lock"
+    else
+        local_lock="$LOCK_FILE"
+    fi
+
+    # Check if skill exists in lock file
+    if ! jq -e ".skills[\"$name\"]" "$local_lock" > /dev/null 2>&1; then
+        echo -e "${RED}Error: Skill '$name' not found in lock file${NC}"
+        echo "Available skills:"
+        jq -r '.skills | keys[]' "$local_lock" | sed 's/^/  /'
+        if [[ -n "${merged_lock-}" ]]; then
+            rm -f "$merged_lock"
+        fi
+        exit 1
+    fi
+
+    # Remove from lock file
+    echo -e "${BLUE}Removing '$name' from lock file...${NC}"
+    jq "del(.skills[\"$name\"])" "$local_lock" > "$LOCK_FILE.tmp"
+    mv "$LOCK_FILE.tmp" "$LOCK_FILE"
+    if [[ -n "${merged_lock-}" ]]; then
+        rm -f "$merged_lock"
+    fi
+
+    # Remove from disk
+    local skill_dir="$HOME/.agents/skills/$name"
+    if [[ -d "$skill_dir" ]]; then
+        echo -e "${BLUE}Removing skill directory...${NC}"
+        rm -rf "$skill_dir"
+    fi
+
+    # Update system lock file too
+    if [[ -f "$SYSTEM_LOCK_FILE" ]]; then
+        jq "del(.skills[\"$name\"])" "$SYSTEM_LOCK_FILE" > "$SYSTEM_LOCK_FILE.tmp"
+        mv "$SYSTEM_LOCK_FILE.tmp" "$SYSTEM_LOCK_FILE"
+    fi
+
+    # Commit and push
+    echo ""
+    echo -e "${BLUE}Committing changes...${NC}"
+    cd "$SCRIPT_DIR"
+    git add skills-lock.json
+    git commit -m "Remove skill: $name"
+
+    echo ""
+    echo -e "${BLUE}Pushing to remote...${NC}"
+    git push
+
+    echo ""
+    echo -e "${GREEN}Done! Skill '$name' removed and synced to git.${NC}"
+}
+
+cmd_sync() {
+    echo -e "${BLUE}Pulling latest changes...${NC}"
+    cd "$SCRIPT_DIR"
+    git pull
+
+    if [[ ! -f "$LOCK_FILE" ]]; then
+        echo -e "${YELLOW}No skills-lock.json found in repo.${NC}"
+        echo -e "${BLUE}Linking local skills...${NC}"
+        cmd_install_local
+        exit 0
+    fi
+
+    check_jq
+
+    echo ""
+    echo -e "${BLUE}Checking for missing skills...${NC}"
+
+    local merged_lock
+    merged_lock="$(mktemp)"
+    merge_lock_with_system "$merged_lock"
+    if [[ -f "$LOCK_FILE" ]] && ! cmp -s "$LOCK_FILE" "$merged_lock"; then
+        echo -e "${YELLOW}Local system lock has skills not present in repo lock; using merged lock for sync.${NC}"
+        mv "$merged_lock" "$LOCK_FILE"
+    else
+        rm -f "$merged_lock"
+        merged_lock="$LOCK_FILE"
+    fi
+
+    # Get list of skills from merged lock file
+    local repo_skills=$(jq -r '.skills | keys[]' "$merged_lock")
+    local installed_skills=""
+
+    # Get list of currently installed skills
+    if [[ -f "$SYSTEM_LOCK_FILE" ]]; then
+        installed_skills=$(jq -r '.skills | keys[]' "$SYSTEM_LOCK_FILE")
+    fi
+
+    local missing=0
+
+    for skill in $repo_skills; do
+        if ! echo "$installed_skills" | grep -q "^${skill}$"; then
+            missing=$((missing + 1))
+
+            # Use the lock-file key as the canonical skill name
+            local source=$(jq -r ".skills[\"$skill\"].source" "$LOCK_FILE")
+            local skill_name="$skill"
+
+            echo ""
+            echo -e "${YELLOW}Installing missing skill: $skill${NC}"
+            echo "  Source: $source"
+            echo "  Skill:  $skill_name"
+
+            # Install the skill
+            npx skills add "$source" --skill "$skill_name" -g -y
+        fi
+    done
+
+    if [[ $missing -eq 0 ]]; then
+        echo -e "${GREEN}All skills are already installed.${NC}"
+    else
+        echo ""
+        echo -e "${GREEN}Done! Installed $missing missing skill(s).${NC}"
+    fi
+
+    echo ""
+    echo -e "${BLUE}Linking local skills...${NC}"
+    cmd_install_local
+}
+
+cmd_update() {
+    echo -e "${BLUE}Pulling latest changes...${NC}"
+    cd "$SCRIPT_DIR"
+    git pull
+
+    echo ""
+    echo -e "${BLUE}Updating external skills...${NC}"
+    npx skills update -g -y
+
+    if [[ ! -f "$SYSTEM_LOCK_FILE" ]]; then
+        echo -e "${RED}Error: System lock file not found at $SYSTEM_LOCK_FILE${NC}"
+        echo "Install some skills first with: npx skills add <repo>"
+        exit 1
+    fi
+
+    local merged_lock
+    merged_lock="$(mktemp)"
+    if [[ -f "$LOCK_FILE" ]]; then
+        merge_lock_with_system "$merged_lock"
+    else
+        cp "$SYSTEM_LOCK_FILE" "$merged_lock"
+    fi
+
+    local changed=1
+    if [[ -f "$LOCK_FILE" ]] && cmp -s "$LOCK_FILE" "$merged_lock"; then
+        changed=0
+    fi
+
+    echo ""
+    echo -e "${BLUE}Updating lock file...${NC}"
+    mv "$merged_lock" "$LOCK_FILE"
+
+    if [[ $changed -eq 0 ]]; then
+        echo -e "${GREEN}No lock file changes detected.${NC}"
+    else
+        echo ""
+        echo -e "${BLUE}Committing changes...${NC}"
+        git add skills-lock.json
+        git commit -m "Update skills"
+
+        echo ""
+        echo -e "${BLUE}Pushing to remote...${NC}"
+        git push
+    fi
+
+    echo ""
+    echo -e "${BLUE}Linking local skills...${NC}"
+    cmd_install_local
+}
+
+# Main command dispatch
+case "${1:-}" in
+    add)
+        shift
+        cmd_add "$@"
+        ;;
+    sync)
+        cmd_sync
+        ;;
+    list)
+        cmd_list
+        ;;
+    remove)
+        shift
+        cmd_remove "$@"
+        ;;
+    export)
+        cmd_export
+        ;;
+    install-local)
+        cmd_install_local
+        ;;
+    update)
+        cmd_update
+        ;;
+    -h|--help|help|"")
+        usage
+        ;;
+    *)
+        echo -e "${RED}Unknown command: $1${NC}"
+        usage
+        exit 1
+        ;;
+esac

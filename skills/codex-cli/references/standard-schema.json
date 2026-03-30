@@ -1,0 +1,44 @@
+{
+  "type": "object",
+  "properties": {
+    "status": {
+      "type": "string",
+      "enum": ["success", "partial", "failed"],
+      "description": "Overall task outcome"
+    },
+    "summary": {
+      "type": "string",
+      "description": "2-4 sentence summary of findings or work done"
+    },
+    "output_files": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "path": { "type": "string" },
+          "description": { "type": "string" }
+        },
+        "required": ["path", "description"],
+        "additionalProperties": false
+      },
+      "description": "Files created by the agent with descriptions"
+    },
+    "issues": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "Problems, bugs, or concerns found"
+    },
+    "insights": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "Non-obvious observations or recommendations"
+    },
+    "questions": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "Unresolved questions requiring human input"
+    }
+  },
+  "required": ["status", "summary", "output_files", "issues", "insights", "questions"],
+  "additionalProperties": false
+}
