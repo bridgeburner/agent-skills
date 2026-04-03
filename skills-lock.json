@@ -7,8 +7,8 @@
       "sourceUrl": "https://github.com/vercel-labs/agent-browser.git",
       "skillPath": "skills/agent-browser/SKILL.md",
       "skillFolderHash": "3b319028d5e51497e251a3481d2c7d8521a860eb",
-      "installedAt": "2026-01-25T01:53:48.486Z",
-      "updatedAt": "2026-04-03T12:29:54.925Z"
+      "installedAt": "2026-01-25T02:44:22.818Z",
+      "updatedAt": "2026-04-03T12:33:35.547Z"
     },
     "frontend-design": {
       "source": "anthropics/skills",
@@ -70,8 +70,8 @@
       "sourceUrl": "https://github.com/vercel-labs/agent-skills.git",
       "skillPath": "skills/react-best-practices/SKILL.md",
       "skillFolderHash": "a203aee7243640ceb56ce2c6c4ab286573df5e69",
-      "installedAt": "2026-01-25T01:48:09.516Z",
-      "updatedAt": "2026-04-02T18:54:48.322Z"
+      "installedAt": "2026-02-01T05:44:19.762Z",
+      "updatedAt": "2026-04-03T12:33:37.348Z"
     },
     "web-design-guidelines": {
       "source": "vercel-labs/agent-skills",
@@ -124,12 +124,8 @@
       "sourceUrl": "https://github.com/googleworkspace/cli.git",
       "skillPath": "skills/gws-shared/SKILL.md",
       "skillFolderHash": "50b50dd1d65c51835c599745c943ada18b187a86",
-      "installedAt": "2026-03-08T14:16:24.889Z",
-      "updatedAt": "2026-04-01T15:25:59.994Z"
-||||||| parent of b998cfe (Update skills)
-      "skillFolderHash": "d9dd0135c6352527070fd57a2846115ef5ff8496",
-      "installedAt": "2026-03-08T14:16:24.889Z",
-      "updatedAt": "2026-03-27T12:52:49.991Z"
+      "installedAt": "2026-03-08T13:57:06.979Z",
+      "updatedAt": "2026-04-03T12:33:39.077Z"
     },
     "gws-drive": {
       "source": "googleworkspace/cli",
@@ -137,12 +133,8 @@
       "sourceUrl": "https://github.com/googleworkspace/cli.git",
       "skillPath": "skills/gws-drive/SKILL.md",
       "skillFolderHash": "46b7e75840ff26db80b6b74238e423dfa4b75c11",
-      "installedAt": "2026-03-08T14:16:15.378Z",
-      "updatedAt": "2026-04-01T15:25:49.655Z"
-||||||| parent of b998cfe (Update skills)
-      "skillFolderHash": "4c98a2d69cc2f780ebc1fedaf7231c033ad7bf7d",
-      "installedAt": "2026-03-08T14:16:15.378Z",
-      "updatedAt": "2026-03-27T12:52:29.849Z"
+      "installedAt": "2026-03-08T14:00:37.204Z",
+      "updatedAt": "2026-04-03T12:33:40.755Z"
     },
     "gws-calendar": {
       "source": "googleworkspace/cli",
@@ -150,12 +142,8 @@
       "sourceUrl": "https://github.com/googleworkspace/cli.git",
       "skillPath": "skills/gws-calendar/SKILL.md",
       "skillFolderHash": "62a27859dbdf798c1f7288d04750e743283a6b4f",
-      "installedAt": "2026-03-08T14:16:07.369Z",
-      "updatedAt": "2026-04-01T15:25:41.314Z"
-||||||| parent of b998cfe (Update skills)
-      "skillFolderHash": "b6391bdc95ec0c7f8cdf2bd1fdb38ebe30e41656",
-      "installedAt": "2026-03-08T14:16:07.369Z",
-      "updatedAt": "2026-03-27T12:52:11.107Z"
+      "installedAt": "2026-03-08T14:00:43.044Z",
+      "updatedAt": "2026-04-03T12:33:42.456Z"
     },
     "gws-gmail": {
       "source": "googleworkspace/cli",
@@ -163,12 +151,8 @@
       "sourceUrl": "https://github.com/googleworkspace/cli.git",
       "skillPath": "skills/gws-gmail/SKILL.md",
       "skillFolderHash": "95c83c1280def63651f99025fa707bc0e4781a79",
-      "installedAt": "2026-03-08T14:16:18.454Z",
-      "updatedAt": "2026-04-01T15:25:53.027Z"
-||||||| parent of b998cfe (Update skills)
-      "skillFolderHash": "0429b169df0659d065bccb70c390d460e9494efa",
-      "installedAt": "2026-03-08T14:16:18.454Z",
-      "updatedAt": "2026-03-27T12:52:33.491Z"
+      "installedAt": "2026-03-08T14:02:06.753Z",
+      "updatedAt": "2026-04-03T12:33:44.246Z"
     },
     "gws-gmail-send": {
       "source": "googleworkspace/cli",
@@ -176,12 +160,8 @@
       "sourceUrl": "https://github.com/googleworkspace/cli.git",
       "skillPath": "skills/gws-gmail-send/SKILL.md",
       "skillFolderHash": "b80148cb44ba92558c4842251c4fd111b9efda0a",
-      "installedAt": "2026-03-08T14:16:19.946Z",
-      "updatedAt": "2026-04-01T15:25:54.570Z"
-||||||| parent of b998cfe (Update skills)
-      "skillFolderHash": "62dda2816aa015259ea65f476008edd66e879c6f",
-      "installedAt": "2026-03-08T14:16:19.946Z",
-      "updatedAt": "2026-03-27T12:52:35.442Z"
+      "installedAt": "2026-03-08T14:02:11.588Z",
+      "updatedAt": "2026-04-03T12:33:45.929Z"
     },
     "gws-gmail-triage": {
       "source": "googleworkspace/cli",
@@ -189,12 +169,8 @@
       "sourceUrl": "https://github.com/googleworkspace/cli.git",
       "skillPath": "skills/gws-gmail-triage/SKILL.md",
       "skillFolderHash": "083258f448ed51fd951b0e85fc35d9da3aaa73b3",
-      "installedAt": "2026-03-08T14:16:21.577Z",
-      "updatedAt": "2026-04-01T15:25:56.641Z"
-||||||| parent of b998cfe (Update skills)
-      "skillFolderHash": "4a71ab011a08580d290639d6b8f05be3653fece5",
-      "installedAt": "2026-03-08T14:16:21.577Z",
-      "updatedAt": "2026-03-27T12:52:40.616Z"
+      "installedAt": "2026-03-08T14:02:16.695Z",
+      "updatedAt": "2026-04-03T12:33:47.719Z"
     },
     "gws-gmail-watch": {
       "source": "googleworkspace/cli",
@@ -202,12 +178,8 @@
       "sourceUrl": "https://github.com/googleworkspace/cli.git",
       "skillPath": "skills/gws-gmail-watch/SKILL.md",
       "skillFolderHash": "5bfb574866f4c0c9e654ec3caddc37b3f36b1cd6",
-      "installedAt": "2026-03-08T14:16:23.041Z",
-      "updatedAt": "2026-04-01T15:25:58.287Z"
-||||||| parent of b998cfe (Update skills)
-      "skillFolderHash": "e56e4a06564e4c2a66c927a1dc08486ec3665c43",
-      "installedAt": "2026-03-08T14:16:23.041Z",
-      "updatedAt": "2026-03-27T12:52:47.704Z"
+      "installedAt": "2026-03-08T14:02:22.009Z",
+      "updatedAt": "2026-04-03T12:33:49.357Z"
     },
     "gws-docs": {
       "source": "googleworkspace/cli",
@@ -215,12 +187,8 @@
       "sourceUrl": "https://github.com/googleworkspace/cli.git",
       "skillPath": "skills/gws-docs/SKILL.md",
       "skillFolderHash": "455f7468d4a2e3b0b352fbd7ad0937354427af82",
-      "installedAt": "2026-03-08T14:16:11.923Z",
-      "updatedAt": "2026-04-01T15:25:46.247Z"
-||||||| parent of b998cfe (Update skills)
-      "skillFolderHash": "ccfc91bddbd39ddd21f33debf861c8cf162e217b",
-      "installedAt": "2026-03-08T14:16:11.923Z",
-      "updatedAt": "2026-03-27T12:52:26.263Z"
+      "installedAt": "2026-03-08T14:02:38.086Z",
+      "updatedAt": "2026-04-03T12:33:51.053Z"
     },
     "gws-docs-write": {
       "source": "googleworkspace/cli",
@@ -228,12 +196,8 @@
       "sourceUrl": "https://github.com/googleworkspace/cli.git",
       "skillPath": "skills/gws-docs-write/SKILL.md",
       "skillFolderHash": "6a9ce7b7d982afc5cead13d64a85fe1875d411e9",
-      "installedAt": "2026-03-08T14:16:13.596Z",
-      "updatedAt": "2026-04-01T15:25:47.894Z"
-||||||| parent of b998cfe (Update skills)
-      "skillFolderHash": "ddff957838e40d170db419fe68dc23cb2ee6d474",
-      "installedAt": "2026-03-08T14:16:13.596Z",
-      "updatedAt": "2026-03-27T12:52:28.040Z"
+      "installedAt": "2026-03-08T14:02:43.703Z",
+      "updatedAt": "2026-04-03T12:33:52.609Z"
     },
     "gws-drive-upload": {
       "source": "googleworkspace/cli",
@@ -241,12 +205,8 @@
       "sourceUrl": "https://github.com/googleworkspace/cli.git",
       "skillPath": "skills/gws-drive-upload/SKILL.md",
       "skillFolderHash": "a9526bcb2b1b1e672d881e1788e9bc76539fbcab",
-      "installedAt": "2026-03-08T14:16:16.901Z",
-      "updatedAt": "2026-04-01T15:25:51.388Z"
-||||||| parent of b998cfe (Update skills)
-      "skillFolderHash": "ea8c073b9bd960f5b41e77f29d04ee964cf493d5",
-      "installedAt": "2026-03-08T14:16:16.901Z",
-      "updatedAt": "2026-03-27T12:52:31.563Z"
+      "installedAt": "2026-03-08T14:03:10.731Z",
+      "updatedAt": "2026-04-03T12:33:54.232Z"
     },
     "gws-calendar-agenda": {
       "source": "googleworkspace/cli",
@@ -254,12 +214,8 @@
       "sourceUrl": "https://github.com/googleworkspace/cli.git",
       "skillPath": "skills/gws-calendar-agenda/SKILL.md",
       "skillFolderHash": "f79ea98b1c11ae13701d100967d6042872fd736d",
-      "installedAt": "2026-03-08T14:16:08.870Z",
-      "updatedAt": "2026-04-01T15:25:42.934Z"
-||||||| parent of b998cfe (Update skills)
-      "skillFolderHash": "37421009b913c970dd794ef41e5968f301570f92",
-      "installedAt": "2026-03-08T14:16:08.870Z",
-      "updatedAt": "2026-03-27T12:52:17.974Z"
+      "installedAt": "2026-03-08T14:03:32.926Z",
+      "updatedAt": "2026-04-03T12:33:55.899Z"
     },
     "gws-calendar-insert": {
       "source": "googleworkspace/cli",
@@ -267,12 +223,8 @@
       "sourceUrl": "https://github.com/googleworkspace/cli.git",
       "skillPath": "skills/gws-calendar-insert/SKILL.md",
       "skillFolderHash": "1f6f872119aee5b19e36993933da1d61e9c09863",
-      "installedAt": "2026-03-08T14:16:10.393Z",
-      "updatedAt": "2026-04-01T15:25:44.692Z"
-||||||| parent of b998cfe (Update skills)
-      "skillFolderHash": "05dcd8f94f55189e399d44f9cae7bfd1a3f968e9",
-      "installedAt": "2026-03-08T14:16:10.393Z",
-      "updatedAt": "2026-03-27T12:52:24.415Z"
+      "installedAt": "2026-03-08T14:03:42.292Z",
+      "updatedAt": "2026-04-03T12:33:57.621Z"
     },
     "gws-sheets": {
       "source": "googleworkspace/cli",
@@ -280,12 +232,8 @@
       "sourceUrl": "https://github.com/googleworkspace/cli.git",
       "skillPath": "skills/gws-sheets/SKILL.md",
       "skillFolderHash": "50758ea65d12833e48361aa541c0acaff0d96f67",
-      "installedAt": "2026-03-08T14:16:26.443Z",
-      "updatedAt": "2026-04-01T15:26:01.801Z"
-||||||| parent of b998cfe (Update skills)
-      "skillFolderHash": "f11307e3d4f0f7ea0b621d378792b3da20e5ee85",
-      "installedAt": "2026-03-08T14:16:26.443Z",
-      "updatedAt": "2026-03-27T12:53:01.975Z"
+      "installedAt": "2026-03-08T14:04:00.552Z",
+      "updatedAt": "2026-04-03T12:33:59.488Z"
     },
     "gws-sheets-read": {
       "source": "googleworkspace/cli",
@@ -293,12 +241,8 @@
       "sourceUrl": "https://github.com/googleworkspace/cli.git",
       "skillPath": "skills/gws-sheets-read/SKILL.md",
       "skillFolderHash": "e7073d8b029f7b1a7659795f6fe13a5f86f78f6d",
-      "installedAt": "2026-03-08T14:16:29.559Z",
-      "updatedAt": "2026-04-01T15:26:05.771Z"
-||||||| parent of b998cfe (Update skills)
-      "skillFolderHash": "5ca357c3da6ab9cd584e263468ee54cfcd7404d8",
-      "installedAt": "2026-03-08T14:16:29.559Z",
-      "updatedAt": "2026-03-27T12:53:07.270Z"
+      "installedAt": "2026-03-08T14:04:04.958Z",
+      "updatedAt": "2026-04-03T12:34:01.228Z"
     },
     "gws-sheets-append": {
       "source": "googleworkspace/cli",
@@ -306,12 +250,8 @@
       "sourceUrl": "https://github.com/googleworkspace/cli.git",
       "skillPath": "skills/gws-sheets-append/SKILL.md",
       "skillFolderHash": "943def878600c64ad8eaede62762d3f9523e127a",
-      "installedAt": "2026-03-08T14:16:28.015Z",
-      "updatedAt": "2026-04-01T15:26:03.490Z"
-||||||| parent of b998cfe (Update skills)
-      "skillFolderHash": "baf9c46d9df64acc799d21b8b3af09e4231b4cb7",
-      "installedAt": "2026-03-08T14:16:28.015Z",
-      "updatedAt": "2026-03-27T12:53:05.563Z"
+      "installedAt": "2026-03-08T14:04:10.712Z",
+      "updatedAt": "2026-04-03T12:34:03.050Z"
     },
     "gws-slides": {
       "source": "googleworkspace/cli",
@@ -319,12 +259,11 @@
       "sourceUrl": "https://github.com/googleworkspace/cli.git",
       "skillPath": "skills/gws-slides/SKILL.md",
       "skillFolderHash": "a1aef615fb11bcce264c1eff679d15c3d2a73f10",
-      "installedAt": "2026-03-08T14:16:31.014Z",
-      "updatedAt": "2026-04-01T15:26:07.458Z"
-||||||| parent of b998cfe (Update skills)
-      "skillFolderHash": "30d1ffe8fe614eeb3c4d2457e03b611b41636fb5",
-      "installedAt": "2026-03-08T14:16:31.014Z",
-      "updatedAt": "2026-03-27T12:53:09.145Z"
+      "installedAt": "2026-03-08T14:04:31.624Z",
+      "updatedAt": "2026-04-03T12:34:04.732Z"
     }
+  },
+  "dismissed": {
+    "findSkillsPrompt": true
   }
 }
