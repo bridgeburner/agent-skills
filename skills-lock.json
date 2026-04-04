@@ -6,9 +6,9 @@
       "sourceType": "github",
       "sourceUrl": "https://github.com/vercel-labs/agent-browser.git",
       "skillPath": "skills/agent-browser/SKILL.md",
-      "skillFolderHash": "3b319028d5e51497e251a3481d2c7d8521a860eb",
+      "skillFolderHash": "068bc465a3f22625f98a7996817feefcd18d772f",
       "installedAt": "2026-01-25T02:44:22.818Z",
-      "updatedAt": "2026-04-03T12:33:35.547Z"
+      "updatedAt": "2026-04-04T21:49:43.985Z"
     },
     "frontend-design": {
       "source": "anthropics/skills",
