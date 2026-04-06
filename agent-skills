@@ -10,6 +10,7 @@ LOCK_FILE="$SCRIPT_DIR/skills-lock.json"
 SYSTEM_LOCK_FILE="$HOME/.agents/.skill-lock.json"
 LOCAL_SKILLS_DIR="$SCRIPT_DIR/skills"
 PERSONAL_SKILLS_DIR="$SCRIPT_DIR/skills-personal"
+SOURCES_FILE="$SCRIPT_DIR/skill-sources.json"
 
 CLAUDE_DIR="$HOME/.claude"
 CODEX_DIR="$HOME/.codex"
@@ -36,6 +37,9 @@ Commands:
   update                        Update external skills, export lock file, and link local skills
   remove <name>                 Remove skill from manifest and disk, commit and push
   export                        Copy current system lock file to repo
+  add-source <path> [--name <label>]  Register an external skill source directory
+  remove-source <name>          Unregister an external skill source directory
+  list-sources                  Show registered external skill source directories
 
 Examples:
   ./agent-skills add vercel-labs/agent-skills --skill react-best-practices
@@ -100,6 +104,23 @@ link_file() {
     echo "Linked: $source -> $target"
 }
 
+load_sources() {
+    if [[ ! -f "$SOURCES_FILE" ]]; then
+        echo "[]"
+        return 0
+    fi
+    if ! command -v jq &> /dev/null; then
+        echo -e "${YELLOW}Warning: jq not installed, skipping external sources${NC}" >&2
+        echo "[]"
+        return 0
+    fi
+    jq -r '.sources // []' "$SOURCES_FILE"
+}
+
+get_source_paths() {
+    load_sources | jq -r '.[].path'
+}
+
 cmd_install_local() {
     mkdir -p "$CLAUDE_SKILLS_DIR" "$CODEX_SKILLS_DIR" "$AGENTS_DIR"
 
@@ -107,19 +128,34 @@ cmd_install_local() {
     link_file "$SCRIPT_DIR/config/CLAUDE.md" "$CODEX_DIR/AGENTS.md"
     link_file "$SCRIPT_DIR/config/CLAUDE.md" "$AGENTS_DIR/AGENTS.md"
 
-    # Clean up dangling symlinks pointing into this repo's skills dir
+    # Build list of all known source directories for dangling cleanup
+    local all_source_dirs=("$LOCAL_SKILLS_DIR" "$PERSONAL_SKILLS_DIR")
+    while IFS= read -r src_path; do
+        [[ -n "$src_path" ]] && all_source_dirs+=("$src_path")
+    done < <(get_source_paths)
+
+    # Clean up dangling symlinks pointing into any known skills dir
     for skills_dir in "$CLAUDE_SKILLS_DIR" "$CODEX_SKILLS_DIR"; do
-        for link in "$skills_dir"/*/; do
-            if [[ -L "${link%/}" ]] && [[ ! -e "${link%/}" ]]; then
+        if [[ ! -d "$skills_dir" ]]; then
+            continue
+        fi
+        for link in "$skills_dir"/*; do
+            if [[ -L "$link" ]] && [[ ! -e "$link" ]]; then
                 local target
-                target=$(readlink "${link%/}")
-                if [[ "$target" == "$LOCAL_SKILLS_DIR"* ]] || [[ "$target" == "$PERSONAL_SKILLS_DIR"* ]]; then
-                    echo -e "${YELLOW}Removing dangling symlink: ${link%/}${NC}"
-                    rm "${link%/}"
-                fi
+                target=$(readlink "$link")
+                for src_dir in "${all_source_dirs[@]}"; do
+                    if [[ "$target" == "$src_dir"* ]]; then
+                        echo -e "${YELLOW}Removing dangling symlink: $link${NC}"
+                        rm "$link"
+                        break
+                    fi
+                done
             fi
         done
     done
+
+    # Track linked skill names for collision detection
+    local linked_skills=()
 
     for skill_path in "$LOCAL_SKILLS_DIR"/*/; do
         if [[ ! -d "$skill_path" ]]; then
@@ -129,6 +165,7 @@ cmd_install_local() {
         skill_name=$(basename "$skill_path")
         link_file "$skill_path" "$CLAUDE_SKILLS_DIR/$skill_name"
         link_file "$skill_path" "$CODEX_SKILLS_DIR/$skill_name"
+        linked_skills+=("$skill_name")
     done
 
     # Link personal (gitignored) skills if present
@@ -141,6 +178,49 @@ cmd_install_local() {
             skill_name=$(basename "$skill_path")
             link_file "$skill_path" "$CLAUDE_SKILLS_DIR/$skill_name"
             link_file "$skill_path" "$CODEX_SKILLS_DIR/$skill_name"
+            linked_skills+=("$skill_name")
+        done
+    fi
+
+    # Link external source skills
+    local sources_json
+    sources_json="$(load_sources)"
+    local source_count
+    source_count=$(echo "$sources_json" | jq 'length')
+
+    if [[ "$source_count" -gt 0 ]]; then
+        for i in $(seq 0 $((source_count - 1))); do
+            local src_name src_path
+            src_name=$(echo "$sources_json" | jq -r ".[$i].name")
+            src_path=$(echo "$sources_json" | jq -r ".[$i].path")
+
+            if [[ ! -d "$src_path" ]]; then
+                echo -e "${YELLOW}Warning: External source '$src_name' directory not found: $src_path${NC}"
+                continue
+            fi
+
+            for skill_path in "$src_path"/*/; do
+                if [[ ! -d "$skill_path" ]]; then
+                    continue
+                fi
+                local skill_name
+                skill_name=$(basename "$skill_path")
+
+                # Check for collision with higher-priority sources
+                local collision=0
+                for linked in "${linked_skills[@]}"; do
+                    if [[ "$linked" == "$skill_name" ]]; then
+                        echo -e "${YELLOW}Skipping '$skill_name' from source '$src_name' (already linked from higher-priority source)${NC}"
+                        collision=1
+                        break
+                    fi
+                done
+                [[ $collision -eq 1 ]] && continue
+
+                link_file "$skill_path" "$CLAUDE_SKILLS_DIR/$skill_name"
+                link_file "$skill_path" "$CODEX_SKILLS_DIR/$skill_name"
+                linked_skills+=("$skill_name")
+            done
         done
     fi
 
@@ -188,6 +268,42 @@ cmd_list() {
         echo ""
     fi
 
+    # List external source skills
+    if command -v jq &> /dev/null && [[ -f "$SOURCES_FILE" ]]; then
+        local sources_json
+        sources_json="$(load_sources)"
+        local source_count
+        source_count=$(echo "$sources_json" | jq 'length')
+
+        if [[ "$source_count" -gt 0 ]]; then
+            for i in $(seq 0 $((source_count - 1))); do
+                local src_name src_path
+                src_name=$(echo "$sources_json" | jq -r ".[$i].name")
+                src_path=$(echo "$sources_json" | jq -r ".[$i].path")
+
+                local ext_skills=()
+                if [[ -d "$src_path" ]]; then
+                    for skill_path in "$src_path"/*/; do
+                        if [[ -d "$skill_path" ]]; then
+                            ext_skills+=("$(basename "$skill_path")")
+                        fi
+                    done
+                fi
+
+                if [[ ${#ext_skills[@]} -gt 0 ]]; then
+                    echo -e "${BLUE}External source \"$src_name\" ($src_path):${NC}"
+                    for skill_name in "${ext_skills[@]}"; do
+                        echo -e "  ${GREEN}$skill_name${NC}"
+                    done
+                    echo ""
+                else
+                    echo -e "${YELLOW}External source \"$src_name\" ($src_path): no skills found${NC}"
+                    echo ""
+                fi
+            done
+        fi
+    fi
+
     if [[ ! -f "$LOCK_FILE" ]]; then
         echo -e "${YELLOW}No skills-lock.json found. Run './agent-skills export' first for external skills.${NC}"
         return 0
@@ -225,6 +341,160 @@ cmd_list() {
             fi
         done
     fi
+}
+
+cmd_add_source() {
+    local src_path=""
+    local src_name=""
+
+    while [[ $# -gt 0 ]]; do
+        case $1 in
+            --name)
+                src_name="$2"
+                shift 2
+                ;;
+            -*)
+                echo -e "${RED}Unknown option: $1${NC}"
+                usage
+                exit 1
+                ;;
+            *)
+                src_path="$1"
+                shift
+                ;;
+        esac
+    done
+
+    if [[ -z "$src_path" ]]; then
+        echo -e "${RED}Error: Path required${NC}"
+        usage
+        exit 1
+    fi
+
+    # Validate directory exists before resolving
+    if [[ ! -d "$src_path" ]]; then
+        echo -e "${RED}Error: Directory does not exist: $src_path${NC}"
+        exit 1
+    fi
+
+    # Resolve to absolute path
+    src_path="$(cd "$src_path" && pwd)"
+
+    # Auto-derive name from directory if not provided
+    if [[ -z "$src_name" ]]; then
+        src_name="$(basename "$(dirname "$src_path")")-$(basename "$src_path")"
+    fi
+
+    check_jq
+
+    # Initialize config if missing
+    if [[ ! -f "$SOURCES_FILE" ]]; then
+        echo '{"sources": []}' > "$SOURCES_FILE"
+    fi
+
+    # Check for duplicate name
+    if jq -e ".sources[] | select(.name == \"$src_name\")" "$SOURCES_FILE" > /dev/null 2>&1; then
+        echo -e "${RED}Error: Source '$src_name' already registered${NC}"
+        exit 1
+    fi
+
+    # Check for duplicate path
+    if jq -e ".sources[] | select(.path == \"$src_path\")" "$SOURCES_FILE" > /dev/null 2>&1; then
+        echo -e "${RED}Error: Path '$src_path' already registered${NC}"
+        exit 1
+    fi
+
+    # Append
+    jq ".sources += [{\"name\": \"$src_name\", \"path\": \"$src_path\"}]" "$SOURCES_FILE" > "$SOURCES_FILE.tmp"
+    mv "$SOURCES_FILE.tmp" "$SOURCES_FILE"
+
+    echo -e "${GREEN}Added source '$src_name' -> $src_path${NC}"
+
+    # Show what skills it contains
+    local count=0
+    for skill_path in "$src_path"/*/; do
+        if [[ -d "$skill_path" ]]; then
+            echo -e "  ${GREEN}$(basename "$skill_path")${NC}"
+            count=$((count + 1))
+        fi
+    done
+    echo -e "${BLUE}Found $count skill(s). Run 'install-local' to link them.${NC}"
+}
+
+cmd_remove_source() {
+    local src_name="$1"
+
+    if [[ -z "$src_name" ]]; then
+        echo -e "${RED}Error: Source name required${NC}"
+        usage
+        exit 1
+    fi
+
+    check_jq
+
+    if [[ ! -f "$SOURCES_FILE" ]]; then
+        echo -e "${RED}Error: No sources configured${NC}"
+        exit 1
+    fi
+
+    if ! jq -e ".sources[] | select(.name == \"$src_name\")" "$SOURCES_FILE" > /dev/null 2>&1; then
+        echo -e "${RED}Error: Source '$src_name' not found${NC}"
+        echo "Registered sources:"
+        jq -r '.sources[].name' "$SOURCES_FILE" | sed 's/^/  /'
+        exit 1
+    fi
+
+    # Get path before removal (for cleaning up symlinks)
+    local src_path
+    src_path=$(jq -r ".sources[] | select(.name == \"$src_name\") | .path" "$SOURCES_FILE")
+
+    # Remove from config
+    jq ".sources = [.sources[] | select(.name != \"$src_name\")]" "$SOURCES_FILE" > "$SOURCES_FILE.tmp"
+    mv "$SOURCES_FILE.tmp" "$SOURCES_FILE"
+
+    # Clean up symlinks pointing to this source
+    for skills_dir in "$CLAUDE_SKILLS_DIR" "$CODEX_SKILLS_DIR"; do
+        for link in "$skills_dir"/*/; do
+            if [[ -L "${link%/}" ]]; then
+                local target
+                target=$(readlink "${link%/}")
+                if [[ "$target" == "$src_path"* ]]; then
+                    echo -e "${YELLOW}Removing symlink: ${link%/}${NC}"
+                    rm "${link%/}"
+                fi
+            fi
+        done
+    done
+
+    echo -e "${GREEN}Removed source '$src_name'${NC}"
+}
+
+cmd_list_sources() {
+    if [[ ! -f "$SOURCES_FILE" ]] || ! command -v jq &> /dev/null || [[ "$(jq '.sources | length' "$SOURCES_FILE")" == "0" ]]; then
+        echo -e "${YELLOW}No external sources configured.${NC}"
+        echo "Add one with: ./agent-skills add-source /path/to/skills --name my-label"
+        return 0
+    fi
+
+    echo -e "${BLUE}Registered external skill sources:${NC}"
+    echo ""
+
+    jq -r '.sources[] | "\(.name)|\(.path)"' "$SOURCES_FILE" | while IFS='|' read -r name path; do
+        echo -e "  ${GREEN}$name${NC}"
+        echo "    Path: $path"
+        if [[ -d "$path" ]]; then
+            local count=0
+            for skill_path in "$path"/*/; do
+                if [[ -d "$skill_path" ]]; then
+                    count=$((count + 1))
+                fi
+            done
+            echo "    Skills: $count"
+        else
+            echo -e "    ${RED}(directory not found)${NC}"
+        fi
+        echo ""
+    done
 }
 
 cmd_export() {
@@ -543,6 +813,17 @@ case "${1:-}" in
         ;;
     update)
         cmd_update
+        ;;
+    add-source)
+        shift
+        cmd_add_source "$@"
+        ;;
+    remove-source)
+        shift
+        cmd_remove_source "$@"
+        ;;
+    list-sources)
+        cmd_list_sources
         ;;
     -h|--help|help|"")
         usage
