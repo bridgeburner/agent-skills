@@ -31,6 +31,16 @@
 - When passing files for subagents to look at, do not waste your context window reading the same file.
 - Ensure that prompts/messages to subagents include sufficient context into the names of temporary files, what they contain, and instructions on how to send context back (similarly preferring temporary files for larger outputs).
 
+### 2c. Temp File Naming
+- **All temp files MUST use the pattern:** `/tmp/{task-slug}-{short-uid}.{ext}`
+  - `task-slug`: kebab-case description of the task (e.g., `design-proposal`, `rls-audit`, `test-plan`)
+  - `short-uid`: first 8 chars of a UUID or `$(date +%s%N | shasum | head -c 8)` — generated once per task, reused for all files in that task
+  - Example: `/tmp/design-proposal-a7f3bc01.md`, `/tmp/rls-audit-e2d914ab-context.md`
+- When a task produces multiple files, use the same slug+uid prefix with a suffix: `/tmp/{task-slug}-{short-uid}-{file-role}.{ext}` (e.g., `-context.md`, `-output.md`, `-result.json`)
+- For workflows that produce many intermediate files, prefer `mktemp -d` to create an isolated directory: `/tmp/{task-slug}-{short-uid}/`
+- When delegating to a subagent, the **parent generates the uid** and passes it in the task prompt. This ensures the parent knows where to find the output without the subagent having to communicate it back.
+- NEVER use bare descriptive names like `/tmp/analysis.md` or `/tmp/claude-output.txt` — these will collide when agents run in parallel.
+
 ### 3. Self-Improvement Loop
 - After ANY correction from the user: update `~/.agents/lessons/<repo-name>.md` with the pattern (for repos with a numeric suffix, drop the suffix eg: my-project-2 -> ~/.agents/lessons/my-project.md)
 - The lesson should not be so general it is not actionable, or so specific it cannot apply to other instances
