@@ -115,6 +115,7 @@ When a three-document topology is detected (spec + design + plan), surface all t
 .agents/terminal-velocity/runs/<YYYYMMDD-HHMMSS>/
 ├── plan_review_report.md      (P1)
 ├── plan_final.md              (P1)
+├── constraint_registry.md     (P1)
 ├── test_strategy.md           (P2)
 ├── test_strategy_review.md    (P2)
 ├── checklist_final.md         (P3)
@@ -178,6 +179,29 @@ Auto-resolution follows the quality rules in the [findings tracker protocol](ref
 
 After the final iteration, save `plan_final.md` and proceed.
 
+### Constraint registry extraction
+
+After the plan is finalized, extract explicit plan constraints into `constraint_registry.md` in the run directory. A Claude subagent scans the plan for constraint language — "must," "never," "not," "always," "required," "does not ship with," "blocked until," "gated on," and similar prohibitions, gates, requirements, and invariants.
+
+The plan author is the authority. The orchestrator extracts constraints verbatim — it does not editorialize on what counts as a constraint.
+
+```markdown
+# Constraint Registry
+
+Extracted from plan_final.md. These are binding commitments the plan makes.
+The orchestrator cannot override these without a PLAN_OVERRIDE disposition.
+
+| ID | Constraint (verbatim quote from plan) | Plan section | Type |
+|---|---|---|---|
+| PC-1 | "the workflow does not ship with stubs" | §4.3 | PROHIBITION |
+| PC-2 | "spikes must confirm before Level 4 assembly" | §1, §5 | GATE |
+| PC-3 | "v1 ships with working repair — not stubs, not operator escalation" | §10.5 | PROHIBITION |
+```
+
+Types: `PROHIBITION` (must not do X), `GATE` (blocks progression until Y), `REQUIREMENT` (must do Z), `INVARIANT` (must hold throughout).
+
+The constraint registry is passed to all subsequent phases — P2 review agents, P3 checklist generation and review, P4 workers, P5 refinement agents.
+
 ***
 
 ## Phase 2: Test Strategy
@@ -220,11 +244,22 @@ A Claude subagent converts the plan into an execution-ordered checklist:
 4. Flag file overlaps (these cannot run in parallel)
 5. Include integration/E2E tests from `test_strategy.md` as first-class items
 6. Create documentation tasks for DEFERRED findings
+7. Produce a **constraint coverage table** tracing every entry in `constraint_registry.md` to the checklist item(s) that satisfy it
+
+```markdown
+## Constraint Coverage
+| Constraint ID | Constraint text | Checklist item(s) | Covered? | Notes |
+|---|---|---|---|---|
+| PC-1 | "does not ship with stubs" | F3 | YES — F3 produces working implementations | |
+| PC-2 | "spikes must confirm before Level 4" | — | NO — spikes are external | Requires PLAN_OVERRIDE |
+```
+
+Uncovered constraints without a PLAN_OVERRIDE disposition are must-fix findings during checklist review.
 
 ### Review — 2 agents
 
-1. **Claude subagent (alignment):** Does the checklist faithfully cover the plan and test strategy?
-2. **Codex agent (alignment):** Independent alignment check. Spawned via `codex-cli`.
+1. **Claude subagent (alignment):** Does the checklist faithfully cover the plan and test strategy? Verify the constraint coverage table — every registered constraint must be traced to a checklist item or have a PLAN_OVERRIDE disposition.
+2. **Codex agent (alignment):** Independent alignment check including constraint coverage verification. Spawned via `codex-cli`.
 
 ### Mode behavior
 
@@ -281,7 +316,9 @@ If overlap is detected: pause the later lane, read both reports, re-scope, respa
 | 3 | Codex | Independent alignment perspective |
 | 4 | Codex | Independent code review perspective |
 
-All agents grounded in the plan, test strategy, and findings registry. In FROM_CHECKLIST mode, P5 agents ground in the user's original checklist and the implemented code; test strategy and findings registry references are omitted.
+All agents grounded in the plan, test strategy, findings registry, and constraint registry. In FROM_CHECKLIST mode, P5 agents ground in the user's original checklist and the implemented code; test strategy and findings registry references are omitted.
+
+**Scope completeness (alignment agents only):** P5 alignment agents must check not just "does the code match the plan?" but also "does the scope of the code match the plan's scope?" For every checklist item, classify: implemented, stubbed (`NotImplementedError` or equivalent), or omitted. A stub is not "implemented" — it is a scope reduction. Cross-reference the constraint registry: stubbed or omitted items that violate a registered PROHIBITION or REQUIREMENT constraint are must-fix findings.
 
 ### Findings
 
@@ -362,3 +399,4 @@ These are the authoritative constraints. Phase descriptions above provide contex
 10. **No plan creation.** This skill receives plans — it does not write them.
 11. **Subagents only.** Use the Task tool. No TeamCreate, no persistent teammates.
 12. **Design decisions documented.** Every worker report includes autonomous decisions with rationale.
+13. **The plan is a contract.** Explicit plan constraints (extracted into `constraint_registry.md`) cannot be silently overridden. The orchestrator may deviate, but only via the PLAN_OVERRIDE disposition — which requires citing the specific constraint, justifying why it cannot be honored, and accepting that the deviation will be surfaced prominently in the final report as a plan deviation, not a design decision. See [findings tracker](references/findings-tracker.md).

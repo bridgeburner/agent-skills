@@ -11,11 +11,11 @@ Every review finding gets a tracking ID and follows a defined lifecycle. The pur
    New finding  │   OPEN   │
                 └────┬─────┘
                      │
-        ┌────────────┼────────────┬──────────────┐
-        ▼            ▼            ▼              ▼
-   ┌─────────┐ ┌──────────┐ ┌──────────┐ ┌────────────┐
-   │RESOLVED │ │ DEFERRED │ │DISMISSED │ │DOWNGRADED  │
-   └─────────┘ └──────────┘ └──────────┘ └────────────┘
+        ┌────────────┼────────────┬──────────────┬───────────────┐
+        ▼            ▼            ▼              ▼               ▼
+   ┌─────────┐ ┌──────────┐ ┌──────────┐ ┌────────────┐ ┌───────────────┐
+   │RESOLVED │ │ DEFERRED │ │DISMISSED │ │DOWNGRADED  │ │PLAN_OVERRIDE  │
+   └─────────┘ └──────────┘ └──────────┘ └────────────┘ └───────────────┘
 ```
 
 | Status | Meaning | Who decides |
@@ -25,6 +25,7 @@ Every review finding gets a tracking ID and follows a defined lifecycle. The pur
 | **DEFERRED** | Accepted risk — requires info the orchestrator lacks or infrastructure that doesn't exist. | User (interactive) or orchestrator (autonomous) |
 | **DISMISSED** | Orchestrator disagrees with the finding. Requires written rationale. | Orchestrator |
 | **DOWNGRADED** | Severity reduced (e.g., must-fix → should-fix). Requires user rationale. | User only |
+| **PLAN_OVERRIDE** | Finding contradicts a registered plan constraint. Deviation acknowledged. | User (interactive) or orchestrator (autonomous) |
 
 ## First iteration
 
@@ -55,6 +56,23 @@ The orchestrator auto-resolves all findings. Quality rules:
 - Resolutions must be as specific as findings. "Missing error handling for X" → add error handling for X, not a vague note.
 - Must-fix items may only be `DEFERRED` if they require information the orchestrator lacks or infrastructure that doesn't exist. "Too complex" is not valid deferral.
 - Self-check after applying: "For each RESOLVED finding, does the new plan text actually prevent the issue?"
+
+### Plan constraint cross-reference
+
+When the orchestrator DEFERs or DISMISSes any must-fix finding, it must cross-reference the finding against `constraint_registry.md`. If the finding's subject matches a registered plan constraint, DEFERRED and DISMISSED are invalid dispositions — the finding must be either:
+- **RESOLVED** — fix the plan, checklist, or code to honor the constraint
+- **PLAN_OVERRIDE** — acknowledge the deviation explicitly
+
+PLAN_OVERRIDE requires three fields:
+1. **Constraint ID** — the specific registry entry being overridden (e.g., PC-1)
+2. **Justification** — why the constraint cannot be honored in this run. Must be concrete and honest. "Deployment-time concern" or "will validate later" are not valid when the plan says otherwise. The test is: would the plan author agree this is a legitimate reason to deviate?
+3. **Consequences** — what downstream impact the override has (scope reduction, missing capability, deferred risk)
+
+In autonomous mode, PLAN_OVERRIDE is permitted — the run continues. But it cannot be hidden. PLAN_OVERRIDE findings are surfaced in the final report under a dedicated "Plan Deviations" section, separate from design decisions.
+
+In interactive mode, PLAN_OVERRIDE blocks until the user approves the deviation.
+
+The purpose of this mechanism: the orchestrator (Claude) has a structural incentive to dismiss findings that make implementation harder. When a reviewer (especially Codex) flags that the implementation drifts from explicit plan constraints, the orchestrator cannot rationalize the finding away with DEFERRED/DISMISSED. It must either fix the problem or own the deviation visibly.
 
 ## Supporting-doc gaps
 

@@ -34,6 +34,7 @@ You are reviewing {what — plan draft / checklist / implementation} for {purpos
 
 Read these files for grounding:
 - Plan: {plan_path}
+- Constraint registry: {constraint_registry_path}
 - Principles/constraints: {principles_path}
 - User goal: {goal_summary}
 {additional context files as needed}
@@ -153,8 +154,8 @@ Use these to populate the review focus section. For combined-angle agents, conca
 
 - **Phase 1 (plan review):** Full angle briefs as above.
 - **Phase 2 (test strategy review):** Focus on strategy alignment with the plan — right seams covered? Critical paths missing? Test levels appropriate?
-- **Phase 3 (checklist review):** Focus on checklist alignment with plan and test strategy — faithful coverage? Missing items? Over-scoped items?
-- **Phase 5 (refinement):** Agents 1 and 3 (alignment) use Angle 1 brief reframed for code review: instead of checking plan-vs-principles, check implementation-vs-plan — does the code match what the plan prescribed? Are spec constraints honored? Agents 2 and 4 (code review) combine Angles 2, 3, and 4 for code-level review — bugs, regressions, missing tests, security vulnerabilities, performance issues.
+- **Phase 3 (checklist review):** Focus on checklist alignment with plan and test strategy — faithful coverage? Missing items? Over-scoped items? Additionally, verify the **constraint coverage table**: every entry in `constraint_registry.md` must trace to a checklist item that satisfies it, or have a PLAN_OVERRIDE disposition. Uncovered constraints without PLAN_OVERRIDE are must-fix findings. Pay particular attention to PROHIBITION constraints ("must not," "never," "does not ship with") — these are the constraints most likely to be silently dropped during checklist generation.
+- **Phase 5 (refinement):** Agents 1 and 3 (alignment) use Angle 1 brief reframed for code review: instead of checking plan-vs-principles, check implementation-vs-plan — does the code match what the plan prescribed? Are spec constraints honored? Additionally, alignment agents must perform a **scope completeness check**: compare the checklist against the implementation. For every checklist item, classify: implemented, stubbed (`NotImplementedError` or equivalent), or omitted. A stub is NOT equivalent to "implemented" — it is a scope reduction. Cross-reference the constraint registry: stubbed or omitted items that violate a registered PROHIBITION or REQUIREMENT constraint are must-fix findings. Agents 2 and 4 (code review) combine Angles 2, 3, and 4 for code-level review — bugs, regressions, missing tests, security vulnerabilities, performance issues.
 
 ## Adaptation for Codex agents
 

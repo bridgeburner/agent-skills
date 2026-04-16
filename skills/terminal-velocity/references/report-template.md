@@ -97,10 +97,10 @@ Brief statement: what is well-covered, and where is residual risk (areas not ful
 
 ## 3. Design decisions
 
-Choices agents made autonomously where the plan or checklist was underspecified. Split into two tiers:
+Choices agents made autonomously where the plan or checklist was underspecified. These are choices within the plan's latitude — they do not contradict any registered plan constraint.
 
 ### Strategic decisions
-Decisions that materially affect the outcome, diverge from stated principles, or constrain future work.
+Decisions that materially affect the outcome or constrain future work.
 
 | Decision | Rationale | Alternatives considered | Impact | Worker |
 |----------|-----------|------------------------|--------|--------|
@@ -112,6 +112,18 @@ Implementation-level choices that don't materially change the overall outcome.
 | Decision | Rationale | Worker |
 |----------|-----------|--------|
 | {what} | {why} | {lane} |
+
+---
+
+## 3b. Plan deviations
+
+Places where the implementation diverged from explicit plan constraints. Sourced from PLAN_OVERRIDE findings in the findings tracker. These are not design decisions — they are acknowledged scope reductions or constraint violations.
+
+If there are no PLAN_OVERRIDE findings, state "None — implementation honored all registered plan constraints" and omit the table.
+
+| Constraint ID | Constraint text | What was done instead | Justification | Consequences |
+|---|---|---|---|---|
+| {PC-N} | {verbatim from constraint registry} | {what actually happened} | {why the constraint could not be honored} | {downstream impact} |
 
 ---
 
@@ -200,11 +212,12 @@ Generate a visual HTML report from the final_report.md at {run_dir}/final_report
 Requirements:
 - Dark theme only (no light theme toggle)
 - Dashboard-style layout
-- Sections map to the 7 report sections:
+- Sections map to the report sections:
   0. Reviewer's guide — prominent callout boxes for focus areas, safe areas, and deployment notes
   1. What changed — cards or tiles per change, grouped by type
   2. How we know it works — test results as status indicators, confidence callout
   3. Design decisions — two-tier display: strategic (prominent) vs tactical (collapsible)
+  3b. Plan deviations — amber/warning cards for PLAN_OVERRIDE items (omit section if none)
   4. Interesting insights — highlighted callouts
   5. Learnings — grouped by category (project / feature-type / workflow)
   6. Skill adherence — compact compliance checklist with pass/fail indicators per phase
@@ -220,6 +233,7 @@ Write to: {run_dir}/report.html
 - **What changed**: card grid — one card per change, color-coded by type (new=green accent, fix=amber, refactor=blue)
 - **How we know it works**: status table with colored indicators + a confidence callout box
 - **Design decisions**: strategic tier shown as prominent cards, tactical tier collapsed under `<details>`
+- **Plan deviations**: if any PLAN_OVERRIDE findings exist, render as amber/warning cards with constraint ID, what was overridden, and consequences. Visually distinct from design decisions — these are acknowledged deviations, not choices
 - **Insights**: styled blockquote callouts
 - **Learnings**: three-column grid grouped by category
 - **Skill adherence**: compact compliance checklist — each phase shown as a row with pass/fail indicator (green check or red X) comparing prescribed vs actual iteration counts and agent topology. Deviations highlighted inline. This should read as a quick audit: "did the orchestrator follow the skill?"

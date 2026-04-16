@@ -28,6 +28,7 @@ Complete these checklist items in order:
 ## Context
 Read these files before starting:
 - Approved plan: {plan_path}
+- Constraint registry: {constraint_registry_path} (plan constraints that are binding — do not stub or omit work that would violate a PROHIBITION or REQUIREMENT)
 - Test strategy: {test_strategy_path} (context on WHY test items exist and what seams they target)
 - Constraint taxonomy: {constraints_path} (if available — MUST/NEVER/ASK FIRST rules from specs)
 
