@@ -7,9 +7,12 @@ description: >-
   "add test coverage", "why did tests miss this bug", "what tests should I
   write", "test this feature", "review test quality". Teaches spec-derived
   testing, mock boundary discipline, architectural invariant enforcement,
-  and cross-component integration testing. Invoke with "/tester reflect"
-  after fixing a bug to evaluate whether the skill itself should be
-  strengthened based on the failure.
+  cross-component integration testing, and mandatory end-to-end wiring tests
+  with a structured Harness Gap Protocol for escalating missing test
+  infrastructure. Invoke with "/tester reflect" after fixing a bug to
+  evaluate whether the skill itself should be strengthened. Invoke with
+  "/tester harness-doctor" to design test infrastructure when the harness
+  can't support the tests you need.
 metadata:
   short-description: Write tests that catch real bugs, not tests that confirm them
 ---
@@ -126,6 +129,8 @@ Mocks trade fidelity for speed. Every mock is a bet that the real thing behaves 
 
 **Real-world failure (Bug 4 from drawing capability):** Tests overrode `get_rls_db` with an in-memory session that had no RLS policies. In production, `db.commit()` cleared `SET LOCAL` RLS context, causing all subsequent queries to fail. The test session had no RLS to clear, so the production failure mode was invisible.
 
+**Orchestration frameworks (Temporal, Celery, message buses, event systems):** These create a subtle T3 trap. The activity/task/handler boundary LOOKS like an architectural seam where mocking is appropriate — but the activities are owned code. The right pattern: register REAL activity/task implementations with the test harness (Temporal `WorkflowEnvironment`, Celery eager mode, etc.). The activities' own dependencies (DB, HTTP, filesystem) get faked at THEIR boundaries. Mocking the activities themselves turns the workflow test into a test of its own branching logic against canned data — it cannot detect interface mismatches, serialization bugs, missing activity registrations, or stubs masquerading as implementations.
+
 ***
 
 ### T4. Test Fixtures Must Reflect Production Reality
@@ -236,6 +241,8 @@ When reviewing tests (yours or others'), check for these anti-patterns. Each one
 | **Snapshot without review** | "Was the snapshot output verified against the spec when accepted?" | Review every snapshot update |
 | **Hard-coded time** | "Will this test fail next year?" | Inject clock, use relative times |
 | **No failure verification** | "Did I verify this test actually fails when the bug exists?" | Mutate the code, confirm red |
+| **All-mock pyramid** | "If every dependency is mocked, is there any test that exercises real wiring?" | Add a wiring test (T12); register real implementations at the harness boundary |
+| **Stub-confirming test** | "Does this test only verify that unimplemented code raises NotImplementedError or returns a default?" | Rewrite as `xfail`-marked behavioral test (see T12 fallback ladder); never assert that stubs ARE stubs |
 
 **Agent rule:** After writing a test suite, run through this table for every test. If a test matches any anti-pattern, fix it before considering the test complete. For existing test suites, use this table to prioritize what to fix first -- "test confirms the bug" and "fixture-production divergence" are the highest priority because they provide active false confidence.
 
@@ -299,6 +306,80 @@ The default ratio is 70% unit / 20% integration / 10% E2E. But the ratio should 
 
 **Agent rule:** After writing tests for a feature, assess the pyramid shape. If you have unit tests and E2E tests but no integration tests, you likely have a gap where the most insidious bugs live. Add at least one integration test per system boundary the feature crosses.
 
+***
+
+### T12. Prove It Runs (End-to-End Functional Coverage)
+
+Every feature, story, or bug fix needs at least one test that proves the real code actually executes end-to-end. This is not the same as an integration test or an E2E UI test — it is the **wiring test**: register real implementations with the real harness, exercise the critical path, verify the system completes the specified work.
+
+The failure mode this prevents: a test suite where every test passes because everything is mocked, but the production code is a `NotImplementedError` stub, a disconnected service, or a misregistered activity. Mocks return whatever you tell them to; the wiring test refuses to lie.
+
+**The wiring test asks one question:** "If I strip out every mock at the framework boundary, does the feature actually produce the specified outcome?"
+
+**Examples by system type:**
+
+| System | Wiring test shape |
+|---|---|
+| HTTP service | Real request → real handler → real DB write → assert DB state |
+| Temporal workflow | Register real activities on test server → execute workflow → assert terminal state |
+| Message bus / event system | Publish real event → real consumer runs → assert side effect |
+| CLI tool | Invoke binary with real args → assert exit code + file system state |
+| Frontend flow | Render component tree with real store → trigger event → assert rendered output + dispatched actions |
+| Background worker | Enqueue real job → worker processes it → assert completion record |
+
+**What to mock in a wiring test:** only the external systems at the absolute edge (a third-party API, a vendor service you cannot stand up). Everything inside your system is real. If you find yourself mocking something you own, ask whether that mock is hiding the thing you most need to test.
+
+**Agent rule:** Before marking a feature's test suite complete, ask: "Does at least one test exercise the real code end-to-end against real wiring?" If the answer is no, the suite is incomplete — even if coverage is 100%. A feature without a wiring test has not been proven to work; it has been proven to have tests. Features that are pure logic with no boundaries (a utility function, a pure data transform) are exempt — any feature that crosses a boundary is not.
+
+**Real-world failure (CREATE pipeline v1):** 150 tests passed with 5 critical activities as `NotImplementedError` stubs. Workflow tests registered canned-response mocks for every activity. Activity tests asserted stubs raise `NotImplementedError`. A single wiring test — registering real activities with Temporal's test server and running the workflow — would have failed immediately, exposing that the pipeline could not execute. Zero tests asked the question "does this actually work?"
+
+---
+
+## Harness Gap Protocol
+
+When the test harness needed for a wiring test (T12) does not exist, the correct response is **escalate and fall back gracefully** — not silently drop the coverage and hope.
+
+### Why this matters
+
+A missing harness means a bug class the team cares about cannot be detected by tests. Every silent harness acceptance is a future production incident. The protocol exists because the easy path — "write only the tests the existing harness allows" — is how 150-test suites with zero real coverage happen.
+
+### Escalation
+
+Report the gap explicitly in your worker/agent output. This is a HIGH-priority signal, not a footnote:
+
+```
+## Harness Gap Detected (HIGH PRIORITY)
+
+**What cannot be tested:** [concrete capability — e.g., "Temporal workflow with real activities," "Windchill REST responses," "CREOSON RPC"]
+**Why:** [concrete reason — e.g., "no WorkflowEnvironment fixture exists," "no FakeWindchill harness"]
+**Bug classes this hides:** [from the Bug Class to Test Level Mapping — e.g., "stale mock divergence," "data flow errors"]
+**Impact:** [what production failure mode becomes invisible]
+**Proposed investment:** [what would unblock this — e.g., "add WorkflowEnvironment fixture to conftest.py," "build FakeWindchillTransport"]
+**Fallback applied:** [which rung of the ladder below you fell back to]
+```
+
+If you are a subagent in an orchestrated run, this belongs in your report's "Blockers" section and must be raised to the orchestrator — not buried in the details. If you are running directly, surface this to the human at the end of the test-writing phase.
+
+The orchestrator or human then decides whether to:
+1. Invest in building the harness before continuing (preferred when feasible — see "Harness Doctor" workflow below)
+2. Accept the gap and proceed with the fallback (the gap must remain tracked)
+3. Descope the feature until the harness exists
+
+Silent acceptance — writing only the tests the existing harness allows and marking the suite complete — is not on the list.
+
+### Fallback ladder
+
+When the harness for the ideal wiring test does not exist, climb down this ladder. Each rung is strictly better than skipping, and strictly worse than the rung above — stop at the first rung that is actually writable:
+
+1. **Wiring test at the best available layer.** If you cannot exercise end-to-end, exercise the largest integration test you can: real service + real repository + fake HTTP transport, or real workflow + mocked activity bodies *but real activity registration* (catches missing registrations, serialization bugs, interface mismatches — even if behavior is fake).
+2. **Architectural invariant test (T7).** If no runnable wiring test is possible, write an invariant that mechanically prevents the failure class: `test_all_activities_are_registered_in_worker`, `test_no_activity_body_is_only_raise_not_implemented`, `test_every_endpoint_has_a_handler`. These catch structural decay even when behavior cannot be exercised.
+3. **`xfail`-marked behavioral test.** Write the real spec-derived test and mark it `@pytest.mark.xfail(reason="harness: no Temporal test server")`. This documents intent, will pass-to-xfail when the harness arrives, and signals a known gap. A suite of passing tests with no xfail markers is worse than a suite with honest xfails.
+4. **Explicit gap documentation.** If none of the above apply, document the gap in the test suite's README or a `KNOWN_GAPS.md`. Never leave the gap implicit.
+
+**Not a valid fallback:** a test that asserts a stub raises `NotImplementedError`. That test confirms the bug and gives false positive signal in CI.
+
+**Agent rule:** Climb down this ladder one rung at a time. Stop at the first rung you can actually write. Report the rung you stopped at and why — the escalation and the fallback go together, not one instead of the other.
+
 ---
 
 ## Workflow: Writing Tests for a New Feature
@@ -311,6 +392,8 @@ The default ratio is 70% unit / 20% integration / 10% E2E. But the ratio should 
 6. **Map the data flow.** If the feature crosses component boundaries, identify the seams. Write overlapping integration tests at each seam.
 7. **Run the anti-pattern audit** (T9 table) on every test before considering it complete.
 8. **Verify the test catches bugs.** Introduce a likely bug (wrong return value, off-by-one, missing null check). Confirm the test fails. If it does not, the test is not testing what you think.
+9. **Wiring test check (T12).** Does at least one test exercise the real code end-to-end against real wiring? If no, either add a wiring test (preferred) or follow the Harness Gap Protocol — identify the missing harness, escalate, apply the fallback ladder. A feature that crosses any system boundary (HTTP, DB, workflow engine, message bus, filesystem) without a wiring test is not complete. Pure-logic features with no boundaries are exempt.
+10. **Strategy conformance check.** If a test strategy document exists for this feature, compare each specified test against the actual test. For every test in the strategy, verify that the implemented test matches the specified assertions — not a degraded version. A silent downgrade (spec says "returns workspace_name", test asserts "raises NotImplementedError") is the failure mode that shipped the CREATE pipeline with stubs. Flag any downgrade and escalate.
 
 ---
 
@@ -369,6 +452,80 @@ A task like "Add user preferences API endpoint" is too large for a single RED→
 - **T1–T11 are the test design principles** — they govern *what* tests to write and *how* to design them well.
 - During RED, apply the relevant T-principles: T1 (spec-first assertions), T3 (mock boundaries), T6 (one behavior per test), T7 (architectural invariants).
 - TDD does not replace the "Writing Tests for a New Feature" workflow — it complements it. Use that workflow to plan which tests to write, then use TDD to write them.
+
+---
+
+## Workflow: Harness Doctor (`/tester harness-doctor`)
+
+A design workflow for building the test infrastructure that makes wiring tests (T12) possible. Invoke explicitly when the Harness Gap Protocol has fired, or when a codebase has no path to functional end-to-end tests.
+
+**When to invoke:**
+- A Harness Gap Protocol escalation lands and the orchestrator needs a concrete build plan
+- The user asks "why can't we test X properly?" or "our test infrastructure can't exercise Y"
+- Starting a new codebase or feature where you need to know what harness to build before writing tests
+- Auditing a legacy codebase where tests exist but wiring tests don't
+
+**Do not invoke this workflow** for every test-writing task. Its job is to design harness construction, not to participate in routine test design. If an existing harness covers the wiring test you need, use it — don't reach for the doctor.
+
+### Two modes
+
+**Feature-scoped** (`/tester harness-doctor feature=<name>`): Given a specific feature or bug, identify what the wiring test for that feature needs that doesn't exist. Output is a minimum viable harness — the smallest build that unblocks this feature's wiring test, not the ideal steady-state.
+
+**Repo-scoped** (`/tester harness-doctor`): Survey the codebase for testability gaps — services without fakes, external boundaries without mock transports, orchestration frameworks without test registration patterns — and produce a prioritized harness roadmap. Use this when setting up a new project or auditing a legacy one.
+
+### Discipline — what makes this different from general architecture work
+
+The harness doctor exists to unblock specific wiring tests, not to redesign test infrastructure in the abstract. Three constraints hold it in scope:
+
+1. **Every component proposal cites what it simulates.** You cannot propose `FakeWindchillTransport` without pointing at the real `WindchillAdapter` code it substitutes for and the contract (OData/REST endpoints) it must honor. No free-floating architecture.
+2. **Code sketches, not prose.** If you cannot show what the interface looks like in code, you haven't thought hard enough. Method signatures, dataclass fields, fixture shapes — concrete, reviewable artifacts.
+3. **Minimum viable first.** Always identify the 20% build that unlocks 80% of the value — the smallest thing that unblocks the FIRST wiring test. The ideal harness is the enemy of the existing gap.
+
+This discipline is what keeps the doctor from becoming a procrastination device. "We need a big harness before we can test anything" → feature ships untested. "Here's the minimum thing to build NOW to write ONE real test" → unblocks the next step.
+
+### Output format
+
+Every harness doctor run produces the same structured output:
+
+```markdown
+# Harness Doctor Report: {scope}
+
+## Gap Summary
+- **What cannot be tested right now:** {concrete capability}
+- **Why:** {missing harness component}
+- **Bug classes currently invisible:** {from Bug Class to Test Level Mapping}
+- **Highest-value wiring test blocked:** {the specific test that would catch the most important bug}
+
+## Proposed Harness
+
+### {Component 1 name} — {one-line purpose}
+**Simulates:** {real code this substitutes for, with file path}
+**Contract it honors:** {the interface/protocol it must match}
+**File:** {where it goes in the repo}
+**Sketch:**
+```python
+# Dataclasses, method signatures, key fixtures.
+# Enough detail that a worker agent could implement from this.
+```
+
+### {Component 2 name} ...
+
+## Minimum Viable Version
+{The 20% of the above that unlocks the FIRST wiring test. Which components to build first, in what order, to get a single passing wiring test.}
+
+## Wiring Tests Unlocked
+{The specific T12 wiring tests that become writable after this harness exists. Name each, describe what it catches.}
+
+## Handoff
+{Concrete next step for the orchestrator or human — "assign a worker lane to build the minimum viable version" or "this is ~3 days of work, here's the plan."}
+```
+
+### Relationship to other workflows
+
+- **Harness Gap Protocol escalates** → harness doctor designs → orchestrator/human implements. The doctor is the middle step that turns "we have a gap" into "here's exactly what to build."
+- **T12 governs** what tests are missing; **harness doctor** governs what to build to enable them.
+- **spec-engineering** may be called during harness design if the harness itself needs a spec (e.g., a complex FakeBackend with its own contract).
+- **Not a substitute** for writing actual tests. After the harness is built, return to the normal "Writing Tests for a New Feature" workflow.
 
 ---
 
@@ -469,6 +626,7 @@ Present the analysis to the user as a structured report:
 | T9 | Anti-Pattern Audit | Run the checklist on every test before it ships |
 | T10 | Property-Based Testing | Invariants for ALL inputs, not just developer-imagined examples |
 | T11 | Test Pyramid Discipline | 70/20/10 default; deviate intentionally with stated rationale |
+| T12 | Prove It Runs | Every feature needs a wiring test; real code end-to-end against real wiring, or escalate the harness gap |
 
 ---
 
