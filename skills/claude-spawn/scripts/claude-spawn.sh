@@ -10,13 +10,14 @@ usage() {
 claude-spawn - manage persistent background agent sessions on a dedicated tmux server
 
 Usage:
-  claude-spawn.sh spawn [--name <slug>] [-- <cmd...>]
+  claude-spawn.sh spawn [--name <slug>] [--codex] [-- <cmd...>]
   claude-spawn.sh list
   claude-spawn.sh kill <index|name>
   claude-spawn.sh attach-hint [target]
   claude-spawn.sh -h | --help
 
-Default command (no `-- <cmd>`): "$SHELL" -lic 'exec clopus'
+Default command: "$SHELL" -lic 'exec clopus'
+With --codex:    "$SHELL" -lic 'exec dex'
 All tmux ops run against socket "claude-spawn" (never the user's normal tmux).
 EOF
 }
@@ -72,9 +73,25 @@ resolve_name_to_index() {
     | awk -v n="$name" '$2 == n {print $1}'
 }
 
+build_alias_shell_command() {
+  # Serialize "$SHELL -lic 'exec <alias>'" after preflighting shell + alias.
+  # Used by default (clopus) and --codex (dex) paths so the alias resolves.
+  local alias_name="$1"
+  local default_shell="${SHELL:-/bin/bash}"
+  case "${default_shell##*/}" in
+    bash|zsh|sh) ;;
+    *) die "default spawn requires bash/zsh/sh for -lic (got: $default_shell); pass -- <cmd...> explicitly" 2 ;;
+  esac
+  if ! "$default_shell" -lic "command -v $alias_name >/dev/null 2>&1" >/dev/null 2>&1; then
+    die "default spawn failed: '$alias_name' is not defined in $default_shell -lic" 127
+  fi
+  printf '%q ' "$default_shell" -lic "exec $alias_name"
+}
+
 cmd_spawn() {
   local name=""
   local user_cmd_given=0
+  local codex_mode=0
   local -a user_cmd=()
 
   while [ $# -gt 0 ]; do
@@ -83,6 +100,10 @@ cmd_spawn() {
         [ $# -ge 2 ] || die "--name requires an argument" 2
         name="$2"
         shift 2
+        ;;
+      --codex)
+        codex_mode=1
+        shift
         ;;
       --)
         user_cmd_given=1
@@ -99,6 +120,10 @@ cmd_spawn() {
     esac
   done
 
+  if [ "$codex_mode" -eq 1 ] && [ "$user_cmd_given" -eq 1 ]; then
+    die "--codex is mutually exclusive with -- <cmd>" 2
+  fi
+
   if [ -z "$name" ]; then
     name="spawn-$(gen_uid)"
   fi
@@ -108,18 +133,10 @@ cmd_spawn() {
   local shell_command
   if [ "$user_cmd_given" -eq 1 ] && [ "${#user_cmd[@]}" -gt 0 ]; then
     shell_command="$(printf '%q ' "${user_cmd[@]}")"
+  elif [ "$codex_mode" -eq 1 ]; then
+    shell_command="$(build_alias_shell_command dex)"
   else
-    # Default: run through login+interactive shell so the `clopus` alias resolves.
-    # Preflight so we fail fast instead of leaving a dead pane.
-    local default_shell="${SHELL:-/bin/bash}"
-    case "${default_shell##*/}" in
-      bash|zsh|sh) ;;
-      *) die "default spawn requires bash/zsh/sh for -lic (got: $default_shell); pass -- <cmd...> explicitly" 2 ;;
-    esac
-    if ! "$default_shell" -lic 'command -v clopus >/dev/null 2>&1' >/dev/null 2>&1; then
-      die "default spawn failed: 'clopus' is not defined in $default_shell -lic" 127
-    fi
-    shell_command="$(printf '%q ' "$default_shell" -lic 'exec clopus')"
+    shell_command="$(build_alias_shell_command clopus)"
   fi
 
   # Collect env flags into a bash 3.2-compatible array (NUL-delimited).

@@ -1,6 +1,6 @@
 ---
 name: claude-spawn
-description: "Spawn, list, or kill persistent Claude/Codex/shell sessions on a dedicated tmux server (socket: claude-spawn). Use this whenever the user wants to launch, start, spawn, park, or background an agent session they can attach to later from their phone (via the auto-registered remote-control channel) or locally via tmux attach — even if they say 'start a clopus session' or 'run this in the background so I can come back to it'. Also use it to list or kill previously-spawned sessions. Do NOT use for generic tmux admin (pane splits, the user's normal tmux server, tmux config debugging)."
+description: "Spawn, list, or kill persistent Claude/Codex/shell sessions on a dedicated tmux server (socket: claude-spawn). Use this whenever the user wants to launch, start, spawn, park, or background an agent session they can attach to later from their phone (via the auto-registered remote-control channel) or locally via tmux attach — even if they say 'start a clopus session', 'spawn a codex session' (pass --codex, which uses the user's dex alias), or 'run this in the background so I can come back to it'. Also use it to list or kill previously-spawned sessions. Do NOT use for generic tmux admin (pane splits, the user's normal tmux server, tmux config debugging)."
 ---
 
 # claude-spawn — Persistent Human-Reachable Agent Sessions
@@ -8,7 +8,10 @@ description: "Spawn, list, or kill persistent Claude/Codex/shell sessions on a d
 ## Quick reference
 
 ```
-scripts/claude-spawn.sh spawn [--name <slug>] [-- <cmd...>]   # default cmd: $SHELL -lic 'exec clopus'
+scripts/claude-spawn.sh spawn [--name <slug>] [--codex] [-- <cmd...>]
+  # default (no flags): $SHELL -lic 'exec clopus'
+  # --codex:            $SHELL -lic 'exec dex'
+  # -- <cmd...>:        run <cmd...> directly (mutually exclusive with --codex)
 scripts/claude-spawn.sh list
 scripts/claude-spawn.sh kill <index|name>
 scripts/claude-spawn.sh attach-hint [target]
@@ -50,7 +53,9 @@ running: /bin/zsh -lic 'exec clopus'
 ```
 
 Key behaviors:
-- Default command is `"$SHELL" -lic 'exec clopus'` — the extra shell layer is required so the `clopus` alias resolves. Default path preflights the shell (bash/zsh/sh) and `clopus` availability, failing fast instead of leaving a dead pane. Overridden commands (anything after `--`) run as direct argv with no preflight.
+- Default command is `"$SHELL" -lic 'exec clopus'` — the extra shell layer is required so the `clopus` alias resolves. Default path preflights the shell (bash/zsh/sh) and alias availability, failing fast instead of leaving a dead pane.
+- `--codex` swaps the default to `"$SHELL" -lic 'exec dex'` (same preflight). Mutually exclusive with `-- <cmd>`.
+- Overridden commands (anything after `--`) run as direct argv with no preflight.
 - `--name` must be a shell-safe slug matching `[A-Za-z0-9_-]+` and must include at least one non-digit. Duplicate name → exit 3.
 - Without `--name`, auto-generates `spawn-<6hex>`.
 - Forwards a small env whitelist into the window (see below).
@@ -98,9 +103,9 @@ tmux -L claude-spawn attach -t claude-spawn \; select-window -t claude-spawn:spa
 scripts/claude-spawn.sh spawn --name morning-triage
 ```
 
-**Spawn a named codex session:**
+**Spawn a named codex session (uses the `dex` alias):**
 ```
-scripts/claude-spawn.sh spawn --name codex-review -- codex
+scripts/claude-spawn.sh spawn --name codex-review --codex
 ```
 
 **Park a long-running build:**
