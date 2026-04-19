@@ -10,7 +10,7 @@ usage() {
 claude-spawn - manage persistent background agent sessions on a dedicated tmux server
 
 Usage:
-  claude-spawn.sh spawn [--name <slug>] [--codex] [-- <cmd...>]
+  claude-spawn.sh spawn [--name <slug>] [--cwd <dir>] [--codex] [-- <cmd...>]
   claude-spawn.sh list
   claude-spawn.sh kill <index|name>
   claude-spawn.sh attach-hint [target]
@@ -18,6 +18,8 @@ Usage:
 
 Default command: "$SHELL" -lic 'exec clopus'
 With --codex:    "$SHELL" -lic 'exec dex'
+With --cwd:      the tmux window's start-directory is set to <dir> so the
+                 shell (and therefore clopus/dex) starts there.
 All tmux ops run against socket "claude-spawn" (never the user's normal tmux).
 EOF
 }
@@ -90,6 +92,7 @@ build_alias_shell_command() {
 
 cmd_spawn() {
   local name=""
+  local cwd=""
   local user_cmd_given=0
   local codex_mode=0
   local -a user_cmd=()
@@ -99,6 +102,11 @@ cmd_spawn() {
       --name)
         [ $# -ge 2 ] || die "--name requires an argument" 2
         name="$2"
+        shift 2
+        ;;
+      --cwd)
+        [ $# -ge 2 ] || die "--cwd requires an argument" 2
+        cwd="$2"
         shift 2
         ;;
       --codex)
@@ -122,6 +130,14 @@ cmd_spawn() {
 
   if [ "$codex_mode" -eq 1 ] && [ "$user_cmd_given" -eq 1 ]; then
     die "--codex is mutually exclusive with -- <cmd>" 2
+  fi
+
+  local -a cwd_args=()
+  if [ -n "$cwd" ]; then
+    [ -d "$cwd" ] || die "--cwd is not a directory: $cwd" 2
+    local abs_cwd
+    abs_cwd="$(cd "$cwd" && pwd -P)" || die "--cwd could not be resolved: $cwd" 2
+    cwd_args=(-c "$abs_cwd")
   fi
 
   if [ -z "$name" ]; then
@@ -150,7 +166,7 @@ cmd_spawn() {
   # session, fall through to the new-window path.
   local bootstrapped=0
   if ! server_up; then
-    if tmux -L "$SOCKET" new-session -d -s "$SESSION" -n "$name" 'sleep 999999' 2>/dev/null; then
+    if tmux -L "$SOCKET" new-session -d -s "$SESSION" -n "$name" ${cwd_args[@]+"${cwd_args[@]}"} 'sleep 999999' 2>/dev/null; then
       bootstrapped=1
       tmux -L "$SOCKET" set-option -g remain-on-exit on >/dev/null
     elif ! server_up; then
@@ -160,18 +176,18 @@ cmd_spawn() {
 
   if [ "$bootstrapped" -eq 1 ]; then
     if [ "${#env_flags[@]}" -gt 0 ]; then
-      tmux -L "$SOCKET" respawn-window -k -t "$SESSION:$name" "${env_flags[@]}" "$shell_command"
+      tmux -L "$SOCKET" respawn-window -k ${cwd_args[@]+"${cwd_args[@]}"} -t "$SESSION:$name" "${env_flags[@]}" "$shell_command"
     else
-      tmux -L "$SOCKET" respawn-window -k -t "$SESSION:$name" "$shell_command"
+      tmux -L "$SOCKET" respawn-window -k ${cwd_args[@]+"${cwd_args[@]}"} -t "$SESSION:$name" "$shell_command"
     fi
   else
     if window_name_exists "$name"; then
       die "window name already exists: $name" 3
     fi
     if [ "${#env_flags[@]}" -gt 0 ]; then
-      tmux -L "$SOCKET" new-window -d -t "$SESSION:" -n "$name" "${env_flags[@]}" "$shell_command" >/dev/null
+      tmux -L "$SOCKET" new-window -d ${cwd_args[@]+"${cwd_args[@]}"} -t "$SESSION:" -n "$name" "${env_flags[@]}" "$shell_command" >/dev/null
     else
-      tmux -L "$SOCKET" new-window -d -t "$SESSION:" -n "$name" "$shell_command" >/dev/null
+      tmux -L "$SOCKET" new-window -d ${cwd_args[@]+"${cwd_args[@]}"} -t "$SESSION:" -n "$name" "$shell_command" >/dev/null
     fi
   fi
 

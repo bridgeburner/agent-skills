@@ -8,9 +8,10 @@ description: "Spawn, list, or kill persistent Claude/Codex/shell sessions on a d
 ## Quick reference
 
 ```
-scripts/claude-spawn.sh spawn [--name <slug>] [--codex] [-- <cmd...>]
+scripts/claude-spawn.sh spawn [--name <slug>] [--cwd <dir>] [--codex] [-- <cmd...>]
   # default (no flags): $SHELL -lic 'exec clopus'
   # --codex:            $SHELL -lic 'exec dex'
+  # --cwd <dir>:        start the tmux window in <dir> (so clopus/dex starts there)
   # -- <cmd...>:        run <cmd...> directly (mutually exclusive with --codex)
 scripts/claude-spawn.sh list
 scripts/claude-spawn.sh kill <index|name>
@@ -55,6 +56,7 @@ running: /bin/zsh -lic 'exec clopus'
 Key behaviors:
 - Default command is `"$SHELL" -lic 'exec clopus'` — the extra shell layer is required so the `clopus` alias resolves. Default path preflights the shell (bash/zsh/sh) and alias availability, failing fast instead of leaving a dead pane.
 - `--codex` swaps the default to `"$SHELL" -lic 'exec dex'` (same preflight). Mutually exclusive with `-- <cmd>`.
+- `--cwd <dir>` sets the tmux window's start-directory. Validated with `[ -d <dir> ]`, resolved to an absolute path, then passed via `tmux new-window -c <abs>` (or the equivalent on `new-session` / `respawn-window`). The spawned shell — and therefore clopus/dex — starts in that directory, with no flag passed to the agent itself. Applies to all spawn modes (default, `--codex`, `--`).
 - Overridden commands (anything after `--`) run as direct argv with no preflight.
 - `--name` must be a shell-safe slug matching `[A-Za-z0-9_-]+` and must include at least one non-digit. Duplicate name → exit 3.
 - Without `--name`, auto-generates `spawn-<6hex>`.
@@ -106,6 +108,12 @@ scripts/claude-spawn.sh spawn --name morning-triage
 **Spawn a named codex session (uses the `dex` alias):**
 ```
 scripts/claude-spawn.sh spawn --name codex-review --codex
+```
+
+**Spawn clopus/dex in a specific project directory:**
+```
+scripts/claude-spawn.sh spawn --name altius-triage --cwd ~/dev/altius
+scripts/claude-spawn.sh spawn --name nixos-dex --codex --cwd ~/nixos-config
 ```
 
 **Park a long-running build:**
