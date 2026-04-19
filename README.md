@@ -47,6 +47,7 @@ npx skills add -g <owner/repo>     # install globally across all agents
 |---|---|
 | `codex-cli` | Delegates tasks to a headless OpenAI Codex agent for parallel or cross-model work |
 | `gwsctx` | Manages multiple Google Workspace CLI account contexts with explicit aliases |
+| `claude-spawn` | Spawns persistent, human-reachable Claude/Codex/shell sessions on a dedicated tmux server |
 
 ## Installing Individual Skills
 
