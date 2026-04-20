@@ -1,6 +1,6 @@
 ---
 name: claude-spawn
-description: "Spawn, list, or kill persistent Claude/Codex/shell sessions on a dedicated tmux server (socket: claude-spawn). Use this whenever the user wants to launch, start, spawn, park, or background an agent session they can attach to later from their phone (via the auto-registered remote-control channel) or locally via tmux attach — even if they say 'start a clopus session', 'spawn a codex session' (pass --codex, which uses the user's dex alias), or 'run this in the background so I can come back to it'. Also use it to list or kill previously-spawned sessions. Do NOT use for generic tmux admin (pane splits, the user's normal tmux server, tmux config debugging)."
+description: "Spawn, list, or kill persistent Claude/Codex/shell sessions as windows inside a `claude-spawn` tmux session on the user's default tmux server (socket `default`). Use this whenever the user wants to launch, start, spawn, park, or background an agent session they can attach to later from their phone (via the auto-registered remote-control channel) or locally via `tmux attach -t claude-spawn` — even if they say 'start a clopus session', 'spawn a codex session' (pass --codex, which uses the user's dex alias), or 'run this in the background so I can come back to it'. Also use it to list or kill previously-spawned sessions. Do NOT use for generic tmux admin (pane splits, arbitrary session management, tmux config debugging)."
 ---
 
 # claude-spawn — Persistent Human-Reachable Agent Sessions
@@ -9,8 +9,8 @@ description: "Spawn, list, or kill persistent Claude/Codex/shell sessions on a d
 
 ```
 scripts/claude-spawn.sh spawn [--name <slug>] [--cwd <dir>] [--codex] [-- <cmd...>]
-  # default (no flags): $SHELL -lic 'exec clopus'
-  # --codex:            $SHELL -lic 'exec dex'
+  # default (no flags): $SHELL -lic 'clopus'
+  # --codex:            $SHELL -lic 'dex'
   # --cwd <dir>:        start the tmux window in <dir> (so clopus/dex starts there)
   # -- <cmd...>:        run <cmd...> directly (mutually exclusive with --codex)
 scripts/claude-spawn.sh list
@@ -22,7 +22,7 @@ Invoke via the absolute path `~/.claude/skills/claude-spawn/scripts/claude-spawn
 
 ## What this is
 
-Spawn a long-lived child process (Claude, Codex, shell, or any command) into a window on a dedicated tmux server, then walk away. The tmux socket is `claude-spawn` — separate from the user's normal tmux, so spawns never collide with their working sessions. Every spawned Claude child auto-registers a remote-control channel on startup, so the user can reach it from their phone; locally, `tmux -L claude-spawn attach` works too. The spawning agent is fire-and-forget: it does not track PIDs or message the child. State is always derived fresh from `tmux list-windows`.
+Spawn a long-lived child process (Claude, Codex, shell, or any command) into a window inside the `claude-spawn` tmux session on the user's default tmux server (socket `default`), then walk away. Spawned sessions therefore show up in the user's regular `tmux ls` and are reachable with plain `tmux attach -t claude-spawn`. Every spawned Claude child auto-registers a remote-control channel on startup, so the user can also reach it from their phone. The spawning agent is fire-and-forget: it does not track PIDs or message the child. State is always derived fresh from `tmux list-windows`.
 
 ## When to use
 
@@ -32,7 +32,7 @@ Spawn a long-lived child process (Claude, Codex, shell, or any command) into a w
 
 ## When NOT to use
 
-- Generic tmux administration (splits, layouts, the user's normal tmux server)
+- Generic tmux administration (splits, layouts, unrelated sessions on the default socket)
 - Sending keystrokes or prompts into an existing session (no `send-keys` / `peek` in v1)
 - Short-lived tasks that should complete and exit (use Bash directly)
 
@@ -49,13 +49,13 @@ Launches a new window on the `claude-spawn` session. Bootstraps the server if ne
 ```
 $ scripts/claude-spawn.sh spawn
 spawned: spawn-a7f3bc (index 0)
-attach: tmux -L claude-spawn attach -t claude-spawn \; select-window -t claude-spawn:spawn-a7f3bc
-running: /bin/zsh -lic 'exec clopus'
+attach: tmux attach -t claude-spawn \; select-window -t claude-spawn:spawn-a7f3bc
+running: /bin/zsh -lic 'clopus'
 ```
 
 Key behaviors:
-- Default command is `"$SHELL" -lic 'exec clopus'` — the extra shell layer is required so the `clopus` alias resolves. Default path preflights the shell (bash/zsh/sh) and alias availability, failing fast instead of leaving a dead pane.
-- `--codex` swaps the default to `"$SHELL" -lic 'exec dex'` (same preflight). Mutually exclusive with `-- <cmd>`.
+- Default command is `"$SHELL" -lic 'clopus'` — the login+interactive shell is required so the `clopus` alias resolves (zsh's `exec` builtin does not expand aliases, so `exec clopus` would die with 127). Default path preflights the shell (bash/zsh/sh) and alias availability, failing fast instead of leaving a dead pane.
+- `--codex` swaps the default to `"$SHELL" -lic 'dex'` (same preflight). Mutually exclusive with `-- <cmd>`.
 - `--cwd <dir>` sets the tmux window's start-directory. Validated with `[ -d <dir> ]`, resolved to an absolute path, then passed via `tmux new-window -c <abs>` (or the equivalent on `new-session` / `respawn-window`). The spawned shell — and therefore clopus/dex — starts in that directory, with no flag passed to the agent itself. Applies to all spawn modes (default, `--codex`, `--`).
 - Overridden commands (anything after `--`) run as direct argv with no preflight.
 - `--name` must be a shell-safe slug matching `[A-Za-z0-9_-]+` and must include at least one non-digit. Duplicate name → exit 3.
@@ -68,7 +68,7 @@ Prints one row per live window with index, name, current command, PID, last-acti
 
 ```
 IDX  NAME           CMD    PID    LAST_ACTIVITY  DEAD  EXIT  START_CMD
-0    spawn-a7f3bc   zsh    41302  1739820001     0     -     /bin/zsh -lic 'exec clopus'
+0    spawn-a7f3bc   zsh    41302  1739820001     0     -     /bin/zsh -lic 'clopus'
 ```
 
 Live windows show `-` in the `EXIT` column; dead windows show their exit code.
@@ -92,10 +92,10 @@ Prints the exact tmux command the user can copy-paste to attach. With no target,
 
 ```
 $ scripts/claude-spawn.sh attach-hint
-tmux -L claude-spawn attach -t claude-spawn
+tmux attach -t claude-spawn
 
 $ scripts/claude-spawn.sh attach-hint spawn-a7f3bc
-tmux -L claude-spawn attach -t claude-spawn \; select-window -t claude-spawn:spawn-a7f3bc
+tmux attach -t claude-spawn \; select-window -t claude-spawn:spawn-a7f3bc
 ```
 
 ## Usage patterns
@@ -142,7 +142,7 @@ Anything not set is silently skipped. Nothing else is forwarded.
 
 ## Socket override (testing)
 
-`CLAUDE_SPAWN_SOCKET` and `CLAUDE_SPAWN_SESSION` override the defaults. Use them for isolated verification without touching the user's live `claude-spawn` socket:
+`CLAUDE_SPAWN_SOCKET` (default: `default`) and `CLAUDE_SPAWN_SESSION` (default: `claude-spawn`) override the defaults. Use them for isolated verification without touching the user's live tmux server:
 
 ```
 CLAUDE_SPAWN_SOCKET=scratch CLAUDE_SPAWN_SESSION=scratch scripts/claude-spawn.sh spawn -- echo hi
@@ -152,4 +152,4 @@ In normal use, leave them unset.
 
 ## How persistence works
 
-tmux owns the PTY for each window, so the child keeps running regardless of whether anyone is attached. When the child is a Claude session, it auto-registers its remote-control channel on startup — meaning the user can drive it from their phone without any extra setup. Locally, `tmux -L claude-spawn attach` (or the exact line from `attach-hint`) drops them into the session. `remain-on-exit on` is set so dead windows stay visible in `list` until explicitly killed, which makes post-mortem debugging possible.
+tmux owns the PTY for each window, so the child keeps running regardless of whether anyone is attached. When the child is a Claude session, it auto-registers its remote-control channel on startup — meaning the user can drive it from their phone without any extra setup. Locally, `tmux attach -t claude-spawn` (or the exact line from `attach-hint`) drops them into the session. `remain-on-exit on` is set on the `claude-spawn` session so dead windows stay visible in `list` until explicitly killed, which makes post-mortem debugging possible.

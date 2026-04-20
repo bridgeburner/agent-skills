@@ -1,13 +1,25 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-SOCKET="${CLAUDE_SPAWN_SOCKET:-claude-spawn}"
+SOCKET="${CLAUDE_SPAWN_SOCKET:-default}"
 SESSION="${CLAUDE_SPAWN_SESSION:-claude-spawn}"
 ENV_WHITELIST="PATH HOME SHELL ANTHROPIC_API_KEY OPENAI_API_KEY CLAUDE_CODE_OAUTH_TOKEN"
 
+# Omit `-L default` in user-facing hints (it's redundant — plain `tmux` already
+# uses the default socket). Script internals still pass `-L "$SOCKET"` for
+# correctness when CLAUDE_SPAWN_SOCKET overrides the default.
+tmux_prefix_hint() {
+  if [ "$SOCKET" = "default" ]; then
+    printf 'tmux'
+  else
+    printf 'tmux -L %s' "$SOCKET"
+  fi
+}
+
 usage() {
   cat <<'EOF'
-claude-spawn - manage persistent background agent sessions on a dedicated tmux server
+claude-spawn - manage persistent background agent sessions as windows inside the
+               `claude-spawn` tmux session on the user's default tmux server
 
 Usage:
   claude-spawn.sh spawn [--name <slug>] [--cwd <dir>] [--codex] [-- <cmd...>]
@@ -16,11 +28,12 @@ Usage:
   claude-spawn.sh attach-hint [target]
   claude-spawn.sh -h | --help
 
-Default command: "$SHELL" -lic 'exec clopus'
-With --codex:    "$SHELL" -lic 'exec dex'
+Default command: "$SHELL" -lic 'clopus'
+With --codex:    "$SHELL" -lic 'dex'
 With --cwd:      the tmux window's start-directory is set to <dir> so the
                  shell (and therefore clopus/dex) starts there.
-All tmux ops run against socket "claude-spawn" (never the user's normal tmux).
+All tmux ops run against the `claude-spawn` session on the user's default
+tmux socket — override via CLAUDE_SPAWN_SOCKET / CLAUDE_SPAWN_SESSION.
 EOF
 }
 
@@ -87,7 +100,10 @@ build_alias_shell_command() {
   if ! "$default_shell" -lic "command -v $alias_name >/dev/null 2>&1" >/dev/null 2>&1; then
     die "default spawn failed: '$alias_name' is not defined in $default_shell -lic" 127
   fi
-  printf '%q ' "$default_shell" -lic "exec $alias_name"
+  # NOTE: no `exec` — zsh's `exec` builtin does not expand aliases, so
+  # `exec clopus` would die with 127. Dropping `exec` leaves one extra
+  # shell layer in the PID tree; harmless.
+  printf '%q ' "$default_shell" -lic "$alias_name"
 }
 
 cmd_spawn() {
@@ -168,7 +184,6 @@ cmd_spawn() {
   if ! server_up; then
     if tmux -L "$SOCKET" new-session -d -s "$SESSION" -n "$name" ${cwd_args[@]+"${cwd_args[@]}"} 'sleep 999999' 2>/dev/null; then
       bootstrapped=1
-      tmux -L "$SOCKET" set-option -g remain-on-exit on >/dev/null
     elif ! server_up; then
       die "failed to bootstrap tmux session $SESSION"
     fi
@@ -191,13 +206,17 @@ cmd_spawn() {
     fi
   fi
 
+  # Scope `remain-on-exit` per-window so dead panes survive for post-mortem
+  # without leaking the option onto unrelated sessions sharing this socket.
+  tmux -L "$SOCKET" set-window-option -t "$SESSION:$name" remain-on-exit on >/dev/null
+
   local idx
   idx="$(resolve_name_to_index "$name")"
   [ -n "$idx" ] || die "spawned but could not resolve window index for $name"
 
   printf 'spawned: %s (index %s)\n' "$name" "$idx"
-  printf 'attach: tmux -L %s attach -t %s \\; select-window -t %s:%s\n' \
-    "$SOCKET" "$SESSION" "$SESSION" "$name"
+  printf 'attach: %s attach -t %s \\; select-window -t %s:%s\n' \
+    "$(tmux_prefix_hint)" "$SESSION" "$SESSION" "$name"
   printf 'running: %s\n' "$shell_command"
 }
 
@@ -259,11 +278,13 @@ cmd_kill() {
 }
 
 cmd_attach_hint() {
+  local prefix
+  prefix="$(tmux_prefix_hint)"
   if [ $# -eq 0 ]; then
-    printf 'tmux -L %s attach -t %s\n' "$SOCKET" "$SESSION"
+    printf '%s attach -t %s\n' "$prefix" "$SESSION"
   else
-    printf 'tmux -L %s attach -t %s \\; select-window -t %s:%s\n' \
-      "$SOCKET" "$SESSION" "$SESSION" "$1"
+    printf '%s attach -t %s \\; select-window -t %s:%s\n' \
+      "$prefix" "$SESSION" "$SESSION" "$1"
   fi
 }
 
