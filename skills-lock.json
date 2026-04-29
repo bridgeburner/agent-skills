@@ -274,6 +274,15 @@
       "skillFolderHash": "6bfa29266f4a22e972ec5350611a21cddb89cc3e",
       "installedAt": "2026-04-25T00:15:14.797Z",
       "updatedAt": "2026-04-25T00:15:14.797Z"
+    },
+    "portless": {
+      "source": "vercel-labs/portless",
+      "sourceType": "github",
+      "sourceUrl": "https://github.com/vercel-labs/portless.git",
+      "skillPath": "skills/portless/SKILL.md",
+      "skillFolderHash": "22cbe8c4e36882ac3fe083ac8e6d9d99663b9de4",
+      "installedAt": "2026-04-29T23:42:12.486Z",
+      "updatedAt": "2026-04-29T23:42:12.486Z"
     }
   }
 }
