@@ -62,7 +62,7 @@ npx skills add <repo> --skill <name>
 The `./agent-skills` CLI manages both local and external skills:
 
 ```bash
-./agent-skills install-local                          # Link local skills + config files
+./agent-skills install-local                          # Link local/global skills + config files
 ./agent-skills add <repo> [--skill <name>]            # Install an external skill and update the lock file
 ./agent-skills sync                                   # Pull + install missing external skills + link local
 ./agent-skills list                                   # Show all installed skills
@@ -70,7 +70,7 @@ The `./agent-skills` CLI manages both local and external skills:
 ./agent-skills remove <name>                          # Remove an external skill
 ```
 
-External skills are tracked in `skills-lock.json` so they stay consistent across machines.
+External skills are tracked in `skills-lock.json` and installed under `~/.agents/skills`; `install-local` mirrors them into both Claude and Codex skill views.
 
 ### Personal Skills
 

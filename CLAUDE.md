@@ -25,7 +25,7 @@ These live in `skills/` and are symlinked into `~/.claude/skills/` and `~/.codex
 
 ## External skills
 
-Installed via `npx skills` and tracked in `skills-lock.json`. Run `./agent-skills list` to see what's currently installed.
+Installed via `npx skills`, stored under `~/.agents/skills`, and tracked in `skills-lock.json`. `install-local` mirrors them into both `~/.claude/skills` and `~/.codex/skills`. Run `./agent-skills list` to see what's currently installed.
 
 ## Keeping docs current
 

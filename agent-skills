@@ -17,6 +17,7 @@ CODEX_DIR="$HOME/.codex"
 AGENTS_DIR="$HOME/.agents"
 CLAUDE_SKILLS_DIR="$CLAUDE_DIR/skills"
 CODEX_SKILLS_DIR="$CODEX_DIR/skills"
+AGENTS_SKILLS_DIR="$AGENTS_DIR/skills"
 
 # Colors for output
 RED='\033[0;31m'
@@ -79,7 +80,7 @@ merge_lock_with_system() {
     jq -s '
         {
             version: ((.[0].version // 3)),
-            skills: (.[0].skills // {}) + (.[1].skills // {})
+            skills: ((.[0].skills // {}) + (.[1].skills // {}))
         }
     ' "$LOCK_FILE" "$SYSTEM_LOCK_FILE" > "$output_file"
 }
@@ -129,7 +130,7 @@ cmd_install_local() {
     link_file "$SCRIPT_DIR/config/CLAUDE.md" "$AGENTS_DIR/AGENTS.md"
 
     # Build list of all known source directories for dangling cleanup
-    local all_source_dirs=("$LOCAL_SKILLS_DIR" "$PERSONAL_SKILLS_DIR")
+    local all_source_dirs=("$LOCAL_SKILLS_DIR" "$PERSONAL_SKILLS_DIR" "$AGENTS_SKILLS_DIR")
     while IFS= read -r src_path; do
         [[ -n "$src_path" ]] && all_source_dirs+=("$src_path")
     done < <(get_source_paths)
@@ -221,6 +222,32 @@ cmd_install_local() {
                 link_file "$skill_path" "$CODEX_SKILLS_DIR/$skill_name"
                 linked_skills+=("$skill_name")
             done
+        done
+    fi
+
+    # Link globally installed external skills managed by the skills CLI
+    if [[ -d "$AGENTS_SKILLS_DIR" ]]; then
+        for skill_path in "$AGENTS_SKILLS_DIR"/*/; do
+            if [[ ! -d "$skill_path" ]]; then
+                continue
+            fi
+            local skill_name
+            skill_name=$(basename "$skill_path")
+
+            # Check for collision with higher-priority sources
+            local collision=0
+            for linked in "${linked_skills[@]}"; do
+                if [[ "$linked" == "$skill_name" ]]; then
+                    echo -e "${YELLOW}Skipping '$skill_name' from global external skills (already linked from higher-priority source)${NC}"
+                    collision=1
+                    break
+                fi
+            done
+            [[ $collision -eq 1 ]] && continue
+
+            link_file "$skill_path" "$CLAUDE_SKILLS_DIR/$skill_name"
+            link_file "$skill_path" "$CODEX_SKILLS_DIR/$skill_name"
+            linked_skills+=("$skill_name")
         done
     fi
 
@@ -693,6 +720,7 @@ cmd_sync() {
     if [[ -f "$LOCK_FILE" ]] && ! cmp -s "$LOCK_FILE" "$merged_lock"; then
         echo -e "${YELLOW}Local system lock has skills not present in repo lock; using merged lock for sync.${NC}"
         mv "$merged_lock" "$LOCK_FILE"
+        merged_lock="$LOCK_FILE"
     else
         rm -f "$merged_lock"
         merged_lock="$LOCK_FILE"

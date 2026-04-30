@@ -10,6 +10,9 @@ cleanup() {
 }
 trap cleanup EXIT
 
+mkdir -p "$TMP_HOME/.agents/skills/external-skill"
+echo "# External Skill" > "$TMP_HOME/.agents/skills/external-skill/SKILL.md"
+
 assert_symlink() {
     local path="$1"
     local expected="$2"
@@ -31,8 +34,10 @@ assert_symlink() {
 
 HOME="$TMP_HOME" "$REPO_DIR/agent-skills" install-local
 
-assert_symlink "$TMP_HOME/.claude/CLAUDE.md" "$REPO_DIR/CLAUDE.md"
-assert_symlink "$TMP_HOME/.codex/AGENTS.md" "$REPO_DIR/CLAUDE.md"
+assert_symlink "$TMP_HOME/.claude/CLAUDE.md" "$REPO_DIR/config/CLAUDE.md"
+assert_symlink "$TMP_HOME/.codex/AGENTS.md" "$REPO_DIR/config/CLAUDE.md"
+assert_symlink "$TMP_HOME/.claude/skills/external-skill" "$TMP_HOME/.agents/skills/external-skill/"
+assert_symlink "$TMP_HOME/.codex/skills/external-skill" "$TMP_HOME/.agents/skills/external-skill/"
 
 for skill_path in "$REPO_DIR/skills"/*/; do
     if [[ ! -d "$skill_path" ]]; then

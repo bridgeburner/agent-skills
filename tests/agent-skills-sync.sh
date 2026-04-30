@@ -13,10 +13,11 @@ cleanup() {
 }
 trap cleanup EXIT
 
-mkdir -p "$TMP_REPO/skills" "$TMP_HOME/.agents" "$TMP_BIN"
+mkdir -p "$TMP_REPO/config" "$TMP_REPO/skills" "$TMP_HOME/.agents/skills/installed-skill" "$TMP_BIN"
 
 cp "$REPO_SRC/agent-skills" "$TMP_REPO/agent-skills"
-cp "$REPO_SRC/CLAUDE.md" "$TMP_REPO/CLAUDE.md"
+cp "$REPO_SRC/config/CLAUDE.md" "$TMP_REPO/config/CLAUDE.md"
+echo "# Installed Skill" > "$TMP_HOME/.agents/skills/installed-skill/SKILL.md"
 
 cat <<'LOCK' > "$TMP_REPO/skills-lock.json"
 {
@@ -38,7 +39,17 @@ LOCK
 cat <<'SYSTEM_LOCK' > "$TMP_HOME/.agents/.skill-lock.json"
 {
   "version": 3,
-  "skills": {}
+  "skills": {
+    "installed-skill": {
+      "source": "example/installed",
+      "sourceType": "github",
+      "sourceUrl": "https://example.com/installed.git",
+      "skillPath": "skills/installed-skill/SKILL.md",
+      "skillFolderHash": "cafebabe",
+      "installedAt": "2026-01-01T00:00:00.000Z",
+      "updatedAt": "2026-01-02T00:00:00.000Z"
+    }
+  }
 }
 SYSTEM_LOCK
 
@@ -71,5 +82,21 @@ if grep -q "other-skill" "$TMP_DIR/npx.log"; then
     cat "$TMP_DIR/npx.log"
     exit 1
 fi
+
+for target in "$TMP_HOME/.claude/skills/installed-skill" "$TMP_HOME/.codex/skills/installed-skill"; do
+    if [[ ! -L "$target" ]]; then
+        echo "Expected installed skill link missing: $target"
+        exit 1
+    fi
+
+    actual="$(readlink "$target")"
+    expected="$TMP_HOME/.agents/skills/installed-skill/"
+    if [[ "$actual" != "$expected" ]]; then
+        echo "Installed skill link target mismatch for $target"
+        echo "  expected: $expected"
+        echo "  actual:   $actual"
+        exit 1
+    fi
+done
 
 echo "ok"
