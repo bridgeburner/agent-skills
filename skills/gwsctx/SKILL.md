@@ -144,6 +144,23 @@ GWSCTX_ACCOUNT=altius gws gmail +triage
 - Only fan out across multiple accounts when the user explicitly asks.
 - Never fan out writes across accounts.
 
+## Runtime Note: macOS Python 3.9 Compatibility
+
+The installed `~/.local/bin/gwsctx` runs under `/usr/bin/env python3`, which can resolve to macOS Python 3.9. Keep the script Python 3.9-compatible: avoid PEP 604 type unions such as `str | None`; use `typing.Optional` instead.
+
+The personal account should use project `agent-gws`; `gws-personal` caused Google API 403 `serviceusage.services.use` failures in May 2026. After changing Home Manager config, run:
+
+```bash
+home-manager switch --flake /Users/bridgeburner/nixos-config#bridgeburner@macbook-home
+```
+
+Verification:
+
+```bash
+gwsctx list
+GWSCTX_ACCOUNT=personal gws gmail users getProfile --params '{"userId":"me"}'
+```
+
 ## Bootstrap Flow
 
 1. Create `accounts.json` from the example.
