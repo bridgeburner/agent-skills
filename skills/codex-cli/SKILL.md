@@ -131,6 +131,7 @@ codex exec \
   -o /tmp/codex-{slug}-{id}-result.json \
   -C {working-directory} \
   "Read /tmp/codex-{slug}-{id}-prompt.md and follow the instructions exactly. Write detailed output to the file path specified in the prompt. Return structured JSON metadata per the output schema." \
+  </dev/null \
   2>/tmp/codex-{slug}-{id}-stderr.txt
 ```
 
@@ -188,6 +189,7 @@ tail -5 /tmp/codex-{slug}-{id}-stderr.txt
 | **Auth / API error** | Exit code 1, `ERROR:` in stderr with `401` or rate limit message | Check `CODEX_API_KEY`, wait and retry |
 | **Empty output file** | `-o` file exists but is empty or contains `""` | Check stderr for premature exit; simplify prompt or break into smaller task |
 | **Agent timeout / hang** | Task running >5 min with no new stderr output | Kill background task, break into smaller subtask |
+| **Stdin wait / no start** | Stderr says `Reading additional input from stdin...` and no other progress | The subprocess inherited an open stdin. Invoke with `</dev/null`, or close stdin immediately via the process tool, then monitor for real progress before killing. |
 | **Output file missing** | Output `.md` file not created by agent | Agent may have misread the path; check stderr for what it actually did, rerun with clearer output path |
 
 **On any failure:** always check stderr first (`tail -20 /tmp/codex-{slug}-{id}-stderr.txt`). The error message is almost always there.
