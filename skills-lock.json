@@ -280,6 +280,15 @@
       "skillFolderHash": "22cbe8c4e36882ac3fe083ac8e6d9d99663b9de4",
       "installedAt": "2026-04-29T23:45:24.922Z",
       "updatedAt": "2026-04-29T23:45:24.922Z"
+    },
+    "ai-elements": {
+      "source": "vercel/ai-elements",
+      "sourceType": "github",
+      "sourceUrl": "https://github.com/vercel/ai-elements.git",
+      "skillPath": "skills/ai-elements/SKILL.md",
+      "skillFolderHash": "9df70ad12070e1d131751a8a696a06a38b893976",
+      "installedAt": "2026-05-02T19:44:29.758Z",
+      "updatedAt": "2026-05-02T19:44:29.758Z"
     }
   }
 }
