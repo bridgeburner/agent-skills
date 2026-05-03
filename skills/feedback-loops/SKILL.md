@@ -72,6 +72,13 @@ Clever abstractions increase the search space. Prefer:
 - Keep hooks updated when the toolchain changes or new languages are added. Remove stale hooks to prevent drift.
 - Treat hooks as a safety net, not a replacement: still run the smallest relevant oracle after each meaningful edit.
 
+### 7) Use interactive probes when live state is the fastest oracle
+For stateful, empirical, under-specified work, a REPL/notebook/shell can produce higher SPT than script-only iteration because the agent can keep production-shaped objects loaded, inspect raw and transformed state side by side, and ask the next question immediately.
+
+Use this for investigative spikes, data-heavy zero-to-one features, policy/scoring exploration, and unfamiliar pipelines where the right abstraction is not known yet. Do not let the probe become the artifact: promote useful behavior into importable modules, tests, replayable scripts, and written findings.
+
+**Rule:** If hidden mutable state could affect the result, rerun from a known load point or add a replay script before trusting the conclusion.
+
 ## Language selection rubric (SPT-first)
 
 ### Score a candidate language by:
@@ -80,14 +87,17 @@ Clever abstractions increase the search space. Prefer:
 - **Locality controls**: can you run checks per module/package/file?
 - **Refactor ergonomics**: are changes mechanical and tool-assisted?
 - **Ecosystem adjacency**: do you have mature libraries for the actual product surface?
+- **Interactive probe support**: can agents cheaply inspect live state without sacrificing replayability?
 
 ### Practical recommendations (default)
 - **TypeScript**: best when you need broad ecosystem + orchestration/UI surface.
-  - SPT requires: strict typecheck + runtime schema validation at boundaries.
+  - SPT requires: strict typecheck + runtime schema validation at boundaries. REPL/probe support is good through Node, tsx/ts-node, browser devtools, and notebooks.
 - **Python**: best for data/ML pipelines, scripting, and rapid prototyping where ecosystem depth matters.
-  - SPT requires: strict mypy + Pydantic models pervasively (not just boundaries).
+  - SPT requires: strict mypy + Pydantic models pervasively (not just boundaries). REPL/probe support is excellent through IPython/Jupyter and ordinary Python shells.
 - **Go**: best default for services + CLIs where fast compile/test and predictable tooling dominate.
+  - SPT relies more on small test harnesses, scratch commands, Delve, and package-scoped `go test` than on a native REPL.
 - **Rust**: best for correctness/performance kernels; enforce discipline to prevent diagnostic explosion.
+  - SPT relies on focused tests/examples and fast crate boundaries; REPL-style probing is weaker than Python/TypeScript.
 
 ### “Avoid as default” (unless you have strong reasons)
 - Stacks where the primary oracle is slow E2E/integration

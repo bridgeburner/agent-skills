@@ -66,8 +66,9 @@ After identifying your mode, invoke the relevant skills:
 
 ### Exploratory Mode
 1. **spec-engineering** (MODE=ORIENT — build a map of the repo)
-2. Build the thinnest vertical slice (tracer bullet — see E5)
-3. **feedback-loops** (only for choosing tools/stack if relevant)
+2. If the problem is stateful, empirical, and under-specified, prefer an interactive probe surface (REPL/notebook/shell) over script-only exploration (see E7)
+3. Build the thinnest vertical slice (tracer bullet — see E5)
+4. **feedback-loops** (for probe/oracle design, or for choosing tools/stack)
 
 ### Debugging Mode
 1. **spec-engineering** (MODE=ANSWER — find relevant specs/docs)
@@ -205,6 +206,15 @@ Before settling on any design reached during exploration, generate at least one 
 
 **Agent rule:** After the first viable design emerges, spend time articulating one alternative before building. The better choice is usually obvious once you have two options in front of you.
 
+***
+
+### E7. Use Interactive Probes for Stateful Empirical Spikes
+For zero-to-one features and investigative spikes, an interactive REPL/notebook/shell is high leverage when the work is **stateful, empirical, and under-specified**: live domain objects matter, the next question depends on intermediate observations, and raw data needs to be inspected as it flows through transformations.
+
+Treat the REPL as a microscope, not the artifact. Keep production-shaped objects loaded for rapid probing, then promote durable findings into importable modules, tests, replayable scripts, ledgers, and docs.
+
+**Agent rule:** If the spike requires repeated inspection of in-memory state or real data pathologies, start with an interactive probe surface. As soon as a behavior matters, move it into versioned code with a replay command and a small oracle.
+
 ---
 
 ## Debugging / Triage Principles
@@ -256,7 +266,7 @@ Resist patches that suppress the visible failure without addressing the defectiv
 | Mode | Trigger signals | Core discipline | Start with |
 |------|----------------|-----------------|------------|
 | **Building** | Clear spec, known deliverable | Correctness, clean design, types, tests | spec-engineering → feedback-loops → tester |
-| **Exploratory** | Knowledge goal, fuzzy success | Fast feedback, concrete data, disposable code | spec-engineering (ORIENT) → tracer bullet |
+| **Exploratory** | Knowledge goal, fuzzy success | Fast feedback, concrete data, live state when useful | spec-engineering (ORIENT) → interactive probe if stateful → tracer bullet |
 | **Debugging** | Specific symptom, known breakage | Reproduce → shrink → hypothesize → verify | spec-engineering (ANSWER) → tester (T2) |
 
 | Code | Principle | One-liner |
