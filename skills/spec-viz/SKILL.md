@@ -1,15 +1,23 @@
 ---
 name: spec-viz
 description: >-
-  Build an interactive, annotatable visualization of a multi-file markdown spec
-  (product specs, design docs, RFCs, architecture sketches). Produces a static
-  HTML viz with sidebar nav, hoverable cards/rows, per-block like/dislike/question
-  reactions and inline notes, an edit mode, dark/light theme, and export-to-markdown.
-  The agent picks from a vocabulary of pre-built components for each spec section
-  and can hand-author HTML islands for bespoke layouts. Invoke when the user asks
-  to "visualize this spec", "build a viz for these design docs", "make these RFCs
-  browseable", "create an annotatable design doc viewer", or wants per-block
-  reactions/notes/annotations on a spec.
+  Build an interactive, annotatable browser visualization of a multi-file markdown
+  spec — product specs, design docs, RFCs, architecture sketches, or any directory
+  of related `.md` files with shared vocabulary. Produces a static HTML viz with
+  sidebar nav, hoverable cards/rows, per-block 👍/👎/❓/💬 reactions and inline
+  notes, edit mode, light/dark theme, and markdown export of all annotations.
+  A runtime renderer parses the `.md` source at page load, and the agent picks
+  from a vocabulary of pre-built components (card grids, requirement grids with
+  Given/When/Then, shape tables, tier stacks, state lists, matrices, deferred
+  callouts, hand-authored SVG diagrams) for each spec section. Use this skill
+  whenever the user mentions "visualize this spec", "build a viz for these
+  designs/RFCs/specs", "make these docs annotatable / clickable / browseable /
+  reviewable", "I want to leave reactions on each requirement", "interactive
+  design doc", "spec walkthrough I can comment on", or has a directory of
+  related markdown files they want to navigate and react to per-block — even
+  if they don't use the word "viz". Also use whenever the user has been working
+  on a multi-file spec (spec.md / design.md / spikes.md / RFC.md pattern) and
+  wants a shareable browser view.
 ---
 
 # spec-viz — annotatable spec visualization
@@ -114,18 +122,25 @@ cp ~/.claude/skills/spec-viz/scripts/viz.js  <spec-dir>/viz/
 
 ### Step 4 — Author the shell pages
 
-Start from [templates/spec-shell.html](templates/spec-shell.html). For each source `.md`:
+```bash
+cp ~/.claude/skills/spec-viz/templates/spec-shell.html <spec-dir>/viz/<page>.html
+```
 
-1. Copy the template to `<spec-dir>/viz/<page>.html`.
-2. Set `<title>`, the topbar brand, the nav links, and `<body data-viz-page="...">` (the page slug is used to namespace `data-anno-id`s — typically the source filename minus extension).
-3. Write the sidebar anchors matching the H2 sections you plan to render.
-4. In `<main>`, place one `<div data-component="…" data-source="<file>.md#<slug>">` per H2 section, in source order. Use hand-authored HTML for the page lede, the hero block, and any bespoke diagrams.
+For each page:
 
-The shell should typically be 60–120 lines per page. If it gets longer than that, you're likely under-using components.
+1. Set `<title>`, the topbar brand, the nav links, and `<body data-viz-page="..." data-viz-storage-key="...">`. The page slug namespaces `data-anno-id`s — typically the source filename without extension. The storage key namespaces localStorage so distinct specs on the same origin don't collide.
+2. Write the sidebar anchors matching the H2 sections you plan to render.
+3. In `<main>`, place one `<div data-component="…" data-source="<file>.md#<slug>">` per H2 section, in source order. Use hand-authored HTML for the page lede, the hero block, and any bespoke diagrams.
+
+**Path resolution.** `data-source` paths are resolved relative to the HTML page. With the default layout (`<spec-dir>/spec.md` and `<spec-dir>/viz/spec.html`), use `../spec.md`. If you put the viz directory elsewhere, adjust accordingly.
+
+**Slug check.** Before declaring done, sanity-check each placeholder's slug against the source: `grep -E "^##\s" <spec-dir>/*.md | sort` shows every H2 heading. The slug is the heading lowercased with non-alphanumerics replaced by hyphens (GitHub style). `## Open Questions` → `#open-questions`.
+
+The shell should typically be 60–120 lines per page. If yours is longer, you're likely under-using components — look for opportunities to drop a multi-table section into a single placeholder.
 
 ### Step 5 — Verify
 
-Start a local HTTP server and load each page:
+Start a local HTTP server and load each page. Pick a port that's free (`ss -tln | grep :87` to check; 8765 is the default; use 8766/8767 if busy):
 
 ```bash
 cd <spec-dir>/viz && python3 -m http.server 8765
@@ -188,21 +203,11 @@ Annotations are stored in `localStorage` under a key set on `<body data-viz-stor
 
 ---
 
-## Future-facing capabilities
-
-The v0 produces static annotation UI. Two natural follow-ups, **not implemented yet**:
-
-1. **Interactive controls/levers** — A spec section can declare `<div data-component="control" data-target="opt-batch-size" data-type="slider" data-min="1" data-max="256">` and the renderer would produce a control that re-renders dependent components reactively. Useful for "see the spec under different option settings."
-
-2. **Cross-doc commenting** — Annotations could sync to a Git-backed store via a small server so multiple reviewers can see each other's notes.
-
-Both layer on top of the existing component model without breaking changes. If the user asks for either, propose the design before implementing.
-
----
-
 ## See also
 
 - [references/components.md](references/components.md) — Full component vocabulary with options and source-shape expectations.
 - [references/annotation-contract.md](references/annotation-contract.md) — Data-attribute contract for annotatable blocks.
 - [references/authoring-walkthrough.md](references/authoring-walkthrough.md) — Worked example: turning a 3-file spec into a viz.
 - [templates/spec-shell.html](templates/spec-shell.html) — Starter HTML shell with all the chrome wired up.
+
+The v0 produces static annotation UI. Interactive controls (sliders, toggles that re-render dependent components reactively) and cross-doc comment syncing are natural follow-ups that layer on top of the existing component model. Don't implement them speculatively; propose the design when the user asks.
