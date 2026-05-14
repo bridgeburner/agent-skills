@@ -101,8 +101,12 @@ function renderInline(text) {
   s = s.replace(/(^|[^*])\*([^*\s][^*]*?)\*(?!\*)/g, "$1<em>$2</em>");
   // Italic _text_
   s = s.replace(/(^|[^_])_([^_\s][^_]*?)_(?!_)/g, "$1<em>$2</em>");
-  // Links [text](url)
-  s = s.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2">$1</a>');
+  // Links [text](url). Rewrite sibling .md links to .html so cross-doc references
+  // inside the viz navigate to the rendered page instead of the raw markdown.
+  s = s.replace(/\[([^\]]+)\]\(([^)]+)\)/g, (_, label, href) => {
+    const rewritten = href.replace(/^([^?#]*?)\.md(?=$|[?#])/, "$1.html");
+    return `<a href="${rewritten}">${label}</a>`;
+  });
   // Restore code spans
   s = s.replace(/ CODE(\d+) /g, (_, i) => `<code>${codes[i]}</code>`);
   return s;
@@ -223,7 +227,12 @@ function renderCardGrid(el, md, anchor, pSlug) {
   const { table } = t;
   const cardType = el.dataset.cardType || "";
   const cols = el.dataset.cols || "2";
-  const bodyCol = parseInt(el.dataset.bodyCol || "2", 10);
+  // body-col: column index that becomes card-body (default 2). "none" skips body
+  // entirely — col 2+ becomes meta. Useful when the source has only ID+Title+Meta
+  // (e.g. Goals: ID | Goal | Verification).
+  const bodyColRaw = el.dataset.bodyCol || "2";
+  const bodyCol = bodyColRaw === "none" ? -1 : parseInt(bodyColRaw, 10);
+  const metaStart = bodyCol < 0 ? 2 : bodyCol + 1;
 
   let html = `<div class="card-grid cols-${escapeHtml(cols)}">`;
   for (const row of table.rows) {
@@ -232,14 +241,15 @@ function renderCardGrid(el, md, anchor, pSlug) {
     const title = row[1] || "";
     const annoId = `${pSlug}:${id || slugify(stripMarkdown(title))}`;
     const annoLabel = `${id} · ${stripMarkdown(title)}`;
-    html += `<div class="card ${escapeHtml(cardType)} block" data-anno-id="${escapeHtml(annoId)}" data-anno-label="${escapeHtml(annoLabel)}">`;
+    const cardElId = id ? ` id="${escapeHtml(id)}"` : "";
+    html += `<div class="card ${escapeHtml(cardType)} block"${cardElId} data-anno-id="${escapeHtml(annoId)}" data-anno-label="${escapeHtml(annoLabel)}">`;
     html += `<div class="card-header"><span class="card-id">${renderInline(rawId)}</span><span class="card-title">${renderInline(title)}</span></div>`;
-    if (row[bodyCol] !== undefined) {
+    if (bodyCol >= 0 && row[bodyCol] !== undefined) {
       html += `<div class="card-body">${renderInline(row[bodyCol])}</div>`;
     }
-    if (row.length > bodyCol + 1) {
+    if (row.length > metaStart) {
       const metaParts = [];
-      for (let i = bodyCol + 1; i < row.length; i++) {
+      for (let i = metaStart; i < row.length; i++) {
         if (row[i]) {
           metaParts.push(`<div class="kv"><span class="k">${escapeHtml(table.headers[i] || "")}</span><span class="v">${renderInline(row[i])}</span></div>`);
         }
@@ -265,9 +275,11 @@ function renderReqGrid(el, md, anchor, pSlug) {
   let html = `<div class="card-grid cols-${escapeHtml(cols)}">`;
   for (const row of table.rows) {
     const [id, title, given, when, then, verification] = row;
-    const annoId = `${pSlug}:${stripMarkdown(id || "").replace(/\s+/g, "")}`;
+    const cleanId = stripMarkdown(id || "").replace(/\s+/g, "");
+    const annoId = `${pSlug}:${cleanId}`;
     const annoLabel = `${stripMarkdown(id)} · ${stripMarkdown(title)}`;
-    html += `<div class="card req block" data-anno-id="${escapeHtml(annoId)}" data-anno-label="${escapeHtml(annoLabel)}">`;
+    const cardElId = cleanId ? ` id="${escapeHtml(cleanId)}"` : "";
+    html += `<div class="card req block"${cardElId} data-anno-id="${escapeHtml(annoId)}" data-anno-label="${escapeHtml(annoLabel)}">`;
     html += `<div class="card-header"><span class="card-id">${renderInline(id || "")}</span><span class="card-title">${renderInline(title || "")}</span></div>`;
     html += `<div class="card-body"><div class="gwt">`;
     html += `<span class="label">Given</span><span>${renderInline(given || "")}</span>`;
@@ -414,6 +426,64 @@ function renderDetailsBlock(el, md, anchor, pSlug) {
   el.innerHTML = html;
 }
 
+function renderKeyValueCard(el, md, anchor, pSlug) {
+  // Render a section that has a 2-col Field/Value table as a single card with the
+  // section title as card-title and table rows as labeled kv pairs in card-body.
+  // Useful for sections like "## S1. ONets Model Metadata Extraction" whose body
+  // is a Goal/Inputs/Procedure/Acceptance/Blocks shape.
+  const section = md && md.sectionsBySlug[anchor];
+  if (!section) return renderEmpty(el, `No section at #${anchor}`);
+  const cardType = el.dataset.cardType || "spike";
+  const explicitId = el.dataset.id || "";
+  const titleText = section.title;
+  const annoId = `${pSlug}:${explicitId || anchor}`;
+  const annoLabel = `${explicitId || anchor} · ${titleText}`;
+  const cardElId = explicitId ? ` id="${escapeHtml(explicitId)}"` : "";
+  let html = `<div class="card ${escapeHtml(cardType)} block"${cardElId} data-anno-id="${escapeHtml(annoId)}" data-anno-label="${escapeHtml(annoLabel)}">`;
+  html += `<div class="card-header">`;
+  if (explicitId) html += `<span class="card-id">${escapeHtml(explicitId)}</span>`;
+  html += `<span class="card-title">${renderInline(titleText)}</span></div>`;
+  if (section.tables[0]) {
+    const table = section.tables[0];
+    // If the table has 2 cols (Field/Value), render as kv block in body
+    if (table.headers.length === 2) {
+      html += `<div class="card-body">`;
+      // Optional: pull out the last row as card-meta if it looks like a "Blocks" or "Verify" row
+      const rows = table.rows.slice();
+      const lastRow = rows[rows.length - 1];
+      const lastKey = lastRow ? stripMarkdown(lastRow[0]).toLowerCase() : "";
+      const moveToMeta = lastRow && /^(blocks?|verify|verification|next)$/.test(lastKey);
+      const bodyRows = moveToMeta ? rows.slice(0, -1) : rows;
+      for (const row of bodyRows) {
+        const [k, v] = row;
+        html += `<p><strong>${renderInline(k)}.</strong> ${renderInline(v)}</p>`;
+      }
+      html += `</div>`;
+      if (moveToMeta) {
+        html += `<div class="card-meta"><div class="kv"><span class="k">${renderInline(lastRow[0])}</span><span class="v">${renderInline(lastRow[1])}</span></div></div>`;
+      }
+    } else {
+      // Fallback for non-2-col tables: just dump the table inside the card body
+      html += `<div class="card-body">`;
+      html += `<table><thead><tr>`;
+      for (const h of table.headers) html += `<th>${escapeHtml(h)}</th>`;
+      html += `</tr></thead><tbody>`;
+      for (const row of table.rows) {
+        html += `<tr>`;
+        for (const cell of row) html += `<td>${renderInline(cell)}</td>`;
+        html += `</tr>`;
+      }
+      html += `</tbody></table></div>`;
+    }
+  } else if (section.paragraphs.length) {
+    html += `<div class="card-body">`;
+    for (const p of section.paragraphs) html += `<p>${renderInline(p)}</p>`;
+    html += `</div>`;
+  }
+  html += `</div>`;
+  el.innerHTML = html;
+}
+
 function renderDiagramInline(el) {
   // Hand-authored inline SVG. The shell author provides the <svg> directly inside
   // <div data-component="diagram-inline">. We add chrome and the fullscreen hook.
@@ -433,6 +503,7 @@ const COMPONENT_REGISTRY = {
   "crosswalk":      renderShapeTable,   // alias
   "matrix":         renderMatrix,
   "details-block":  renderDetailsBlock,
+  "keyvalue-card":  renderKeyValueCard,
   "diagram-inline": renderDiagramInline,
 };
 

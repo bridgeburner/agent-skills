@@ -40,7 +40,7 @@ Generic card grid. Each table row becomes one card.
 |---|---|---|
 | `data-card-type` | `""` | CSS class applied for color/style — one of `goal`, `nongoal`, `principle`, `constraint`, `risk`, `question`, `dep`, `policy`, `spike`, `req`, `deferred`. |
 | `data-cols` | `"2"` | Grid columns: `2`, `3`, or `4`. |
-| `data-body-col` | `"2"` | Column index used as the card body. Columns after this become `card-meta` key/value pairs. |
+| `data-body-col` | `"2"` | Column index used as the card body. Columns after this become `card-meta` key/value pairs. Special value `"none"` skips the body entirely — col 1 stays as the title, columns 2+ become `card-meta`. Use when the source table is `ID \| Title \| Verification` (or similar) and there's no separate body column. |
 
 **Expected source shape:** `| ID | Title | Body | …meta cols (optional) |`. The first column is the card-id pill (e.g. `G1`, `D3`, `RP2`), the second is the card title, the third is the body. Remaining columns render as labeled meta rows under the body using the column headers as labels.
 
@@ -126,6 +126,28 @@ Matrix table with auto-colored cells. Cell text drives coloring: `✓ / yes / al
 ```html
 <div data-component="matrix" data-source="../design.md#authority-matrix"></div>
 ```
+
+---
+
+## `keyvalue-card`
+
+Renders a section whose body is a 2-column Field/Value table as a single card. The section title becomes the card title; each table row becomes a labeled paragraph (`<strong>Field.</strong> Value`) inside the card body. The last row is automatically pulled out as `card-meta` if its key matches `blocks` / `verify` / `verification` / `next`.
+
+| Option | Default | Effect |
+|---|---|---|
+| `data-card-type` | `"spike"` | CSS class for color (typically `spike`, but any `card-grid` type works). |
+| `data-id` | `""` | If set, becomes the card's `id=` (for direct anchoring) and the `card-id` pill. |
+
+**Expected source shape:** a section whose first content is a 2-column `\| Field \| Value \|` table. Useful for sections like `## S1. ONets Model Metadata Extraction` (a Goal/Inputs/Procedure/Acceptance/Blocks shape).
+
+```html
+<div data-component="keyvalue-card"
+     data-source="../spikes.md#s1-onets-model-metadata-extraction"
+     data-id="S1"
+     data-card-type="spike"></div>
+```
+
+If the section's first table has more or fewer than 2 columns, the renderer falls back to rendering the full table inside the card body.
 
 ---
 
