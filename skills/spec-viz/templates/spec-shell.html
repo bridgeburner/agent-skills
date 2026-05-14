@@ -1,0 +1,162 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>CUSTOMIZE: Project name — page title</title>
+  <link rel="stylesheet" href="viz.css" />
+</head>
+<!--
+  Required body data attributes:
+    data-viz-page          page slug used as the prefix for data-anno-id (e.g. "spec", "design", "spikes", "index")
+    data-viz-storage-key   localStorage namespace; pick a unique name per spec
+  Optional:
+    data-viz-page-order    comma-separated page slug order for the exported markdown
+-->
+<body data-viz-page="CUSTOMIZE-page-slug"
+      data-viz-storage-key="CUSTOMIZE-viz:state"
+      data-viz-page-order="index,spec,design,spikes">
+  <header class="topbar">
+    <div class="brand"><span class="brand-mark"></span> CUSTOMIZE: Project Name</div>
+    <nav>
+      <a href="index.html">Overview</a>
+      <a href="spec.html">Spec</a>
+      <a href="design.html">Design</a>
+      <a href="spikes.html">Spikes</a>
+    </nav>
+    <div class="spacer"></div>
+    <div class="stat" id="ann-stat"><strong>0</strong> 👍 · <strong>0</strong> 👎 · <strong>0</strong> ❓ · <strong>0</strong> 💬 · <strong>0</strong> ✎</div>
+    <button class="btn" id="btn-theme">☀ Light</button>
+    <button class="btn toggle" id="btn-edit">✎ Edit</button>
+    <button class="btn" id="btn-export">Export</button>
+    <button class="btn" id="btn-reset" title="Clear all annotations">⌫</button>
+  </header>
+
+  <div class="layout">
+    <aside class="sidebar">
+      <h3>On this page</h3>
+      <!-- CUSTOMIZE: add one <a href="#section-id">Label</a> per H2 section below -->
+      <a href="#example-section">Example section</a>
+      <h3>Pages</h3>
+      <a href="index.html">Overview</a>
+      <a href="spec.html">Spec</a>
+      <a href="design.html">Design</a>
+      <a href="spikes.html">Spikes</a>
+    </aside>
+
+    <main class="main">
+      <h1>CUSTOMIZE: Page title</h1>
+      <p class="lede">CUSTOMIZE: one-line lede describing this page.</p>
+      <p><span class="status-pill">Draft discovery</span></p>
+
+      <!--
+        CUSTOMIZE: place one <div data-component="..."> per H2 section in source order.
+        Common patterns shown below.
+      -->
+
+      <h2 id="example-section">Example section</h2>
+      <div data-component="card-grid"
+           data-source="../source.md#example-section"
+           data-card-type="goal"
+           data-cols="2"></div>
+
+      <!-- Glossary (Term / Definition) -->
+      <!--
+      <h2 id="glossary">Glossary</h2>
+      <div data-component="glossary-table" data-source="../spec.md#glossary"></div>
+      -->
+
+      <!-- Goals / Non-goals / Principles / Constraints / Open questions (card grids) -->
+      <!--
+      <h2 id="goals">Goals</h2>
+      <div data-component="card-grid" data-source="../spec.md#goals"
+           data-card-type="goal" data-cols="2"></div>
+
+      <h2 id="nongoals">Non-goals</h2>
+      <div data-component="card-grid" data-source="../spec.md#non-goals"
+           data-card-type="nongoal" data-cols="2"></div>
+
+      <h2 id="constraints">Constraints</h2>
+      <div data-component="card-grid" data-source="../spec.md#constraints"
+           data-card-type="constraint" data-cols="2"></div>
+      -->
+
+      <!-- Requirements with Given/When/Then -->
+      <!--
+      <h2 id="requirements">Requirements</h2>
+      <div data-component="req-grid" data-source="../spec.md#requirements"
+           data-cols="2"></div>
+      -->
+
+      <!-- Shape tables (Field / Required / Purpose) -->
+      <!--
+      <h2 id="mv-shape">ModelVersion shape</h2>
+      <div data-component="shape-table" data-source="../design.md#modelversion-shape"
+           data-id-prefix="mv"></div>
+      -->
+
+      <!-- Tier stack (Tier / Field examples / Behavior) -->
+      <!--
+      <h2 id="tiers">Compatibility tiers</h2>
+      <div data-component="tier-stack" data-source="../design.md#compatibility-metadata-tiers"></div>
+      -->
+
+      <!-- State machine -->
+      <!--
+      <h2 id="state">State machine</h2>
+      <div data-component="state-list" data-source="../design.md#servingendpoint-state-machine"></div>
+      -->
+
+      <!-- Matrix (auto-colored cells) -->
+      <!--
+      <h2 id="matrix">Authority matrix</h2>
+      <div data-component="matrix" data-source="../design.md#authority-matrix"></div>
+      -->
+
+      <!-- Future / deferred callout (collapsible) -->
+      <!--
+      <h2 id="future-hosted">External hosted endpoints (future)</h2>
+      <div data-component="details-block" data-source="../design.md#future-external-hosted-endpoint-handling"
+           data-label="Future"></div>
+      -->
+
+      <!-- Hand-authored inline SVG (any layout you want) -->
+      <!--
+      <h2 id="hero-diagram">Flow</h2>
+      <div data-component="diagram-inline" class="diagram-wrap">
+        <svg viewBox="0 0 460 280" xmlns="http://www.w3.org/2000/svg" aria-label="Flow">
+          <!- your SVG -->
+        </svg>
+        <div class="diagram-caption">Optional caption.</div>
+      </div>
+      -->
+
+      <!-- Hand-authored HTML island (use class="block" + data-anno-id to make it annotatable) -->
+      <!--
+      <h2 id="bespoke">Bespoke section</h2>
+      <div class="card block"
+           data-anno-id="CUSTOMIZE-page-slug:bespoke-card"
+           data-anno-label="bespoke · custom card">
+        <div class="card-header">
+          <span class="card-id">Custom</span>
+          <span class="card-title">Some title</span>
+        </div>
+        <div class="card-body">Any HTML you want here.</div>
+      </div>
+      -->
+
+      <div class="docfoot">
+        <span>CUSTOMIZE: source filename · status</span>
+        <span><a href="CUSTOMIZE-next.html">Next →</a></span>
+      </div>
+    </main>
+
+    <aside class="annotations-pane" id="ann-pane">
+      <h3>Annotations on this page</h3>
+      <div class="ann-empty">Hover a block, then 👍 👎 ❓ or 💬 to mark it.</div>
+    </aside>
+  </div>
+
+  <script src="viz.js"></script>
+</body>
+</html>
