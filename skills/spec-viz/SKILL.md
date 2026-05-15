@@ -1,23 +1,22 @@
 ---
 name: spec-viz
 description: >-
-  Build an interactive, annotatable browser visualization of a multi-file markdown
-  spec — product specs, design docs, RFCs, architecture sketches, or any directory
-  of related `.md` files with shared vocabulary. Produces a static HTML viz with
-  sidebar nav, hoverable cards/rows, per-block 👍/👎/❓/💬 reactions and inline
-  notes, edit mode, light/dark theme, and markdown export of all annotations.
-  A runtime renderer parses the `.md` source at page load, and the agent picks
-  from a vocabulary of pre-built components (card grids, requirement grids with
-  Given/When/Then, shape tables, tier stacks, state lists, matrices, deferred
-  callouts, hand-authored SVG diagrams) for each spec section. Use this skill
-  whenever the user mentions "visualize this spec", "build a viz for these
-  designs/RFCs/specs", "make these docs annotatable / clickable / browseable /
-  reviewable", "I want to leave reactions on each requirement", "interactive
-  design doc", "spec walkthrough I can comment on", or has a directory of
-  related markdown files they want to navigate and react to per-block — even
-  if they don't use the word "viz". Also use whenever the user has been working
-  on a multi-file spec (spec.md / design.md / spikes.md / RFC.md pattern) and
-  wants a shareable browser view.
+  Use this skill whenever a user wants to turn spec/design/RFC/architecture markdown
+  files into a shareable browser page their team can click through, react to, vote on,
+  comment on, or annotate per item. The skill ships ~64KB of prebuilt renderer
+  (`scripts/viz.js` + `scripts/viz.css`) implementing the annotation gutter,
+  localStorage persistence, theming, edit mode, and markdown export — do NOT roll your
+  own HTML/CSS/JS for this; vendor the prebuilt assets and author thin shell pages.
+  Strong triggers: the user has `.md` files (spec.md, design.md, spikes, RFC,
+  requirements, principles) AND mentions any of — "clickable," "interactive,"
+  "browseable," "annotatable," "reviewable," "visual," "sidebar nav," "split into
+  sections," "leave reactions/notes/comments," "vote on requirements," "tally
+  feedback," "design review," "team walkthrough," "Friday meeting," "async review."
+  Also trigger on "make an interactive version of [the RFC/spec]," "set up something
+  visual for team review," or splitting an unwieldy markdown into navigable sections
+  with per-block feedback. Trigger even without "viz" or "visualize." Do NOT use for:
+  single markdown-to-HTML rendering, slide decks, diffs, summaries, static doc sites
+  (Jekyll/Docusaurus), or animated explainers.
 ---
 
 # spec-viz — annotatable spec visualization
