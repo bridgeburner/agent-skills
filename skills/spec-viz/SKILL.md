@@ -1,21 +1,18 @@
 ---
 name: spec-viz
 description: >-
-  Use this skill whenever a user wants to turn spec/design/RFC/architecture markdown
-  files into a shareable browser page their team can click through, react to, vote on,
-  comment on, or annotate per item. The skill ships ~64KB of prebuilt renderer
-  (`scripts/viz.js` + `scripts/viz.css`) implementing the annotation gutter,
-  localStorage persistence, theming, edit mode, and markdown export — do NOT roll your
-  own HTML/CSS/JS for this; vendor the prebuilt assets and author thin shell pages.
-  Strong triggers: the user has `.md` files (spec.md, design.md, spikes, RFC,
-  requirements, principles) AND mentions any of — "clickable," "interactive,"
-  "browseable," "annotatable," "reviewable," "visual," "sidebar nav," "split into
-  sections," "leave reactions/notes/comments," "vote on requirements," "tally
-  feedback," "design review," "team walkthrough," "Friday meeting," "async review."
-  Also trigger on "make an interactive version of [the RFC/spec]," "set up something
-  visual for team review," or splitting an unwieldy markdown into navigable sections
-  with per-block feedback. Trigger even without "viz" or "visualize." Do NOT use for:
-  single markdown-to-HTML rendering, slide decks, diffs, summaries, static doc sites
+  Use whenever a user wants to turn spec/design/RFC/architecture markdown files into a
+  shareable browser page their team can click through, react to, vote on, or annotate
+  per block. Ships ~64KB of prebuilt renderer (`scripts/viz.js` + `scripts/viz.css`)
+  with annotation gutter, localStorage persistence, theming, edit mode, and markdown
+  export — vendor these assets; do NOT roll your own HTML/CSS/JS. Strong triggers:
+  user has `.md` files (spec.md, design.md, RFC, requirements, principles) AND
+  mentions clickable, interactive, browseable, annotatable, reviewable, sidebar nav,
+  split into sections, leave reactions/notes/comments, vote on requirements, tally
+  feedback, design review, team walkthrough, or async review. Also "make an
+  interactive version of [the RFC/spec]" or splitting unwieldy markdown into navigable
+  sections with per-block feedback. Trigger even without "viz" or "visualize." Not
+  for: plain markdown-to-HTML, slide decks, diffs, summaries, static doc sites
   (Jekyll/Docusaurus), or animated explainers.
 ---
 
