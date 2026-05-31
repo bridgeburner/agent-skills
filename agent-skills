@@ -85,6 +85,31 @@ merge_lock_with_system() {
     ' "$LOCK_FILE" "$SYSTEM_LOCK_FILE" > "$output_file"
 }
 
+merge_missing_system_skills() {
+    local output_file="$1"
+
+    if [[ ! -f "$SYSTEM_LOCK_FILE" ]]; then
+        if [[ -f "$LOCK_FILE" ]]; then
+            cp "$LOCK_FILE" "$output_file"
+        fi
+        return 0
+    fi
+
+    if [[ ! -f "$LOCK_FILE" ]]; then
+        cp "$SYSTEM_LOCK_FILE" "$output_file"
+        return 0
+    fi
+
+    jq -s '
+        (.[0].skills // {}) as $repo_skills |
+        (.[1].skills // {}) as $system_skills |
+        {
+            version: ((.[0].version // 3)),
+            skills: ($repo_skills + ($system_skills | with_entries(select(.key as $key | $repo_skills | has($key) | not))))
+        }
+    ' "$LOCK_FILE" "$SYSTEM_LOCK_FILE" > "$output_file"
+}
+
 # Extract skill name from skillPath (e.g., "skills/react-best-practices/SKILL.md" -> "react-best-practices")
 get_skill_name_from_path() {
     echo "$1" | sed -E 's|.*/([^/]+)/SKILL\.md|\1|'
@@ -716,7 +741,7 @@ cmd_sync() {
 
     local merged_lock
     merged_lock="$(mktemp)"
-    merge_lock_with_system "$merged_lock"
+    merge_missing_system_skills "$merged_lock"
     if [[ -f "$LOCK_FILE" ]] && ! cmp -s "$LOCK_FILE" "$merged_lock"; then
         echo -e "${YELLOW}Local system lock has skills not present in repo lock; using merged lock for sync.${NC}"
         mv "$merged_lock" "$LOCK_FILE"

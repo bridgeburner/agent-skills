@@ -44,9 +44,9 @@ cat <<'SYSTEM_LOCK' > "$TMP_HOME/.agents/.skill-lock.json"
       "sourceType": "github",
       "sourceUrl": "https://example.com/repo.git",
       "skillPath": "skills/repo-skill/SKILL.md",
-      "skillFolderHash": "deadbeef",
-      "installedAt": "2026-01-01T00:00:00.000Z",
-      "updatedAt": "2026-01-02T00:00:00.000Z"
+      "skillFolderHash": "stalehash",
+      "installedAt": "2025-01-01T00:00:00.000Z",
+      "updatedAt": "2025-01-02T00:00:00.000Z"
     },
     "local-skill": {
       "source": "local/repo",
@@ -86,6 +86,13 @@ fi
 
 if ! jq -e '.skills["local-skill"]' "$TMP_REPO/skills-lock.json" > /dev/null; then
     echo "Expected local-skill to be present in synced lock."
+    exit 1
+fi
+
+if [[ "$(jq -r '.skills["repo-skill"].skillFolderHash' "$TMP_REPO/skills-lock.json")" != "deadbeef" ]]; then
+    echo "Expected repo-skill metadata from repo lock to be preserved."
+    echo "Current lock:"
+    cat "$TMP_REPO/skills-lock.json"
     exit 1
 fi
 
