@@ -9,7 +9,7 @@ This repo manages skills for Claude Code (and compatible agents like Codex). It 
 | `skills/` | Locally-authored skills. Each subdirectory is one skill with a `SKILL.md` inside. |
 | `skills-lock.json` | Lock file tracking externally-installed skills (sources, hashes). Managed by the `agent-skills` CLI. |
 | `config/CLAUDE.md` | Global agent instructions symlinked to `~/.claude/CLAUDE.md`, `~/.codex/AGENTS.md`, and `~/.agents/AGENTS.md`. Edit this to change system-wide agent behavior. |
-| `agent-skills` | CLI for managing skills: add, remove, sync, update, export, install-local. |
+| `agent-skills` | CLI for managing skills: add, remove, sync, update, prune, export, install-local. |
 | `skills-personal/` | Gitignored personal skills. Symlinked by `install-local` but not committed. |
 | `tests/` | Shell scripts for testing the `agent-skills` CLI. |
 

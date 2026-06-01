@@ -35,7 +35,8 @@ Commands:
   sync                          Pull repo, install missing skills, and link local skills
   list                          Show local and external skills
   install-local                 Link local skills and CLAUDE/AGENTS files
-  update                        Update external skills, export lock file, and link local skills
+  update [--prune] [--yes]      Update external skills, export lock file, and link local skills
+  prune [--dry-run] [--yes]     Remove skills that no longer exist in their upstream repos
   remove <name>                 Remove skill from manifest and disk, commit and push
   export                        Copy current system lock file to repo
   add-source <path> [--name <label>]  Register an external skill source directory
@@ -49,6 +50,8 @@ Examples:
   ./agent-skills list
   ./agent-skills install-local
   ./agent-skills update
+  ./agent-skills update --prune
+  ./agent-skills prune --dry-run
   ./agent-skills remove agent-browser
   ./agent-skills export
 EOF
@@ -113,6 +116,59 @@ merge_missing_system_skills() {
 # Extract skill name from skillPath (e.g., "skills/react-best-practices/SKILL.md" -> "react-best-practices")
 get_skill_name_from_path() {
     echo "$1" | sed -E 's|.*/([^/]+)/SKILL\.md|\1|'
+}
+
+# Strip ANSI/terminal escape sequences from stdin.
+strip_ansi() {
+    sed -E $'s/\x1b\\[[0-9;?]*[a-zA-Z]//g'
+}
+
+# List canonical skill names a source repo currently exposes, one per line.
+# Delegates discovery to the upstream `skills` CLI so names match lock keys
+# exactly (including org-prefixed names like "vercel-react-best-practices").
+#
+# Empty output means "could not determine" (clone/list failed, or the output
+# format changed): callers MUST treat that as "skip", never "all deleted".
+# This fails closed so a transient network error can never trigger deletion.
+list_upstream_skills() {
+    local source="$1"
+    # Redirect stdin from /dev/null: npx reads stdin, and this runs inside a
+    # `while read` loop, so without this it would swallow the remaining sources.
+    npx skills add "$source" --list -y < /dev/null 2>&1 \
+        | strip_ansi \
+        | grep -E '^[[:space:]]*│[[:space:]]+[a-z0-9][a-z0-9_-]*[[:space:]]*$' \
+        | sed -E 's/^[[:space:]]*│[[:space:]]+//; s/[[:space:]]+$//'
+}
+
+# Detect skills in the merged lock that no longer exist in their upstream repo.
+# Arg: $1 = path to a merged (repo + system) lock file.
+# Echoes one "<skill>\t<source>" line per deleted skill on stdout; progress
+# goes to stderr so stdout stays parseable.
+detect_deleted_skills() {
+    local merged="$1"
+    local sources
+    sources="$(jq -r '.skills | to_entries[] | .value.source' "$merged" | sort -u)"
+
+    local source
+    while IFS= read -r source; do
+        [[ -z "$source" ]] && continue
+        echo -e "${BLUE}Checking source: $source${NC}" >&2
+
+        local upstream
+        upstream="$(list_upstream_skills "$source")"
+        if [[ -z "$upstream" ]]; then
+            echo -e "  ${YELLOW}Could not list skills for '$source'; skipping (nothing pruned from this source).${NC}" >&2
+            continue
+        fi
+
+        local skill
+        while IFS= read -r skill; do
+            [[ -z "$skill" ]] && continue
+            if ! grep -qxF -- "$skill" <<< "$upstream"; then
+                printf '%s\t%s\n' "$skill" "$source"
+            fi
+        done < <(jq -r --arg s "$source" '.skills | to_entries[] | select(.value.source == $s) | .key' "$merged")
+    done <<< "$sources"
 }
 
 link_file() {
@@ -793,6 +849,32 @@ cmd_sync() {
 }
 
 cmd_update() {
+    local do_prune=0
+    local assume_yes=0
+
+    while [[ $# -gt 0 ]]; do
+        case "$1" in
+            --prune)
+                do_prune=1
+                shift
+                ;;
+            -y|--yes)
+                assume_yes=1
+                shift
+                ;;
+            -*)
+                echo -e "${RED}Unknown option: $1${NC}"
+                usage
+                exit 1
+                ;;
+            *)
+                echo -e "${RED}Unexpected argument: $1${NC}"
+                usage
+                exit 1
+                ;;
+        esac
+    done
+
     echo -e "${BLUE}Pulling latest changes...${NC}"
     cd "$SCRIPT_DIR"
     git pull
@@ -840,6 +922,150 @@ cmd_update() {
     echo ""
     echo -e "${BLUE}Linking local skills...${NC}"
     cmd_install_local
+
+    if [[ $do_prune -eq 1 ]]; then
+        echo ""
+        echo -e "${BLUE}Checking for skills deleted upstream...${NC}"
+        prune_skills 0 "$assume_yes"
+    fi
+}
+
+# Remove skills that no longer exist in their upstream repos.
+# Args: $1 = dry_run (0/1), $2 = assume_yes (0/1).
+prune_skills() {
+    local dry_run="$1"
+    local assume_yes="$2"
+
+    check_jq
+
+    if [[ ! -f "$LOCK_FILE" && ! -f "$SYSTEM_LOCK_FILE" ]]; then
+        echo -e "${RED}Error: No lock file found to prune against.${NC}"
+        return 1
+    fi
+
+    # Detect against the union of the repo lock and the system lock so we catch
+    # skills tracked in either place.
+    local merged
+    merged="$(mktemp)"
+    merge_lock_with_system "$merged"
+
+    echo -e "${BLUE}Checking which installed skills still exist upstream...${NC}"
+    echo ""
+
+    local deleted_pairs
+    deleted_pairs="$(detect_deleted_skills "$merged")"
+    rm -f "$merged"
+
+    if [[ -z "$deleted_pairs" ]]; then
+        echo ""
+        echo -e "${GREEN}Nothing to prune — all tracked skills still exist upstream.${NC}"
+        return 0
+    fi
+
+    echo ""
+    echo -e "${YELLOW}The following skills no longer exist in their upstream repos:${NC}"
+    while IFS=$'\t' read -r skill source; do
+        [[ -z "$skill" ]] && continue
+        echo -e "  ${RED}$skill${NC}  (from $source)"
+    done <<< "$deleted_pairs"
+    echo ""
+
+    if [[ "$dry_run" -eq 1 ]]; then
+        echo -e "${BLUE}Dry run — no changes made. Re-run without --dry-run to remove them.${NC}"
+        return 0
+    fi
+
+    if [[ "$assume_yes" -ne 1 ]]; then
+        local reply=""
+        read -r -p "Remove these skill(s) from the lock files, disk, and symlinks? [y/N] " reply || true
+        case "$reply" in
+            [yY]|[yY][eE][sS])
+                ;;
+            *)
+                echo -e "${YELLOW}Aborted. No skills removed.${NC}"
+                echo -e "${BLUE}(Pass --yes to skip this prompt in non-interactive runs.)${NC}"
+                return 0
+                ;;
+        esac
+    fi
+
+    local repo_lock_changed=0
+    local removed=()
+    while IFS=$'\t' read -r skill source; do
+        [[ -z "$skill" ]] && continue
+        echo -e "${BLUE}Pruning '$skill'...${NC}"
+
+        if [[ -f "$LOCK_FILE" ]] && jq -e --arg k "$skill" '.skills[$k]' "$LOCK_FILE" > /dev/null 2>&1; then
+            jq --arg k "$skill" 'del(.skills[$k])' "$LOCK_FILE" > "$LOCK_FILE.tmp"
+            mv "$LOCK_FILE.tmp" "$LOCK_FILE"
+            repo_lock_changed=1
+        fi
+
+        if [[ -f "$SYSTEM_LOCK_FILE" ]] && jq -e --arg k "$skill" '.skills[$k]' "$SYSTEM_LOCK_FILE" > /dev/null 2>&1; then
+            jq --arg k "$skill" 'del(.skills[$k])' "$SYSTEM_LOCK_FILE" > "$SYSTEM_LOCK_FILE.tmp"
+            mv "$SYSTEM_LOCK_FILE.tmp" "$SYSTEM_LOCK_FILE"
+        fi
+
+        local skill_dir="$HOME/.agents/skills/$skill"
+        if [[ -d "$skill_dir" ]]; then
+            rm -rf "$skill_dir"
+        fi
+
+        removed+=("$skill")
+    done <<< "$deleted_pairs"
+
+    echo ""
+    echo -e "${BLUE}Relinking skills...${NC}"
+    cmd_install_local
+
+    if [[ $repo_lock_changed -eq 1 ]]; then
+        local list
+        list="$(printf '%s, ' "${removed[@]}")"
+        list="${list%, }"
+
+        echo ""
+        echo -e "${BLUE}Committing changes...${NC}"
+        cd "$SCRIPT_DIR"
+        git add skills-lock.json
+        git commit -m "Prune deleted skills: $list"
+
+        echo ""
+        echo -e "${BLUE}Pushing to remote...${NC}"
+        git push
+    fi
+
+    echo ""
+    echo -e "${GREEN}Done! Pruned ${#removed[@]} skill(s).${NC}"
+}
+
+cmd_prune() {
+    local dry_run=0
+    local assume_yes=0
+
+    while [[ $# -gt 0 ]]; do
+        case "$1" in
+            -n|--dry-run)
+                dry_run=1
+                shift
+                ;;
+            -y|--yes)
+                assume_yes=1
+                shift
+                ;;
+            -*)
+                echo -e "${RED}Unknown option: $1${NC}"
+                usage
+                exit 1
+                ;;
+            *)
+                echo -e "${RED}Unexpected argument: $1${NC}"
+                usage
+                exit 1
+                ;;
+        esac
+    done
+
+    prune_skills "$dry_run" "$assume_yes"
 }
 
 # Main command dispatch
@@ -865,7 +1091,12 @@ case "${1:-}" in
         cmd_install_local
         ;;
     update)
-        cmd_update
+        shift
+        cmd_update "$@"
+        ;;
+    prune)
+        shift
+        cmd_prune "$@"
         ;;
     add-source)
         shift
