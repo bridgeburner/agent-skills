@@ -42,18 +42,18 @@
       "sourceType": "github",
       "sourceUrl": "https://github.com/trailofbits/skills.git",
       "skillPath": "plugins/modern-python/skills/modern-python/SKILL.md",
-      "skillFolderHash": "8679b9b2269f4320d40c4f0bea5d71fb6812b483",
+      "skillFolderHash": "66286b6bf2ff7866f31fd76829ca51083d864ff4",
       "installedAt": "2026-01-28T02:06:41.235Z",
-      "updatedAt": "2026-02-26T01:15:57.150Z"
+      "updatedAt": "2026-06-07T15:32:04.582Z"
     },
     "supabase-postgres-best-practices": {
       "source": "supabase/agent-skills",
       "sourceType": "github",
       "sourceUrl": "https://github.com/supabase/agent-skills.git",
       "skillPath": "skills/supabase-postgres-best-practices/SKILL.md",
-      "skillFolderHash": "238da1c5c846b01c7d7e1cff992676683fe2a929",
+      "skillFolderHash": "6f1495c72c918e6f80c2f69df9005eacd5c57d7a",
       "installedAt": "2026-02-01T05:44:12.865Z",
-      "updatedAt": "2026-06-02T16:05:15.251Z"
+      "updatedAt": "2026-06-07T15:32:06.105Z"
     },
     "test-driven-development": {
       "source": "obra/superpowers",
@@ -277,9 +277,9 @@
       "sourceType": "github",
       "sourceUrl": "https://github.com/vercel-labs/portless.git",
       "skillPath": "skills/portless/SKILL.md",
-      "skillFolderHash": "8359531be2abc609acd08f0e8f3f66d762e45fbf",
+      "skillFolderHash": "4e4afcfe9655b89327a7be04969e37f0a8034357",
       "installedAt": "2026-04-29T23:45:24.922Z",
-      "updatedAt": "2026-05-31T16:23:43.404Z"
+      "updatedAt": "2026-06-07T15:32:07.843Z"
     },
     "ai-elements": {
       "source": "vercel/ai-elements",
