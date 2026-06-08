@@ -62,10 +62,13 @@ Do not collapse evidence tiers. Record what was actually proven:
 - `fixture`: deterministic unit or fixture proof.
 - `scripted-product`: product API/UI path with scripted or fake model behavior.
 - `live-provider`: real model/provider path without full UI exercise.
-- `live-ui`: real UI exercise, ideally with `agent-browser`.
+- `live-ui`: actual UI exercise, ideally with `agent-browser`.
+- `live-ui-provider`: actual UI plus real provider/model path.
 - `manual`: user-confirmed manual verification.
 
-Functionality counts as working only when the evidence tier matches the claim. For example, a UI-facing goal needs UI evidence; an agent-behavior parity goal needs live model evidence unless the user explicitly scopes that out.
+Functionality counts as working only when the evidence tier matches the claim. Prefer `live-ui-provider` for as many product and agent-behavior claims as practical: it tests the real product surface, real provider decisions, streaming/readback, and user-visible behavior together. Anything short of that is still useful, but it is evidence about a fixture, script, or partial product path and must be labeled that way.
+
+For agent behavior parity goals, treat `live-ui-provider` as the default required evidence unless the user explicitly scopes it out or the UI path is irrelevant to the feature. Fixture, scripted-product, and live-provider-only tests can narrow bugs and protect contracts, but they do not prove the user-facing agent behavior by themselves.
 
 ## Completion
 
