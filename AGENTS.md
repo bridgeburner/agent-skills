@@ -34,7 +34,7 @@ Goal commands are for sustained, outcome-oriented work where the agent should pr
 - Keep the objective explicit and stable. If new information changes the objective, say so and reframe it before continuing.
 - Prefer architectural risk reduction before demo momentum when the goal is exploratory or strategic; prefer the thinnest working vertical slice when the goal is implementation.
 - Maintain an auditable trail of decisions, tests, blockers, and known gaps so the user can inspect progress without reconstructing the session.
-- Do not claim goal completion from partial evidence. Separate fixture tests, scripted tests, live-provider tests, UI tests, and manual verification.
+- Do not claim goal completion from partial evidence. Separate fixture tests, scripted tests, live-provider tests, UI tests, live UI plus provider tests, and manual verification. For agent behavior parity, default to live UI plus live provider evidence; weaker tests are supporting evidence, not proof of parity, unless the user explicitly scopes the live path out.
 - When a user correction exposes a bad assumption, update the relevant lesson or tracker before moving on.
 - Stop and re-plan when the current path starts solving symptoms, drifting from the requested design, or accumulating unreviewed contract changes.
 - Mark a goal complete only when the stated objective is genuinely achieved and the remaining gaps are either closed or explicitly accepted by the user.
