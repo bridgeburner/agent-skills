@@ -32,6 +32,7 @@ npx skills add -g <owner/repo>     # install globally across all agents
 | `tester` | TDD discipline and test design that catches real bugs |
 | `agent-native` | Audits and improves codebases for AI agent legibility and navigability |
 | `terminal-velocity` | Orchestrates parallel Claude subagent lanes with critique loops for large implementations |
+| `better-goal` | Runs long-lived goal-command work with durable trackers, design reviews, and evidence ledgers |
 
 ### Creative & Visual
 
