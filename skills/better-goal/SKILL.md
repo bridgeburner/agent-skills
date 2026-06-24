@@ -40,7 +40,7 @@ Repeat until the goal is genuinely complete:
 3. For implementation, favor tracer bullets: the thinnest end-to-end slice that crosses the necessary layers and produces a real output.
 4. Test early. After meaningful edits, run the smallest relevant oracle; after a slice touches product behavior, run an e2e path that resembles the user flow.
 5. For user/UI-facing behavior, use the actual UI and `agent-browser` when available. Store screenshots or browser artifacts under the goal folder.
-6. Commit changes early and often when the repo policy and user direction allow it.
+6. Commit actual repo-tracked work early and often when the repo policy and user direction allow it. `.sdd` artifacts are planning/evidence and stay local by default, but code, tests, specs, docs, migrations, generated API clients, and other tracked deliverables should be committed at coherent checkpoints after the relevant checks pass. Do not leave a large completed implementation uncommitted unless the user asked you not to commit, the repo policy forbids it, or the checkpoint is still knowingly unstable.
 7. Update `tasks.md`, append `events.jsonl`, and record open gaps before moving to the next task.
 
 ## Design Review Gauntlet
@@ -78,7 +78,7 @@ Before marking a goal complete:
 
 1. Audit `goal.md` success criteria against `tasks.md`.
 2. List remaining gaps and classify them as closed, accepted, parked, or blocking.
-3. Summarize commits and durable artifacts.
+3. Summarize commits and durable artifacts. If tracked repo changes remain uncommitted, call that out explicitly and explain whether the user asked for that, repo policy required it, or the work is intentionally still unstable.
 4. Report e2e tests and evidence paths.
 5. List documents in `designs/` and ask the user which, if any, should graduate into repo-tracked specs or docs.
 
