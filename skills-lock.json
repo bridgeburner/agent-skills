@@ -115,10 +115,9 @@
       "sourceType": "github",
       "sourceUrl": "https://github.com/nicobailon/visual-explainer.git",
       "skillPath": "plugins/visual-explainer/SKILL.md",
-      "skillFolderHash": "2e703a2798bb55fb6aef723fbf79cd804cb1750f",
-      "pluginName": "visual-explainer",
+      "skillFolderHash": "e1778142a9e13d41c9f06d3ac1fafabed07ab160",
       "installedAt": "2026-04-25T00:15:23.831Z",
-      "updatedAt": "2026-04-29T19:58:25.442Z"
+      "updatedAt": "2026-06-25T14:21:21.415Z"
     },
     "gws-shared": {
       "source": "googleworkspace/cli",
@@ -278,9 +277,9 @@
       "sourceType": "github",
       "sourceUrl": "https://github.com/vercel-labs/portless.git",
       "skillPath": "skills/portless/SKILL.md",
-      "skillFolderHash": "4e4afcfe9655b89327a7be04969e37f0a8034357",
+      "skillFolderHash": "a55fce256aaed9a34ed63109d3e6775c2096eb93",
       "installedAt": "2026-05-01T14:07:33.664Z",
-      "updatedAt": "2026-06-10T23:44:24.993Z"
+      "updatedAt": "2026-06-25T14:21:22.843Z"
     },
     "ai-elements": {
       "source": "vercel/ai-elements",
