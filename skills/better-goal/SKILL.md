@@ -72,6 +72,19 @@ For agent behavior parity goals, `live-ui-provider` is the default proof standar
 
 If a goal uses weaker evidence for an agent behavior claim, record the explicit reason: user scoped out the live path, UI path is irrelevant to that feature, credentials/environment are unavailable, or the task is only a pre-parity tracer bullet. Mark the resulting claim as partial and keep the live UI/provider gap visible in `tasks.md`, `events.jsonl`, and the completion audit. Do not use deterministic fake-agent output as sufficient proof for parity unless the user explicitly limited the claim to that lower evidence tier.
 
+## Archiving
+
+When a goal reaches a meaningful milestone or the user asks to archive the current tracker, rotate the live tracker instead of leaving the completed arc as the default resume point.
+
+1. Create `archive/<timestamp-slug>/` under the canonical goal folder.
+2. Copy the completed tracker surfaces into that archive: `goal.md`, `tasks.md`, `events.jsonl`, completion audits, relevant `designs/`, and any evidence indexes needed to understand the arc.
+3. Add `SUMMARY.md`: a compact but readable summary of what was accomplished, important decisions, final metrics, artifacts, verification, remaining gaps, and the recommended next starting point.
+4. Add `manifest.md`: a minified entry point that links to `SUMMARY.md`, lists archived files, names the final commit/artifacts, and gives the shortest useful status snapshot.
+5. Reset the live `goal.md`, `tasks.md`, and `events.jsonl` to a fresh starting point that links back to the archive and waits for the next objective.
+6. Keep `.sdd` archives local unless the repo explicitly tracks them.
+
+This gives progressive disclosure: `manifest.md` for orientation, `SUMMARY.md` for context, and the raw tracker files for audit.
+
 ## Completion
 
 Before marking a goal complete:
