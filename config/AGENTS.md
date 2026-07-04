@@ -76,8 +76,8 @@ Vishwath maintains a personal LLM wiki that serves as cross-agent durable memory
 - They coexist. If something is only relevant to the current project, auto-memory is fine. If it's durable personal knowledge, it belongs in the wiki.
 
 ## Spec-Based Development
-- `.sdd/` and `.tv` directories are local planning artifacts, intentionally gitignored.
-- Do not commit files in these dirs or remove them from `.gitignore`.
+- `~/.sdd/<project-pillar>/<worktree-name>/` and `.tv/` directories are local planning artifacts.
+- Do not commit files from these dirs or remove `.tv/` from `.gitignore`; `.sdd` trackers live outside repos by default.
 
 # Commits and PRs
 When creating commits or pull requests:

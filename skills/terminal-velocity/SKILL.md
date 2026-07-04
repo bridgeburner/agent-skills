@@ -90,7 +90,7 @@ Gather these inputs — in interactive mode, ask the user directly; in AUTONOMOU
 4. Constraints? (no breaking changes, test framework, time budget)
 5. Autonomy preference? (interactive or autonomous)
 
-Auto-detect from the project: language(s), framework(s), test runner commands, lint/format tools, existing specs (`.sdd/`, `.tv/`, `docs/`, `specs/`), git state.
+Auto-detect from the project: language(s), framework(s), test runner commands, lint/format tools, existing specs (`~/.sdd/`, `.tv/`, `docs/`, `specs/`), git state.
 
 ### Codex availability check
 

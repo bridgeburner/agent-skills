@@ -1,15 +1,15 @@
 ---
 name: better-goal
-description: Use this skill for durable agent work that should use `.sdd` tracking. Trigger when a task is likely to span 3+ meaningful steps, 30+ minutes, multiple turns, multiple files/modules, multiple agents, or a restart/resume boundary; when it involves design decisions, PR/CI refreshes, research spikes, UI/e2e evidence, live-provider validation, migrations, backfills, deployments, coordinated commits, completion audits, or false-completion risk; or when the user invokes/refers to `/goal`, resume, audit, tracker, or completion proof. Do not use for one-shot answers, tiny edits, or single-command checks.
+description: Use this skill for durable agent work that should use `~/.sdd` tracking. Trigger when a task is likely to span 3+ meaningful steps, 30+ minutes, multiple turns, multiple files/modules, multiple agents, or a restart/resume boundary; when it involves design decisions, PR/CI refreshes, research spikes, UI/e2e evidence, live-provider validation, migrations, backfills, deployments, coordinated commits, completion audits, or false-completion risk; or when the user invokes/refers to `/goal`, resume, audit, tracker, or completion proof. Do not use for one-shot answers, tiny edits, or single-command checks.
 ---
 
 # Better Goal
 
-Run significant agent work through the repo-local `.sdd` protocol. `/goal` is the canonical long-running use case, but the same task ledger, event log, evidence capture, and completion audit apply whenever work must be resumable or proof-driven.
+Run significant agent work through the home-level `~/.sdd` protocol. `/goal` is the canonical long-running use case, but the same task ledger, event log, evidence capture, and completion audit apply whenever work must be resumable or proof-driven.
 
 ## Trigger Decision
 
-Use `.sdd` tracking when any threshold is met:
+Use `~/.sdd` tracking when any threshold is met:
 
 - 3+ meaningful steps.
 - Likely 30+ minutes of work.
@@ -23,15 +23,21 @@ Do not use this skill for one-shot answers, tiny edits, or single-command checks
 
 ## Setup
 
-1. Find the canonical tracker folder for the current worktree: nearest repo root's `.sdd/<worktree-folder-name>/`. If the repo/worktree mapping is ambiguous, ask the user to confirm.
-2. Create the folder if needed. Do not commit `.sdd` artifacts unless the repo explicitly wants them committed.
-3. Create or update:
+1. Resolve the project pillar from the git worktree root:
+   - `personal`: paths under `~/dev/personal/` or `~/src/personal/`.
+   - `altius`: paths under `~/dev/altius/` or `~/src/altius/`.
+   - `apex`: paths under `~/dev/apex/` or `~/src/apex/`.
+2. Use the canonical live tracker: `~/.sdd/<project-pillar>/<worktree-name>/`, where `<worktree-name>` is the git root basename. Prefer running `scripts/sdd_path.py --create` from this skill to avoid hand-rolled path inference.
+3. If the pillar cannot be inferred, ask the user before creating tracker files. Do not create repo-local `.sdd` directories.
+4. Create or update:
    - `goal.md`: current objective, scope, non-goals, success criteria, and any approved objective changes.
    - `tasks.md`: top table of tasks with status, plus linked detail sections as needed.
    - `events.jsonl`: append-only event ledger.
    - `designs/`: non-trivial designs, specs, spike reports, review outputs.
-   - `screenshots/` or `browser-evidence/`: UI/e2e evidence grouped by task id.
-4. Optionally create `operating-philosophy.md` only when the work needs a local copy or deviations from this skill. Prefer avoiding boilerplate drift.
+   - `evidence/`: command outputs, generated artifacts, data proofs, and validation bundles grouped by task id or run id.
+   - `browser-evidence/` and `screenshots/`: UI/e2e artifacts grouped by task id or run id.
+   - Optional domain folders such as `experiments/`, `research/`, `handoffs/`, or `canonical/` when the work naturally needs them.
+5. Optionally create `operating-philosophy.md` only when the work needs a local copy or deviations from this skill. Prefer avoiding boilerplate drift.
 
 Use task statuses consistently: `pending`, `in_progress`, `blocked`, `complete`, `parked`.
 
@@ -54,7 +60,7 @@ Repeat until the tracked work is genuinely complete:
 3. For implementation, favor tracer bullets: the thinnest end-to-end slice that crosses the necessary layers and produces a real output.
 4. Test early. After meaningful edits, run the smallest relevant oracle; after a slice touches product behavior, run an e2e path that resembles the user flow.
 5. For user/UI-facing behavior, use the actual UI and `agent-browser` when available. Store screenshots or browser artifacts under the goal folder.
-6. Commit actual repo-tracked work early and often when the repo policy and user direction allow it. `.sdd` artifacts are planning/evidence and stay local by default, but code, tests, specs, docs, migrations, generated API clients, and other tracked deliverables should be committed at coherent checkpoints after the relevant checks pass. Do not leave a large completed implementation uncommitted unless the user asked you not to commit, the repo policy forbids it, or the checkpoint is still knowingly unstable.
+6. Commit actual repo-tracked work early and often when the repo policy and user direction allow it. `~/.sdd` artifacts are planning/evidence and stay outside the repo by default, but code, tests, specs, docs, migrations, generated API clients, and other tracked deliverables should be committed at coherent checkpoints after the relevant checks pass. Do not leave a large completed implementation uncommitted unless the user asked you not to commit, the repo policy forbids it, or the checkpoint is still knowingly unstable.
 7. Update `tasks.md`, append `events.jsonl`, and record open gaps before moving to the next task.
 
 ## Design Review Gauntlet
@@ -90,12 +96,12 @@ If tracked work uses weaker evidence for an agent behavior claim, record the exp
 
 When tracked work reaches a meaningful milestone or the user asks to archive the current tracker, rotate the live tracker instead of leaving the completed arc as the default resume point.
 
-1. Create `archive/<timestamp-slug>/` under the canonical goal folder.
+1. Create `~/.sdd/<project-pillar>/archive/<worktree-name>/<timestamp-slug>/`.
 2. Copy the completed tracker surfaces into that archive: `goal.md`, `tasks.md`, `events.jsonl`, completion audits, relevant `designs/`, and any evidence indexes needed to understand the arc.
 3. Add `SUMMARY.md`: a compact but readable summary of what was accomplished, important decisions, final metrics, artifacts, verification, remaining gaps, and the recommended next starting point.
 4. Add `manifest.md`: a minified entry point that links to `SUMMARY.md`, lists archived files, names the final commit/artifacts, and gives the shortest useful status snapshot.
 5. Reset the live `goal.md`, `tasks.md`, and `events.jsonl` to a fresh starting point that links back to the archive and waits for the next objective.
-6. Keep `.sdd` archives local unless the repo explicitly tracks them.
+6. Keep archives under `~/.sdd`; do not move them into the repo unless the user explicitly asks.
 
 This gives progressive disclosure: `manifest.md` for orientation, `SUMMARY.md` for context, and the raw tracker files for audit.
 
