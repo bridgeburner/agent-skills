@@ -11,15 +11,11 @@
 - Use plan mode for verification steps, not just building
 - Write detailed specs upfront to reduce ambiguity
 
-### 2. Subagent and Teammate Terminology
-- **"subagent"** = fire-and-forget child. `Task` tool (with or without `run_in_background`). No persistent identity, no messaging.
-- **"teammate"** = named, persistent agent. `TeamCreate` first, then `Task` with `team_name`. Has identity, sends/receives messages via `SendMessage`.
-- Never substitute a plain subagent when the user asks for a teammate.
+### 2. Subagents
 
 ### 2a. Subagent Delegation Strategy
 - Use subagents aggressively to keep main context window clean. Delegate by default over doing work yourself.
 - Offload research, exploration, and parallel analysis to subagents. For complex problems, throw more compute at it.
-- ONE task per subagent for focused execution. Teammates can handle larger arcs with tasks delegatable to their own subagents.
 - Subagents MUST output to files (usually temporary files unless explicitly asked otherwise) in addition to any output sent back to the top-level agent. These files serve as audit trail. The file output MUST contain a section on design decisions that were autonomously taken.
 - When passing files for subagents to look at, do not waste your context window reading the same file. Include sufficient context in prompts: names of temporary files, what they contain, and instructions on how to send context back (preferring temporary files for larger outputs).
 

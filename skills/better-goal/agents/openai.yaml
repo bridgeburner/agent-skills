@@ -1,4 +1,4 @@
 interface:
   display_name: "Better Goal"
-  short_description: "Run durable goal-command workflows"
-  default_prompt: "Use $better-goal to set up and run this goal with durable tracking, design review, and e2e evidence."
+  short_description: "Track durable agent work in .sdd"
+  default_prompt: "Use $better-goal to run this work through the .sdd protocol with task tracking, evidence, and a completion audit."

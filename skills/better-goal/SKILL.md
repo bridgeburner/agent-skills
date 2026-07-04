@@ -1,23 +1,37 @@
 ---
 name: better-goal
-description: Use this skill for long-running `/goal` work, goal-command planning, or sustained implementation/debugging sessions that need durable tracking across turns. Apply it when the user starts, refines, resumes, audits, or asks how to run a goal; when work needs `.sdd` persistence, task ledgers, event logs, design spikes, design-review gauntlets, tracer bullets, e2e UI evidence, or completion audits; and when preventing false completion claims matters.
+description: Use this skill for durable agent work that should use `.sdd` tracking. Trigger when a task is likely to span 3+ meaningful steps, 30+ minutes, multiple turns, multiple files/modules, multiple agents, or a restart/resume boundary; when it involves design decisions, PR/CI refreshes, research spikes, UI/e2e evidence, live-provider validation, migrations, backfills, deployments, coordinated commits, completion audits, or false-completion risk; or when the user invokes/refers to `/goal`, resume, audit, tracker, or completion proof. Do not use for one-shot answers, tiny edits, or single-command checks.
 ---
 
 # Better Goal
 
-Run `/goal` work as a durable, auditable loop. Treat the goal as a stable commitment: persist intent, track tasks and evidence, reduce architectural risk early, and only claim completion from appropriate proof.
+Run significant agent work through the repo-local `.sdd` protocol. `/goal` is the canonical long-running use case, but the same task ledger, event log, evidence capture, and completion audit apply whenever work must be resumable or proof-driven.
+
+## Trigger Decision
+
+Use `.sdd` tracking when any threshold is met:
+
+- 3+ meaningful steps.
+- Likely 30+ minutes of work.
+- Multiple turns, interruption risk, or resume needed.
+- Multiple files, modules, services, agents, or coordinated commits.
+- Design decisions, research spikes, PR/CI refreshes, migrations, data backfills, deployments, or live-system proof.
+- UI/e2e evidence, live-provider validation, screenshots, browser artifacts, or completion audit needed.
+- User mentions `/goal`, resume, audit, tracker, completion proof, or false-completion concerns.
+
+Do not use this skill for one-shot answers, tiny edits, or single-command checks where the final response plus command output is sufficient evidence.
 
 ## Setup
 
-1. Find the canonical goal folder for the current worktree: nearest repo root's `.sdd/<worktree-folder-name>/`. If the repo/worktree mapping is ambiguous, ask the user to confirm.
+1. Find the canonical tracker folder for the current worktree: nearest repo root's `.sdd/<worktree-folder-name>/`. If the repo/worktree mapping is ambiguous, ask the user to confirm.
 2. Create the folder if needed. Do not commit `.sdd` artifacts unless the repo explicitly wants them committed.
 3. Create or update:
-   - `goal.md`: current objective, scope, non-goals, success criteria, and any approved changes to the objective.
+   - `goal.md`: current objective, scope, non-goals, success criteria, and any approved objective changes.
    - `tasks.md`: top table of tasks with status, plus linked detail sections as needed.
    - `events.jsonl`: append-only event ledger.
    - `designs/`: non-trivial designs, specs, spike reports, review outputs.
    - `screenshots/` or `browser-evidence/`: UI/e2e evidence grouped by task id.
-4. Optionally create `operating-philosophy.md` only when the goal needs a local copy or deviations from this skill. Prefer avoiding boilerplate drift.
+4. Optionally create `operating-philosophy.md` only when the work needs a local copy or deviations from this skill. Prefer avoiding boilerplate drift.
 
 Use task statuses consistently: `pending`, `in_progress`, `blocked`, `complete`, `parked`.
 
@@ -33,7 +47,7 @@ Useful event types include `goal.created`, `goal.updated`, `task.created`, `task
 
 ## Operating Loop
 
-Repeat until the goal is genuinely complete:
+Repeat until the tracked work is genuinely complete:
 
 1. Pick the most impactful next task, with architectural risk reduction before demo momentum unless the user says otherwise.
 2. Investigate with real data and live code where possible. Prefer spikes and prototypes over theory when the uncertainty is empirical.
@@ -68,13 +82,13 @@ Do not collapse evidence tiers. Record what was actually proven:
 
 Functionality counts as working only when the evidence tier matches the claim. Prefer `live-ui-provider` for as many product and agent-behavior claims as practical: it tests the real product surface, real provider decisions, streaming/readback, and user-visible behavior together. Anything short of that is still useful, but it is evidence about a fixture, script, or partial product path and must be labeled that way.
 
-For agent behavior parity goals, `live-ui-provider` is the default proof standard, not an optional polish step. Build the parity matrix around live UI plus live provider scenarios first, then add fixtures and scripted tests as supporting checks. Drive as many parity checks as possible through the live UI with a real provider because this is the only tier that directly tests the user's product experience rather than an agent's assumption about a fixture or harness. Fixture, scripted-product, and live-provider-only tests can narrow bugs and protect contracts, but they do not prove the user-facing agent behavior by themselves.
+For agent behavior parity work, `live-ui-provider` is the default proof standard, not an optional polish step. Build the parity matrix around live UI plus live provider scenarios first, then add fixtures and scripted tests as supporting checks. Drive as many parity checks as possible through the live UI with a real provider because this is the only tier that directly tests the user's product experience rather than an agent's assumption about a fixture or harness. Fixture, scripted-product, and live-provider-only tests can narrow bugs and protect contracts, but they do not prove the user-facing agent behavior by themselves.
 
-If a goal uses weaker evidence for an agent behavior claim, record the explicit reason: user scoped out the live path, UI path is irrelevant to that feature, credentials/environment are unavailable, or the task is only a pre-parity tracer bullet. Mark the resulting claim as partial and keep the live UI/provider gap visible in `tasks.md`, `events.jsonl`, and the completion audit. Do not use deterministic fake-agent output as sufficient proof for parity unless the user explicitly limited the claim to that lower evidence tier.
+If tracked work uses weaker evidence for an agent behavior claim, record the explicit reason: user scoped out the live path, UI path is irrelevant to that feature, credentials/environment are unavailable, or the task is only a pre-parity tracer bullet. Mark the resulting claim as partial and keep the live UI/provider gap visible in `tasks.md`, `events.jsonl`, and the completion audit. Do not use deterministic fake-agent output as sufficient proof for parity unless the user explicitly limited the claim to that lower evidence tier.
 
 ## Archiving
 
-When a goal reaches a meaningful milestone or the user asks to archive the current tracker, rotate the live tracker instead of leaving the completed arc as the default resume point.
+When tracked work reaches a meaningful milestone or the user asks to archive the current tracker, rotate the live tracker instead of leaving the completed arc as the default resume point.
 
 1. Create `archive/<timestamp-slug>/` under the canonical goal folder.
 2. Copy the completed tracker surfaces into that archive: `goal.md`, `tasks.md`, `events.jsonl`, completion audits, relevant `designs/`, and any evidence indexes needed to understand the arc.
@@ -87,7 +101,7 @@ This gives progressive disclosure: `manifest.md` for orientation, `SUMMARY.md` f
 
 ## Completion
 
-Before marking a goal complete:
+Before marking tracked work complete:
 
 1. Audit `goal.md` success criteria against `tasks.md`.
 2. List remaining gaps and classify them as closed, accepted, parked, or blocking.
@@ -95,4 +109,4 @@ Before marking a goal complete:
 4. Report e2e tests and evidence paths.
 5. List documents in `designs/` and ask the user which, if any, should graduate into repo-tracked specs or docs.
 
-Never mark a goal complete because the context is long, the work is tiring, or only low-tier tests passed. Completion means the stated objective is achieved or the user has explicitly accepted the remaining gaps.
+Never mark work complete because the context is long, the work is tiring, or only low-tier tests passed. Completion means the stated objective is achieved or the user has explicitly accepted the remaining gaps.
