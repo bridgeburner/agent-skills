@@ -46,7 +46,7 @@ Every unnecessary word consumes tokens from the agent's working context. Bullet 
 
 ## P11. Machine-parseable structure
 
-Use consistent, parseable formats: metadata tables for story fields, checkbox lists for acceptance criteria, structured headings for phases and streams. Execution tools (beads, terminal-velocity) consume these documents programmatically. Ambiguous prose structures ("mostly done", "see above") are unparseable.
+Use consistent, parseable formats: metadata tables for story fields, checkbox lists for acceptance criteria, structured headings for phases and streams. Execution tools consume these documents programmatically. Ambiguous prose structures ("mostly done", "see above") are unparseable.
 
 ## P12. Spec quality is the primary lever for agent reliability
 

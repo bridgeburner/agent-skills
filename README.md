@@ -28,10 +28,7 @@ npx skills add -g <owner/repo>     # install globally across all agents
 | `architect` | Routes you into the right engineering posture (Building / Exploratory / Debugging) at the start of a task |
 | `spec-engineering` | Writes specs, navigates unfamiliar code, decomposes features into stories |
 | `spec-viz` | Renders multi-file markdown specs as an interactive, annotatable browser viz with per-block reactions, notes, and export |
-| `feedback-loops` | Optimizes the edit → check → fix loop — language selection, CI setup, test architecture |
-| `tester` | TDD discipline and test design that catches real bugs |
 | `agent-native` | Audits and improves codebases for AI agent legibility and navigability |
-| `terminal-velocity` | Orchestrates parallel Claude subagent lanes with critique loops for large implementations |
 | `better-goal` | Runs durable agent work through `~/.sdd` trackers, evidence ledgers, and completion audits |
 
 ### Creative & Visual

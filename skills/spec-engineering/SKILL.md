@@ -157,7 +157,7 @@ Run the smallest validating tests. Ensure spec changes match implementation.
 ### When to invoke
 - A product spec and design doc exist (or are being authored alongside)
 - User asks to "plan the implementation", "break this into stories/tasks", "create an execution plan"
-- Downstream consumers: beads (`bd create -f`) for tracking, terminal-velocity for agent orchestration
+- Downstream consumers: task trackers such as beads (`bd create -f`) and durable `~/.sdd` execution ledgers when appropriate
 
 ### 4.5.1 Prerequisites
 1. Confirm product spec exists (requirements R#, API contracts, state machine)
@@ -270,7 +270,7 @@ Requirements in the product spec should be independently verifiable. Each requir
 ```
 
 This format:
-- Is mechanically convertible to test cases (bridges to tester skill T1)
+- Is mechanically convertible to test cases and smoke/e2e acceptance checks
 - Makes coverage gaps visible (each R# should have at least one test)
 - Eliminates ambiguity about expected behavior
 
@@ -375,8 +375,5 @@ If the repo lacks any spec topology:
 
 | Skill | Relationship | When |
 |-------|-------------|------|
-| **architect** | Upstream. Architect identifies mode; spec-engineering is invoked in Building mode (author/navigate) and Debugging mode (answer/orient). | Architect routes here |
-| **tester** | Downstream. Given/When/Then requirements (Section 5.4) feed directly into tester T1 (Spec-First Assertions). Constraint taxonomy feeds T7 (Architectural Invariant Tests). | After authoring, when writing tests |
-| **feedback-loops** | Complementary. Signal-per-token guides the feedback loop; spec-engineering ensures the spec exists to derive tests from. | Parallel concern during implementation |
+| **architect** | Upstream and downstream. Architect identifies mode before spec work; Given/When/Then requirements and constraints later feed its proof path and optional testing reference. | Architect routes here before spec work and uses the output during implementation |
 | **agent-native** | Complementary. Agent-native defines doc structure requirements (N1 AGENTS.md, U3 Doc Architecture). Spec-engineering defines navigation protocol over it and authoring content patterns. | Agent-native for structure; spec-engineering for content |
-| **terminal-velocity** | Downstream. MODE=PLAN produces implementation stories that terminal-velocity consumes for orchestrated implementation. Stories are also importable by beads (`bd create -f`) for tracking and dependency management. | After planning, when orchestrating parallel implementation |

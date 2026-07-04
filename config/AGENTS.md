@@ -16,6 +16,7 @@
 ### 2a. Subagent Delegation Strategy
 - Use subagents aggressively to keep main context window clean. Delegate by default over doing work yourself.
 - Offload research, exploration, and parallel analysis to subagents. For complex problems, throw more compute at it.
+- Prefer subagents for reconnaissance, critique, alternate hypotheses, and independent validation. Do not split implementation into layer-based lanes before a tracer bullet exists and the smoke/e2e oracle is known.
 - Subagents MUST output to files (usually temporary files unless explicitly asked otherwise) in addition to any output sent back to the top-level agent. These files serve as audit trail. The file output MUST contain a section on design decisions that were autonomously taken.
 - When passing files for subagents to look at, do not waste your context window reading the same file. Include sufficient context in prompts: names of temporary files, what they contain, and instructions on how to send context back (preferring temporary files for larger outputs).
 
@@ -38,6 +39,7 @@
 - Diff behavior between the parent branch and your changes when relevant
 - Ask yourself: "Would a staff engineer approve this?"
 - Run tests, check logs, demonstrate correctness
+- For user-facing behavior, integrations, workflows, deployments, and agent behavior, smoke/e2e/product-path validation is the acceptance bar. Unit tests, type checks, lint, fixtures, and narrow integration tests are supporting evidence, not full proof.
 - For each issue found ask the question "Are we solving symptoms, or are we solving ROOT problems in the architecture design/decision?". For each answer that is 'symptom', create a Task to find the proper root cause that needs solving instead. Run these Tasks in the background.
 - For non-trivial changes, consider whether there's a more elegant approach before presenting.
 

@@ -1,27 +1,10 @@
----
-name: tester
-description: >-
-  Test design skill for writing tests that catch real bugs. Use when writing
-  tests for new features, fixing bugs (regression tests), reviewing test
-  suites, or deciding what level of test to write. Triggers: "write tests",
-  "add test coverage", "why did tests miss this bug", "what tests should I
-  write", "test this feature", "review test quality". Teaches spec-derived
-  testing, mock boundary discipline, architectural invariant enforcement,
-  cross-component integration testing, and mandatory end-to-end wiring tests
-  with a structured Harness Gap Protocol for escalating missing test
-  infrastructure. Invoke with "/tester reflect" after fixing a bug to
-  evaluate whether the skill itself should be strengthened. Invoke with
-  "/tester harness-doctor" to design test infrastructure when the harness
-  can't support the tests you need.
-metadata:
-  short-description: Write tests that catch real bugs, not tests that confirm them
----
-
-# Tester
+# Testing Reference
 
 Tests exist to catch bugs before users do. A test that cannot catch a bug it was not specifically written for is theater. A test that validates the current implementation instead of the intended behavior is worse than no test -- it provides false confidence.
 
-This skill teaches you to write tests derived from specifications and invariants, not from implementations.
+Use this reference only when test design itself is material to the task: writing or reviewing substantial tests, designing regression tests, investigating why tests missed a bug, choosing mock boundaries, or handling a missing harness.
+
+This reference is subordinate to `architect`: for user-facing behavior, integrations, workflows, deployments, and agent behavior, smoke/e2e/product-path validation remains the acceptance bar. The test techniques below provide supporting evidence and regression protection; they do not replace product-path proof.
 
 ---
 
@@ -446,7 +429,7 @@ A task like "Add user preferences API endpoint" is too large for a single RED→
 
 **Agent rule:** Before starting implementation, list the behaviors you will test — one per line, each a concrete "given/when/then." This list IS your implementation plan. If you cannot list the behaviors, you do not understand the feature well enough to build it.
 
-### Relationship to other tester workflows
+### Relationship to other testing workflows
 
 - **TDD is the implementation discipline** — it governs *when* you write tests relative to code.
 - **T1–T11 are the test design principles** — they govern *what* tests to write and *how* to design them well.
@@ -455,9 +438,9 @@ A task like "Add user preferences API endpoint" is too large for a single RED→
 
 ---
 
-## Workflow: Harness Doctor (`/tester harness-doctor`)
+## Workflow: Harness Doctor
 
-A design workflow for building the test infrastructure that makes wiring tests (T12) possible. Invoke explicitly when the Harness Gap Protocol has fired, or when a codebase has no path to functional end-to-end tests.
+A design workflow for building the test infrastructure that makes wiring tests (T12) possible. Use explicitly when the Harness Gap Protocol has fired, or when a codebase has no path to functional end-to-end tests.
 
 **When to invoke:**
 - A Harness Gap Protocol escalation lands and the orchestrator needs a concrete build plan
@@ -469,9 +452,9 @@ A design workflow for building the test infrastructure that makes wiring tests (
 
 ### Two modes
 
-**Feature-scoped** (`/tester harness-doctor feature=<name>`): Given a specific feature or bug, identify what the wiring test for that feature needs that doesn't exist. Output is a minimum viable harness — the smallest build that unblocks this feature's wiring test, not the ideal steady-state.
+**Feature-scoped**: Given a specific feature or bug, identify what the wiring test for that feature needs that doesn't exist. Output is a minimum viable harness — the smallest build that unblocks this feature's wiring test, not the ideal steady-state.
 
-**Repo-scoped** (`/tester harness-doctor`): Survey the codebase for testability gaps — services without fakes, external boundaries without mock transports, orchestration frameworks without test registration patterns — and produce a prioritized harness roadmap. Use this when setting up a new project or auditing a legacy one.
+**Repo-scoped**: Survey the codebase for testability gaps — services without fakes, external boundaries without mock transports, orchestration frameworks without test registration patterns — and produce a prioritized harness roadmap. Use this when setting up a new project or auditing a legacy one.
 
 ### Discipline — what makes this different from general architecture work
 
@@ -527,90 +510,6 @@ Every harness doctor run produces the same structured output:
 - **spec-engineering** may be called during harness design if the harness itself needs a spec (e.g., a complex FakeBackend with its own contract).
 - **Not a substitute** for writing actual tests. After the harness is built, return to the normal "Writing Tests for a New Feature" workflow.
 
----
-
-## Workflow: Reflect (`/tester reflect`)
-
-A self-improvement loop for the skill itself. Invoke after fixing a bug to evaluate whether the skill's principles, anti-patterns, or workflows should be strengthened.
-
-**When to invoke:** After discovering a bug that tests should have caught -- whether you have already fixed it or are still triaging it.
-
-### Step 1: Gather Context
-
-Determine the bug from whatever is available. Two entry points:
-
-**From a fix (post-fix):**
-1. Run `git diff HEAD~1..HEAD` (or a wider range if the fix spans multiple commits) to identify changed files.
-2. Read the failing test(s) and the fix.
-3. Identify: *What was the bug?* *What test existed (if any)?* *Why did the existing test not catch it?*
-
-**From conversation (mid-triage):**
-1. Review the conversation history for the bug description, reproduction steps, and any diagnosis so far.
-2. Read the relevant source files and existing tests mentioned in the conversation.
-3. Identify: *What is the bug?* *What tests exist for this area?* *Why didn't they catch it?*
-
-If the user provides a specific commit range, file, or bug description, use that as the primary source.
-
-### Step 2: Classify the Bug
-
-Using the **Bug Class to Test Level Mapping** table:
-1. Assign the bug a class (logic error, interface mismatch, data flow error, etc.).
-2. Identify the correct test level that should have caught it.
-3. Determine which principle(s) (T1-T11) are most relevant to preventing this class of failure.
-
-### Step 3: Trace Through the Skill
-
-For each relevant principle, ask:
-- **Does the principle already cover this failure mode?** If the principle, followed correctly, would have prevented the bug -- the skill is fine; the issue was application, not coverage.
-- **Is there a gap in the principle?** The principle covers the general area but misses a specific nuance exposed by this bug.
-- **Is there a missing principle?** No existing principle addresses this failure mode at all.
-
-Also check:
-- Does the **Anti-Pattern Audit** (T9) have a row that would have flagged the test deficiency?
-- Does the **Bug Class to Test Level Mapping** table include this bug class?
-- Do the **Workflows** cover the investigation path that was actually needed?
-
-### Step 4: Propose a Skill Edit
-
-Based on the analysis, propose exactly ONE of:
-
-| Finding | Proposal |
-|---------|----------|
-| Existing principle covers it (application gap) | No skill change needed. Report which principle should have been applied and how. |
-| Principle exists but misses a nuance | Add a "Real-world failure" callout to the principle, or refine the "Agent rule" to cover the nuance. Show the exact text to add. |
-| Anti-pattern table is missing a row | Add a new row to the T9 table. Show the detection question and fix. |
-| Bug class table is incomplete | Add a new row to the Bug Class to Test Level Mapping. |
-| No existing principle covers this | Propose a new principle (T12, T13, ...) with the same structure: description, agent rule, real-world failure callout. |
-| Workflow has a gap | Add or modify a step in the relevant workflow. |
-
-### Step 5: Present and Wait
-
-Present the analysis to the user as a structured report:
-
-```
-## Reflect: [Bug summary in one line]
-
-**Bug class:** [from taxonomy]
-**Correct test level:** [from mapping table]
-**Relevant principles:** [T1, T3, etc.]
-
-### Analysis
-[1-3 sentences: why the existing skill did or did not cover this]
-
-### Proposed change
-[Exact text to add/modify, with location in the skill file]
-
-### No change needed?
-[If the skill already covers this, explain which principle should have been applied]
-```
-
-**Do not edit the skill file until the user approves.** The user may:
-- **Approve**: Apply the edit to the SKILL.md file.
-- **Modify**: Adjust the proposal, then apply.
-- **Reject**: No change; the skill is fine as-is.
-
----
-
 ## Quick Reference
 
 | ID | Principle | One-liner |
@@ -627,21 +526,6 @@ Present the analysis to the user as a structured report:
 | T10 | Property-Based Testing | Invariants for ALL inputs, not just developer-imagined examples |
 | T11 | Test Pyramid Discipline | 70/20/10 default; deviate intentionally with stated rationale |
 | T12 | Prove It Runs | Every feature needs a wiring test; real code end-to-end against real wiring, or escalate the harness gap |
-
----
-
-## Skill Composition
-
-This skill is designed to work with these other skills:
-
-| Skill | Relationship | When to Invoke |
-|-------|-------------|----------------|
-| **architect** | Upstream. Architect's mode (Building/Exploratory/Debugging) determines which tester workflows apply. Building mode triggers the "new feature" workflow; Debugging mode triggers the "regression test" workflow. | At the start of the task, before tester |
-| **spec-engineering** | Complementary. Spec-engineering ensures the specification exists and is current (MODE=AUTHOR for spec creation, Given/When/Then requirements); tester derives test assertions from that specification. | When writing T1 (Spec-First Assertions) -- the spec must exist first |
-| **feedback-loops** | Complementary. Signal-per-token guides what to communicate; tester ensures test names and failure messages carry maximum signal. | When naming tests and writing failure messages (T6) |
-| **architect** | Upstream. DRY (B4), orthogonality (B5), and tracer bullet (E5) principles inform test design -- factory functions over god fixtures, one concern per test. | When designing test infrastructure (factories, helpers) |
-
----
 
 ## References
 

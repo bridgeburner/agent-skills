@@ -1,13 +1,13 @@
 ---
 name: architect
-description: "Engineering posture and skill routing. Use at the start of any non-trivial task to identify your mode (Building, Exploratory, or Debugging/Triage), apply the right principles, and invoke the relevant companion skills."
+description: "Engineering posture and execution discipline. Use at the start of any non-trivial task to identify Building, Exploratory, or Debugging/Triage mode; choose a prototype, spike, or tracer bullet; set proof and smoke-test expectations; and route to specs, durable tracking, or testing references only when needed."
 ---
 
 # Architect
 
 Engineering is not one activity. Applying the wrong principles to the wrong mode is one of the most common sources of wasted effort and poor decisions.
 
-Identify your mode first. Then apply the principles for that mode and route to the right companion skills.
+Identify your mode first. Then apply the principles for that mode, keep the feedback loop tight, and route to companion skills or references only when they add concrete value.
 
 ---
 
@@ -56,26 +56,47 @@ Read the task carefully and ask: **what kind of work is this?**
 
 ## Skill Routing
 
-After identifying your mode, invoke the relevant skills:
+After identifying your mode, invoke only the relevant companion skills:
 
 ### Building Mode
 1. **spec-engineering** (MODE=AUTHOR if spec needed, MODE=NAVIGATE to read existing)
-2. **feedback-loops** (design the feedback loop before coding)
-3. **tester** (write failing tests from spec before implementing)
-4. After implementation: **spec-engineering** (MODE=CHANGE — update specs if impacted)
+2. Establish the proof path before coding: the smallest cheap oracle for each edit, plus the smoke/e2e path that proves the product behavior.
+3. Build the thinnest production-quality tracer bullet before widening implementation.
+4. Read `references/testing.md` only for deep test-suite design, regression-test design, mock/fixture concerns, harness gaps, or "why did tests miss this bug?"
+5. After implementation: **spec-engineering** (MODE=CHANGE — update specs if impacted)
 
 ### Exploratory Mode
 1. **spec-engineering** (MODE=ORIENT — build a map of the repo)
 2. If the problem is stateful, empirical, and under-specified, prefer an interactive probe surface (REPL/notebook/shell) over script-only exploration (see E7)
 3. Build the thinnest vertical slice (tracer bullet — see E5)
-4. **feedback-loops** (for probe/oracle design, or for choosing tools/stack)
+4. Record what the probe proved and what smoke/e2e path would validate a real implementation.
 
 ### Debugging Mode
 1. **spec-engineering** (MODE=ANSWER — find relevant specs/docs)
-2. **tester** (T2 regression test protocol — failing test first)
-3. **feedback-loops** (run targeted oracles)
+2. Reproduce the symptom, shrink it, and run one targeted oracle per hypothesis.
+3. Read `references/testing.md` only if you need regression-test design, mock/fixture analysis, harness-gap handling, or test-suite review.
 
 ---
+
+## Feedback and Proof Discipline
+
+Run the smallest useful oracle after each meaningful edit. Typical order is format, lint, typecheck/build, scoped tests, then broader integration or smoke checks. Do not accumulate a large diff and check everything at the end.
+
+For user-facing behavior, agent behavior, integrations, workflows, deployments, or configuration-sensitive work, smoke/e2e/product-path validation is the acceptance bar. Unit tests, type checks, lint, fixtures, and narrow integration tests are supporting evidence; they do not prove the user-visible behavior by themselves.
+
+When an ideal smoke/e2e path is unavailable, say what proof tier you reached, why the higher-fidelity path was unavailable, and what gap remains. Do not relabel lower-tier evidence as full proof.
+
+## Parallel Agent Guardrails
+
+Use subagents to increase independent signal, not to front-load implementation in separate layers. Good parallel tasks include repo reconnaissance, design alternatives, root-cause hypotheses, critique, spike comparison, and independent smoke/e2e validation.
+
+Do not split implementation into frontend/backend/data/model "lanes" before a tracer bullet exists and the smoke oracle is known. The parent agent owns synthesis, sequencing, and final proof.
+
+Each subagent should have one question or outcome, write an audit artifact when the repo instructions require it, and report concrete failure modes rather than broad opinions.
+
+## Testing Reference
+
+Use `references/testing.md` as a reference, not a default process. Load it only when the task genuinely needs deeper test design: writing or reviewing substantial tests, investigating why tests missed a bug, choosing mock boundaries, designing a wiring test, or handling a missing harness.
 
 ## Meta-Principle: Easier to Change (ETC)
 
@@ -97,7 +118,7 @@ Prefer one general mechanism over separate mechanisms per role. If two things lo
 ### B2. Prove It Works, Then Ship It
 No capability is complete without a concrete test exercising a real scenario. Equally, know when to stop — ship when requirements are met, not when code is "perfect."
 
-**Agent rule:** Before marking any task done, write and run at least one test that exercises the actual behavior end-to-end. When tempted to add "one more improvement," ask: "Does this address a stated requirement or prevent a real problem?" If not, stop.
+**Agent rule:** Before marking any task done, run proof that matches the claim. For user-facing or integration behavior, that means a smoke/e2e/product-path check whenever practical. When tempted to add "one more improvement," ask: "Does this address a stated requirement or prevent a real problem?" If not, stop.
 
 ***
 
@@ -265,9 +286,9 @@ Resist patches that suppress the visible failure without addressing the defectiv
 
 | Mode | Trigger signals | Core discipline | Start with |
 |------|----------------|-----------------|------------|
-| **Building** | Clear spec, known deliverable | Correctness, clean design, types, tests | spec-engineering → feedback-loops → tester |
+| **Building** | Clear spec, known deliverable | Correctness, clean design, tracer bullet, smoke proof | spec-engineering if needed → proof path → tracer bullet |
 | **Exploratory** | Knowledge goal, fuzzy success | Fast feedback, concrete data, live state when useful | spec-engineering (ORIENT) → interactive probe if stateful → tracer bullet |
-| **Debugging** | Specific symptom, known breakage | Reproduce → shrink → hypothesize → verify | spec-engineering (ANSWER) → tester (T2) |
+| **Debugging** | Specific symptom, known breakage | Reproduce → shrink → hypothesize → verify | spec-engineering (ANSWER) → targeted oracle |
 
 | Code | Principle | One-liner |
 |------|-----------|-----------|

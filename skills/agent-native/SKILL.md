@@ -104,8 +104,8 @@ For full principle specifications, read `references/principles.md`.
 ## Companion Skill Checks
 | Concern | Status | Recommendation |
 |---------|--------|----------------|
-| Feedback loop speed | ... | See feedback-loops |
-| Test coverage/quality | ... | See tester |
+| Feedback loop speed | ... | See architect feedback discipline |
+| Test coverage/quality | ... | See architect testing reference when needed |
 | Type safety at boundaries | ... | See architect B4 |
 
 ## Quality Scores by Domain
@@ -173,10 +173,10 @@ For full principle specifications, read `references/principles.md`.
 2. Map symptoms to principles or companion skills:
    - "Opens wrong files, can't find things" → Navigate (check N1, N2, N3)
    - "Misunderstands architecture" → Understand (check U3) + architect skill
-   - "Breaks things non-obviously" → Modify (check M1, M2) + tester skill T7
-   - "Can't tell if change is correct" → Verify (check V4) + feedback-loops + tester
-   - "Slow iteration" → feedback-loops (feedback loop speed) + I1 (environments)
-   - "Poor test quality" → tester skill
+   - "Breaks things non-obviously" → Modify (check M1, M2) + architect testing reference T7
+   - "Can't tell if change is correct" → Verify (check V4) + architect feedback and proof discipline
+   - "Slow iteration" → architect feedback discipline + I1 (environments)
+   - "Poor test quality" → architect testing reference
    - "Entropy / quality drift" → I3 (quality scoring)
 3. Run targeted checks for the identified stage (read relevant principles from `references/principles.md`)
 4. Recommend specific fixes
@@ -193,9 +193,6 @@ This skill is invoked periodically for project-level structural work, not on eve
 |-------|-------------|----------------|
 | **architect** | Complementary. Architect = how to think while working. Agent-native = how to structure the project. Architect routes to agent-native for project structure decisions. | Architect routes here; agent-native for audit/bootstrap/evolve |
 | **spec-engineering** | Complementary. Agent-native defines physical doc structure (N1, U3). Spec-engineering defines navigation protocol and spec authoring patterns. The agent instructions file is the shared entry point. | Spec-engineering for navigating/authoring docs; agent-native for creating/auditing doc structure |
-| **feedback-loops** | Complementary. Signal-per-token owns feedback loop design methodology. Agent-native provides the structural enablers (V4 structured errors, V5 observability). | Signal-per-token for individual change efficiency; agent-native for project-wide infrastructure |
-| **tester** | Complementary. Tester owns test design methodology (T1-T11). Agent-native provides structural enforcement (M1 mechanical rules, I3 quality ratchet). Tester T7 (architectural invariant tests) is the mechanism; M1 is the escalation ladder. | Tester for writing tests; agent-native for test infrastructure policy |
-| **terminal-velocity** | Downstream. Terminal-velocity's parallel worktree lanes assume the isolation described in I1. Agent-native Audit could serve as prerequisite check. | Run agent-native audit before terminal-velocity parallel execution |
 
 ### Principles in Companion Skills
 
@@ -203,9 +200,9 @@ These concerns are important for agent-native codebases but are owned by compani
 
 | Concern | Companion Skill | Principle/Section |
 |---------|----------------|-------------------|
-| Feedback loop speed | feedback-loops | Section 1 (early, incremental checks) |
-| Test determinism | feedback-loops | Section 3 (determinism) |
-| Coverage policy | tester | T11 (test pyramid discipline) |
+| Feedback loop speed | architect | Feedback and Proof Discipline |
+| Test determinism | architect | Feedback and Proof Discipline |
+| Coverage policy | architect | `references/testing.md` T11 when needed |
 | Type safety at boundaries | architect | B4 (type safety) |
 | Layered architecture | architect | B6 (orthogonality) |
 | Reversibility | architect | B11 (reversibility) |

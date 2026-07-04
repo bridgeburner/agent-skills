@@ -1,6 +1,6 @@
 # Story Decomposition Methodology
 
-How to decompose a product spec and design doc into implementation stories organized by phase and stream. Stories are the unit of work that execution tools consume — beads (`bd create -f`) for tracking and dependency management, terminal-velocity for agent orchestration.
+How to decompose a product spec and design doc into implementation stories organized by phase and stream. Stories are the unit of work that execution tools consume, including task trackers such as beads (`bd create -f`) and durable `~/.sdd` ledgers when appropriate.
 
 The spec-engineering skill owns the decomposition thinking. Execution tracking (status, parallelization, verification cadence) belongs to the tools that consume the stories.
 
