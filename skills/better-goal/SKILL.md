@@ -105,6 +105,17 @@ When tracked work reaches a meaningful milestone or the user asks to archive the
 
 This gives progressive disclosure: `manifest.md` for orientation, `SUMMARY.md` for context, and the raw tracker files for audit.
 
+## Legacy Tracker Archiving
+
+When the user points at a legacy repo-local `.sdd` location, treat it as historical material and archive it into the new home-level layout. Do not upgrade it into the live tracker, and do not copy anything without explicit human approval of the source and destination.
+
+1. Identify the project pillar from the legacy path or nearby git worktree.
+2. Present the proposed copy plan: each legacy tracker source and its destination `~/.sdd/<project-pillar>/archive/<legacy-tracker-name>/legacy-import-<timestamp>/`.
+3. Wait for explicit human approval before copying.
+4. Never move or delete the legacy source. Never overwrite an existing archive.
+5. Add `import-manifest.md` with source path, destination path, import timestamp, copied top-level entries, skipped entries, and assumptions.
+6. Leave `~/.sdd/<project-pillar>/<worktree-name>/` untouched unless the user separately asks to start or resume live work.
+
 ## Completion
 
 Before marking tracked work complete:
