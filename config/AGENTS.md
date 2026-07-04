@@ -10,7 +10,6 @@
 - If something goes sideways, STOP and re-plan immediately - don't keep pushing
 - Use plan mode for verification steps, not just building
 - Write detailed specs upfront to reduce ambiguity
-- When a real plan or checklist already exists and the work can be split into independent lanes, use `terminal-velocity`; do not use it to author the plan
 
 ### 2. Subagent and Teammate Terminology
 - **"subagent"** = fire-and-forget child. `Task` tool (with or without `run_in_background`). No persistent identity, no messaging.

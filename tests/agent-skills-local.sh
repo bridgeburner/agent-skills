@@ -34,8 +34,8 @@ assert_symlink() {
 
 HOME="$TMP_HOME" "$REPO_DIR/agent-skills" install-local
 
-assert_symlink "$TMP_HOME/.claude/CLAUDE.md" "$REPO_DIR/config/CLAUDE.md"
-assert_symlink "$TMP_HOME/.codex/AGENTS.md" "$REPO_DIR/config/CLAUDE.md"
+assert_symlink "$TMP_HOME/.claude/CLAUDE.md" "$REPO_DIR/config/AGENTS.md"
+assert_symlink "$TMP_HOME/.codex/AGENTS.md" "$REPO_DIR/config/AGENTS.md"
 assert_symlink "$TMP_HOME/.claude/skills/external-skill" "$TMP_HOME/.agents/skills/external-skill/"
 assert_symlink "$TMP_HOME/.codex/skills/external-skill" "$TMP_HOME/.agents/skills/external-skill/"
 

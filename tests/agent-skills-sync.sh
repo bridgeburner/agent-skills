@@ -16,7 +16,7 @@ trap cleanup EXIT
 mkdir -p "$TMP_REPO/config" "$TMP_REPO/skills" "$TMP_HOME/.agents/skills/installed-skill" "$TMP_BIN"
 
 cp "$REPO_SRC/agent-skills" "$TMP_REPO/agent-skills"
-cp "$REPO_SRC/config/CLAUDE.md" "$TMP_REPO/config/CLAUDE.md"
+cp "$REPO_SRC/config/AGENTS.md" "$TMP_REPO/config/AGENTS.md"
 echo "# Installed Skill" > "$TMP_HOME/.agents/skills/installed-skill/SKILL.md"
 
 cat <<'LOCK' > "$TMP_REPO/skills-lock.json"

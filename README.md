@@ -75,6 +75,8 @@ The `./agent-skills` CLI manages both local and external skills:
 
 External skills are tracked in `skills-lock.json` and installed under `~/.agents/skills`; `install-local` mirrors them into both Claude and Codex skill views.
 
+Global agent instructions live in `config/AGENTS.md`; `install-local` links that file to `~/.claude/CLAUDE.md`, `~/.codex/AGENTS.md`, and `~/.agents/AGENTS.md`.
+
 `prune` asks each skill's upstream repo (via `npx skills add <source> --list`) whether the skill still exists, and removes any that are gone from the lock files, disk, and symlinks. Detection fails closed — if a repo can't be reached, nothing is pruned from it. By default it previews the deletions and asks for confirmation; pass `--dry-run` to only preview, or `--yes` to skip the prompt. `update --prune` runs the same check after updating.
 
 ### Personal Skills

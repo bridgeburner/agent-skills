@@ -206,9 +206,9 @@ get_source_paths() {
 cmd_install_local() {
     mkdir -p "$CLAUDE_SKILLS_DIR" "$CODEX_SKILLS_DIR" "$AGENTS_DIR"
 
-    link_file "$SCRIPT_DIR/config/CLAUDE.md" "$CLAUDE_DIR/CLAUDE.md"
-    link_file "$SCRIPT_DIR/config/CLAUDE.md" "$CODEX_DIR/AGENTS.md"
-    link_file "$SCRIPT_DIR/config/CLAUDE.md" "$AGENTS_DIR/AGENTS.md"
+    link_file "$SCRIPT_DIR/config/AGENTS.md" "$CLAUDE_DIR/CLAUDE.md"
+    link_file "$SCRIPT_DIR/config/AGENTS.md" "$CODEX_DIR/AGENTS.md"
+    link_file "$SCRIPT_DIR/config/AGENTS.md" "$AGENTS_DIR/AGENTS.md"
 
     # Build list of all known source directories for dangling cleanup
     local all_source_dirs=("$LOCAL_SKILLS_DIR" "$PERSONAL_SKILLS_DIR" "$AGENTS_SKILLS_DIR")
