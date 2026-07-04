@@ -26,17 +26,7 @@ npx skills add -g <owner/repo>     # install globally across all agents
 | Skill | What it does |
 |---|---|
 | `architect` | Routes you into the right engineering posture (Building / Exploratory / Debugging) at the start of a task |
-| `spec-viz` | Renders multi-file markdown specs as an interactive, annotatable browser viz with per-block reactions, notes, and export |
-| `agent-native` | Audits and improves codebases for AI agent legibility and navigability |
 | `better-goal` | Runs durable agent work through `~/.sdd` trackers, evidence ledgers, and completion audits |
-
-### Creative & Visual
-
-| Skill | What it does |
-|---|---|
-| `explainer` | Creates explanatory content in any format — articles, tutorials, presentations, interactive HTML essays |
-| `pixi-animate` | Generates self-contained PixiJS canvas visualizations from a figure spec |
-| `create-image` | Generates images from text prompts via Google Gemini |
 
 ### Utilities
 
