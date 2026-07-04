@@ -4,7 +4,7 @@ description: >-
   Build PixiJS Canvas 2D visualizations as self-contained HTML. A pure rendering
   primitive — given a figure spec or ad-hoc request, produces interactive canvas
   figures with parameter sliders, simulations, direct manipulation, scroll-driven
-  animations, and animated diagrams. Called by orchestrators (explainer, visual-explainer)
+  animations, and animated diagrams. Called by orchestrators such as explainer
   to render figures; also usable standalone for any PixiJS canvas work. Invoke
   whenever a canvas figure needs to be implemented — whether that's a physics
   simulation, an algorithm step-through, a parameter sweep, an animated diagram,

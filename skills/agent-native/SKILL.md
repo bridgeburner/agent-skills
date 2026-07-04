@@ -18,7 +18,7 @@ metadata:
 
 Define principles, canonical structures, and tooling configurations that optimize codebases for agentic engineering velocity. Make projects maximally legible, navigable, and verifiable by AI agents so they can develop, maintain, and evolve codebases with minimal human intervention and maximal correctness.
 
-This skill owns **project infrastructure** -- the structural properties of a codebase that make it agent-friendly. How you *work* (feedback loops, test design, spec authoring, engineering posture) belongs to companion skills. This skill owns how the *project is set up*.
+This skill owns **project infrastructure** -- the structural properties of a codebase that make it agent-friendly. How you *work* (feedback loops, test design, lightweight spec discipline, engineering posture) belongs to `architect`. This skill owns how the *project is set up*.
 
 ---
 
@@ -130,7 +130,7 @@ For full principle specifications, read `references/principles.md`.
    1. Create agent instructions file with project goals, philosophy, and run commands (N1)
    2. Configure linter (M1) -- read `references/tooling-profiles.md`
    3. Create ARCHITECTURE.md skeleton (U3)
-   4. Create spec topology router if applicable (see spec-engineering skill)
+   4. Create a lightweight docs/spec router if applicable
    --- MVP complete: run Audit to verify Tier 1 compliance ---
    5. Create directory layout (N3) -- read `references/layouts.md` for ecosystem reference
    6. Create core-beliefs.md with applicable principles (M1) -- see `references/layouts.md` for format
@@ -192,7 +192,6 @@ This skill is invoked periodically for project-level structural work, not on eve
 | Skill | Relationship | When to Invoke |
 |-------|-------------|----------------|
 | **architect** | Complementary. Architect = how to think while working. Agent-native = how to structure the project. Architect routes to agent-native for project structure decisions. | Architect routes here; agent-native for audit/bootstrap/evolve |
-| **spec-engineering** | Complementary. Agent-native defines physical doc structure (N1, U3). Spec-engineering defines navigation protocol and spec authoring patterns. The agent instructions file is the shared entry point. | Spec-engineering for navigating/authoring docs; agent-native for creating/auditing doc structure |
 
 ### Principles in Companion Skills
 

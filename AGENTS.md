@@ -17,9 +17,9 @@ This repo manages skills for Claude Code (and compatible agents like Codex). It 
 
 These live in `skills/` and are symlinked into `~/.claude/skills/` and `~/.codex/skills/` by `install-local`:
 
-**Engineering workflow:** `architect`, `spec-engineering`, `spec-viz`, `agent-native`, `better-goal`
+**Engineering workflow:** `architect`, `spec-viz`, `agent-native`, `better-goal`
 
-**Creative / visual:** `pixi-animate`, `image-slides`, `explainer`, `create-image`
+**Creative / visual:** `pixi-animate`, `explainer`, `create-image`
 
 **Utilities:** `codex-cli`, `gwsctx`, `claude-spawn`
 

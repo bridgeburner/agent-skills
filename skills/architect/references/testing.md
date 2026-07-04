@@ -507,7 +507,7 @@ Every harness doctor run produces the same structured output:
 
 - **Harness Gap Protocol escalates** → harness doctor designs → orchestrator/human implements. The doctor is the middle step that turns "we have a gap" into "here's exactly what to build."
 - **T12 governs** what tests are missing; **harness doctor** governs what to build to enable them.
-- **spec-engineering** may be called during harness design if the harness itself needs a spec (e.g., a complex FakeBackend with its own contract).
+- If the harness itself needs a spec (e.g., a complex FakeBackend with its own contract), write the smallest design note needed to define the contract before building it.
 - **Not a substitute** for writing actual tests. After the harness is built, return to the normal "Writing Tests for a New Feature" workflow.
 
 ## Quick Reference

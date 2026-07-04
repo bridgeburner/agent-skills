@@ -42,7 +42,7 @@ The agent instructions file (CLAUDE.md, AGENTS.md, or equivalent) is not just a 
 - User-level agent instructions (via skill repos or global config): cross-repo workflow instructions, skill invocation rules, commit conventions
 - If the ecosystem expects a specific file (AGENTS.md) that you don't use as primary, add a one-line pointer to your primary file
 
-**Cross-references:** Serves as the router entry point that spec-engineering's discovery protocol searches for. Agent-native defines what the entry point should contain; spec-engineering defines how agents navigate from it.
+**Cross-references:** Serves as the router entry point for `architect`'s progressive-disclosure repo orientation. Agent-native defines what the entry point should contain; architect defines how agents navigate from it while working.
 
 ---
 
@@ -103,14 +103,14 @@ Documentation is structured for progressive disclosure: agents start with the ag
 ```
 Agent instructions file (N1)        -- decision context, router
   → ARCHITECTURE.md                 -- system shape, boundaries, key choices
-  → specs/INDEX.md                  -- feature spec router (see spec-engineering)
+  → specs/INDEX.md                  -- optional feature spec router
     → specs/<feature>/spec.md       -- product spec
     → specs/<feature>/design.md     -- design doc with constraints
     → specs/<feature>/plan.md       -- execution plan
   → docs/conventions/               -- coding patterns, database patterns
 ```
 
-**Relationship to spec-engineering:** Agent-native defines the physical documentation structure (where files live). Spec-engineering defines the navigation protocol (how agents discover and traverse the structure) and the spec authoring patterns (three-doc topology, constraint taxonomy).
+**Relationship to architect:** Agent-native defines the physical documentation structure (where files live). Architect defines the lightweight navigation and spec discipline agents use while working.
 
 **Documentation CI (automatable checks only):**
 - All internal links resolve (dead link checker)
@@ -138,7 +138,7 @@ Encode architectural rules as machine-checked constraints. Documentation alone i
 
 Promote rules upward as confidence grows. New rules start at level 1; proven rules graduate to level 3.
 
-**Connection to spec-engineering:** The MUST/NEVER/ASK FIRST constraint taxonomy in design docs (spec-engineering) provides the content that feeds this escalation pipeline. Every MUST constraint should eventually graduate from spec → structural test → CI check.
+**Connection to architect:** The MUST/NEVER/ASK FIRST constraint taxonomy in design notes provides the content that feeds this escalation pipeline. Every durable MUST constraint should eventually graduate from spec → structural test → CI check.
 
 **Enforcement catalog:**
 

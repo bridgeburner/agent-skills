@@ -203,6 +203,11 @@ get_source_paths() {
     load_sources | jq -r '.[].path'
 }
 
+is_skill_dir() {
+    local skill_path="$1"
+    [[ -d "$skill_path" && -f "$skill_path/SKILL.md" ]]
+}
+
 cmd_install_local() {
     mkdir -p "$CLAUDE_SKILLS_DIR" "$CODEX_SKILLS_DIR" "$AGENTS_DIR"
 
@@ -240,7 +245,7 @@ cmd_install_local() {
     local linked_skills=()
 
     for skill_path in "$LOCAL_SKILLS_DIR"/*/; do
-        if [[ ! -d "$skill_path" ]]; then
+        if ! is_skill_dir "$skill_path"; then
             continue
         fi
         local skill_name
@@ -253,7 +258,7 @@ cmd_install_local() {
     # Link personal (gitignored) skills if present
     if [[ -d "$PERSONAL_SKILLS_DIR" ]]; then
         for skill_path in "$PERSONAL_SKILLS_DIR"/*/; do
-            if [[ ! -d "$skill_path" ]]; then
+            if ! is_skill_dir "$skill_path"; then
                 continue
             fi
             local skill_name
@@ -282,7 +287,7 @@ cmd_install_local() {
             fi
 
             for skill_path in "$src_path"/*/; do
-                if [[ ! -d "$skill_path" ]]; then
+                if ! is_skill_dir "$skill_path"; then
                     continue
                 fi
                 local skill_name
@@ -309,7 +314,7 @@ cmd_install_local() {
     # Link globally installed external skills managed by the skills CLI
     if [[ -d "$AGENTS_SKILLS_DIR" ]]; then
         for skill_path in "$AGENTS_SKILLS_DIR"/*/; do
-            if [[ ! -d "$skill_path" ]]; then
+            if ! is_skill_dir "$skill_path"; then
                 continue
             fi
             local skill_name
@@ -341,7 +346,7 @@ cmd_list() {
 
     if [[ -d "$LOCAL_SKILLS_DIR" ]]; then
         for skill_path in "$LOCAL_SKILLS_DIR"/*/; do
-            if [[ -d "$skill_path" ]]; then
+            if is_skill_dir "$skill_path"; then
                 local_skills+=("$(basename "$skill_path")")
             fi
         done
@@ -362,7 +367,7 @@ cmd_list() {
     local personal_skills=()
     if [[ -d "$PERSONAL_SKILLS_DIR" ]]; then
         for skill_path in "$PERSONAL_SKILLS_DIR"/*/; do
-            if [[ -d "$skill_path" ]]; then
+            if is_skill_dir "$skill_path"; then
                 personal_skills+=("$(basename "$skill_path")")
             fi
         done
@@ -392,7 +397,7 @@ cmd_list() {
                 local ext_skills=()
                 if [[ -d "$src_path" ]]; then
                     for skill_path in "$src_path"/*/; do
-                        if [[ -d "$skill_path" ]]; then
+                        if is_skill_dir "$skill_path"; then
                             ext_skills+=("$(basename "$skill_path")")
                         fi
                     done
@@ -521,7 +526,7 @@ cmd_add_source() {
     # Show what skills it contains
     local count=0
     for skill_path in "$src_path"/*/; do
-        if [[ -d "$skill_path" ]]; then
+        if is_skill_dir "$skill_path"; then
             echo -e "  ${GREEN}$(basename "$skill_path")${NC}"
             count=$((count + 1))
         fi
@@ -593,7 +598,7 @@ cmd_list_sources() {
         if [[ -d "$path" ]]; then
             local count=0
             for skill_path in "$path"/*/; do
-                if [[ -d "$skill_path" ]]; then
+                if is_skill_dir "$skill_path"; then
                     count=$((count + 1))
                 fi
             done

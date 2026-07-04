@@ -59,20 +59,20 @@ Read the task carefully and ask: **what kind of work is this?**
 After identifying your mode, invoke only the relevant companion skills:
 
 ### Building Mode
-1. **spec-engineering** (MODE=AUTHOR if spec needed, MODE=NAVIGATE to read existing)
+1. Read the relevant router/docs/code with progressive disclosure; do not bulk-load the repo.
 2. Establish the proof path before coding: the smallest cheap oracle for each edit, plus the smoke/e2e path that proves the product behavior.
 3. Build the thinnest production-quality tracer bullet before widening implementation.
-4. Read `references/testing.md` only for deep test-suite design, regression-test design, mock/fixture concerns, harness gaps, or "why did tests miss this bug?"
-5. After implementation: **spec-engineering** (MODE=CHANGE — update specs if impacted)
+4. Update specs/docs only when public contracts, invariants, workflows, or operating procedures changed.
+5. Read `references/testing.md` only for deep test-suite design, regression-test design, mock/fixture concerns, harness gaps, or "why did tests miss this bug?"
 
 ### Exploratory Mode
-1. **spec-engineering** (MODE=ORIENT — build a map of the repo)
+1. Build a repo map cheaply: find the router, then read only docs/code needed for the question.
 2. If the problem is stateful, empirical, and under-specified, prefer an interactive probe surface (REPL/notebook/shell) over script-only exploration (see E7)
 3. Build the thinnest vertical slice (tracer bullet — see E5)
 4. Record what the probe proved and what smoke/e2e path would validate a real implementation.
 
 ### Debugging Mode
-1. **spec-engineering** (MODE=ANSWER — find relevant specs/docs)
+1. Find the smallest relevant docs/code path using the repo router, README, architecture docs, and agent instructions.
 2. Reproduce the symptom, shrink it, and run one targeted oracle per hypothesis.
 3. Read `references/testing.md` only if you need regression-test design, mock/fixture analysis, harness-gap handling, or test-suite review.
 
@@ -85,6 +85,28 @@ Run the smallest useful oracle after each meaningful edit. Typical order is form
 For user-facing behavior, agent behavior, integrations, workflows, deployments, or configuration-sensitive work, smoke/e2e/product-path validation is the acceptance bar. Unit tests, type checks, lint, fixtures, and narrow integration tests are supporting evidence; they do not prove the user-visible behavior by themselves.
 
 When an ideal smoke/e2e path is unavailable, say what proof tier you reached, why the higher-fidelity path was unavailable, and what gap remains. Do not relabel lower-tier evidence as full proof.
+
+## Repo Orientation and Specs
+
+Use progressive disclosure. Start from the first useful router, then read only the docs/code needed for the current question:
+
+1. `AGENTS.md`, `CLAUDE.md`, `.claude/`, `.codex/`
+2. `README.md`, `ARCHITECTURE.md`, `DESIGN.md`, `CONTRIBUTING.md`
+3. `specs/INDEX.md`, `specs/README.md`, `docs/README.md`, `docs/architecture.md`
+4. Relevant routes, schemas, configs, migrations, tests, and entrypoints
+
+Treat docs as maps, not proof. For correctness, compatibility, security, performance, or availability claims, verify against code, tests, configs, runtime behavior, or live product paths.
+
+Only write or update specs when they reduce ambiguity for non-trivial work or when the change affects a public contract, invariant/trust boundary, workflow, operation, or validation path. Do not churn docs for internal-only refactors.
+
+When a spec/design is needed, keep it minimal and agent-consumable:
+
+- Number requirements and constraints.
+- Use Given/When/Then for behavior.
+- Capture MUST, ASK FIRST, and NEVER constraints; for NEVER, include the correct approach.
+- Record design decisions with rationale when an agent might otherwise "improve" them away.
+- Include acceptance checks, especially the smoke/e2e path that proves user-visible behavior.
+- Follow existing repo doc layout before proposing a new one.
 
 ## Parallel Agent Guardrails
 
@@ -286,9 +308,9 @@ Resist patches that suppress the visible failure without addressing the defectiv
 
 | Mode | Trigger signals | Core discipline | Start with |
 |------|----------------|-----------------|------------|
-| **Building** | Clear spec, known deliverable | Correctness, clean design, tracer bullet, smoke proof | spec-engineering if needed → proof path → tracer bullet |
-| **Exploratory** | Knowledge goal, fuzzy success | Fast feedback, concrete data, live state when useful | spec-engineering (ORIENT) → interactive probe if stateful → tracer bullet |
-| **Debugging** | Specific symptom, known breakage | Reproduce → shrink → hypothesize → verify | spec-engineering (ANSWER) → targeted oracle |
+| **Building** | Clear spec, known deliverable | Correctness, clean design, tracer bullet, smoke proof | router/docs if needed → proof path → tracer bullet |
+| **Exploratory** | Knowledge goal, fuzzy success | Fast feedback, concrete data, live state when useful | repo map → interactive probe if stateful → tracer bullet |
+| **Debugging** | Specific symptom, known breakage | Reproduce → shrink → hypothesize → verify | relevant docs/code → targeted oracle |
 
 | Code | Principle | One-liner |
 |------|-----------|-----------|
