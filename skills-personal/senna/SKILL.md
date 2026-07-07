@@ -53,18 +53,31 @@ Derive the remote destination from the local source path:
 
 The whole point of the auto-mapping is that vish mirrors his local `~/dev/{apex,personal}/...` tree under `~/src/{apex,personal}/...` on Senna. Don't invent destinations under other paths without asking.
 
-## Worktree parent artifacts
+## Better Goal `.sdd` artifacts
 
-Some Apex repos keep shared dev artifacts one level above individual worktrees.
-For example:
+The current Better Goal protocol keeps live trackers under each user's home
+directory, not inside repos and not one level above worktrees.
 
-- Local worktree: `~/dev/apex/morpheos/niobe-2d-drawing/`
-- Local canonical `.sdd`: `~/dev/apex/morpheos/.sdd/`
-- Senna canonical `.sdd`: `/home/vish/src/apex/morpheos/.sdd/`
+Resolve the live tracker from the current git worktree root:
 
-When the user asks to sync `.sdd` from inside a Morpheos/Niobe worktree, first check `../.sdd/`.
-If it exists, treat it as canonical and use it instead of `./.sdd/`. Do not create or sync
-`./.sdd/` inside the worktree unless the user explicitly names that path.
+- Project pillar: `personal`, `altius`, or `apex`, inferred from
+  `~/dev/<pillar>/...` or `~/src/<pillar>/...`.
+- Worktree name: git root basename.
+- Local live tracker: `~/.sdd/<project-pillar>/<worktree-name>/`.
+- Senna live tracker: `/home/vish/.sdd/<project-pillar>/<worktree-name>/`.
+- Local archive root: `~/.sdd/<project-pillar>/archive/<worktree-name>/`.
+- Senna archive root: `/home/vish/.sdd/<project-pillar>/archive/<worktree-name>/`.
+
+When the `better-goal` skill is available, prefer its
+`scripts/sdd_path.py --cwd "$PWD"` resolver instead of hand-rolled inference.
+If the pillar cannot be inferred, ask before creating or syncing any `.sdd`
+path.
+
+Repo-local `.sdd/` or parent-level `../.sdd/` directories are legacy tracker
+material. Do not treat them as the current `sdd` preset. If the user explicitly
+names one of those paths, explain that it is legacy material and ask for
+confirmation of the source and destination before copying it. Do not move or
+delete legacy `.sdd` material as part of a sync.
 
 ## Direction and conflict mode
 
@@ -77,15 +90,15 @@ If it exists, treat it as canonical and use it instead of `./.sdd/`. Do not crea
 
 Most of vish's project trees flow via GitHub. This skill is for the **gitignored dev artifacts** that don't go through git. Recognize these preset names:
 
-| Preset | Expands to (in current project / cwd) |
+| Preset | Expands to |
 |---|---|
 | `env` | `.env`, `.env.local`, `.env.*` (whichever exist) |
-| `sdd` | `../.sdd/` when present; otherwise `.sdd/` |
+| `sdd` | Better Goal live tracker: `~/.sdd/<project-pillar>/<worktree-name>/` |
 | `tv` | `.tv/` |
 | `claude-local` | `.claude/settings.local.json`, `.claude/<dir>.local.md` if any |
 | `dev-artifacts` | union of all the above (the "everything I care about that's gitignored" bundle) |
 
-If the user names explicit paths instead of a preset, use those. If a preset expands to zero existing paths in the cwd, tell the user before doing anything.
+If the user names explicit paths instead of a preset, use those. If a preset expands to zero existing paths, tell the user before doing anything.
 
 ## THE CORE SAFETY CONTRACT — union sync, never delete silently
 
@@ -188,7 +201,7 @@ For pull, the parse logic flips: `<f+++++++++` (note `<` instead of `>`) is a ne
 - `rsync src/  dest/` — copies CONTENTS of `src` into `dest`. Result: `dest/file1`, `dest/file2`, ...
 - `rsync src   dest/` — copies `src` AS A SUBDIR of `dest`. Result: `dest/src/file1`, ...
 
-Default for directory presets (`sdd`, `tv`): use trailing slash on source so contents merge into the existing remote directory.
+Default for directory presets (`sdd`, `tv`): use trailing slash on source so contents merge into the existing destination directory.
 
 ## Common workflows (concrete recipes)
 
@@ -205,23 +218,43 @@ rsync -avzn --itemize-changes -e "tsh ssh" --rsync-path="sudo -u vish rsync" \
 # 2. Parse, surface conflicts, resolve, execute as above.
 ```
 
-### Push .sdd/ planning artifacts
+### Push current Better Goal .sdd planning artifacts
 
 ```bash
-# From a worktree whose parent owns the shared .sdd:
+# Resolve first, ideally with the better-goal resolver:
+python ~/.codex/skills/better-goal/scripts/sdd_path.py --cwd "$PWD"
+
+# Example for an Apex worktree named niobe-2d-drawing:
 rsync -avzn --itemize-changes -e "tsh ssh" --rsync-path="sudo -u vish rsync" \
-  ../.sdd/ apexhq@senna:/home/vish/src/apex/<proj>/.sdd/
+  ~/.sdd/apex/niobe-2d-drawing/ apexhq@senna:/home/vish/.sdd/apex/niobe-2d-drawing/
 # (then resolve conflicts, then execute)
 ```
 
-### Pull parent-level .sdd/ planning artifacts
+### Pull current Better Goal .sdd planning artifacts
 
 ```bash
-# From a worktree whose parent owns the shared .sdd:
+# Resolve first, ideally with the better-goal resolver:
+python ~/.codex/skills/better-goal/scripts/sdd_path.py --cwd "$PWD"
+
+# Example for an Apex worktree named niobe-2d-drawing:
 rsync -avzn --itemize-changes -e "tsh ssh" --rsync-path="sudo -u vish rsync" \
-  apexhq@senna:/home/vish/src/apex/<proj>/.sdd/ ../.sdd/
+  apexhq@senna:/home/vish/.sdd/apex/niobe-2d-drawing/ ~/.sdd/apex/niobe-2d-drawing/
 # (then resolve conflicts, then execute)
 ```
+
+### Copy legacy repo-local or parent-level .sdd material
+
+If the user explicitly names `./.sdd/`, `../.sdd/`, or another old tracker
+location, treat it as legacy material. Present a copy plan first, including the
+source and exact destination. For Better Goal history imports, prefer an archive
+destination such as:
+
+```text
+/home/vish/.sdd/<project-pillar>/archive/<legacy-tracker-name>/legacy-import-<timestamp>/
+```
+
+Wait for explicit approval before copying legacy material. Never move or delete
+the source during this workflow.
 
 ### Pull .tv/ artifacts back from Senna after a remote run
 
