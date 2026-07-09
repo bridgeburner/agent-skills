@@ -232,9 +232,9 @@
       "sourceType": "github",
       "sourceUrl": "https://github.com/vercel/ai-elements.git",
       "skillPath": "skills/ai-elements/SKILL.md",
-      "skillFolderHash": "9df70ad12070e1d131751a8a696a06a38b893976",
+      "skillFolderHash": "2f8770af55a59b5d90ac2321835cef1037c6b412",
       "installedAt": "2026-05-17T17:57:41.954Z",
-      "updatedAt": "2026-05-17T17:57:41.954Z"
+      "updatedAt": "2026-07-09T13:29:55.980Z"
     },
     "find-skills": {
       "source": "vercel-labs/skills",
