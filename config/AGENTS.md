@@ -87,6 +87,9 @@ Vishwath maintains a personal LLM wiki that serves as cross-agent durable memory
 - `~/.sdd/<project-pillar>/<worktree-name>/` and `.tv/` directories are local planning artifacts.
 - Do not commit files from these dirs or remove `.tv/` from `.gitignore`; `.sdd` trackers live outside repos by default.
 
+# Linear
+- ALWAYS confirm with the user before ANY write to Linear — comments, assignments, status/field/description changes, new issues, relations. Show the exact content and get an explicit yes first. Reads need no confirmation. Writes are outward-facing and post under the user's own account/name.
+
 # Commits and PRs
 When creating commits or pull requests:
 - Focus only on the changes being committed
