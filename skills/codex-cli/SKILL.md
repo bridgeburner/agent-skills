@@ -1,11 +1,19 @@
 ---
 name: codex-cli
-description: "Invoke headless OpenAI Codex CLI agents for delegated tasks: code reviews, design analysis, research, file transformations, or any work that benefits from a second model's perspective. Use when you want to delegate a self-contained task to a Codex agent running in the background, especially for parallel work, cross-model analysis, or tasks where structured handoff is valuable. Triggers on: 'run codex', 'ask codex', 'delegate to codex', 'use codex for', 'codex review', 'codex analyze', or when the user explicitly requests Codex CLI invocation."
+description: "Use only from a non-Codex harness, such as Claude Code, to invoke a headless OpenAI Codex CLI agent for a deliberately delegated task. Do not use this skill from a Codex harness: use that harness's native agents for subagent work instead. In eligible harnesses, use for explicit requests to run, ask, or delegate to Codex, or for self-contained cross-model reviews, analysis, research, and file transformations that need a structured handoff. Do not trigger merely because the user asks for a generic subagent."
 ---
 
 # Codex CLI — Headless Agent Invocation
 
 Delegate self-contained tasks to a headless Codex CLI agent (`codex exec`) running in the background. The agent reads context from temp files, writes detailed output to temp files, and returns structured metadata (summary, questions, insights, output file paths) via `--output-schema`.
+
+## Harness Selection
+
+This skill is a bridge from another agent harness to Codex; it is not the subagent protocol for Codex itself.
+
+- **Inside a Codex harness:** do not invoke this skill or start nested `codex exec` processes for ordinary delegation. Use the harness's native agent/subagent facility. It already has the appropriate model integration, context handoff, lifecycle management, and result collection.
+- **Inside a non-Codex harness** (for example, Claude Code): use this skill when the user explicitly asks for Codex or when an independent Codex pass is intentionally useful. The invocation gives the parent structured, file-backed handoff rather than an untracked shell subprocess.
+- A generic instruction to use a subagent is not enough to select this skill. Choose the host harness's native subagent mechanism unless the work specifically calls for a Codex CLI pass.
 
 ## Invocation Pattern
 
