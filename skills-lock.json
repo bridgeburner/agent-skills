@@ -6,9 +6,9 @@
       "sourceType": "github",
       "sourceUrl": "https://github.com/vercel-labs/agent-browser.git",
       "skillPath": "skills/agent-browser/SKILL.md",
-      "skillFolderHash": "9b31e495b887e4ca123960415eca69fc7e1bba28",
+      "skillFolderHash": "037e8078db4b20b4aa25c04f21c6de7d335ec449",
       "installedAt": "2026-01-25T02:44:22.818Z",
-      "updatedAt": "2026-06-23T19:04:14.321Z"
+      "updatedAt": "2026-07-25T14:02:42.175Z"
     },
     "skill-creator": {
       "source": "anthropics/skills",
@@ -222,9 +222,9 @@
       "sourceType": "github",
       "sourceUrl": "https://github.com/vercel-labs/portless.git",
       "skillPath": "skills/portless/SKILL.md",
-      "skillFolderHash": "02783b357c29a68bcdbcb2d15ba9bc8458a3622d",
+      "skillFolderHash": "1a7b4b4d84ebaedf5e7901608b642d7362e44c1d",
       "installedAt": "2026-04-29T23:45:24.922Z",
-      "updatedAt": "2026-07-19T01:30:26.981Z"
+      "updatedAt": "2026-07-25T14:02:44.176Z"
     },
     "ai-elements": {
       "source": "vercel/ai-elements",
