@@ -51,6 +51,79 @@ Append one JSON object per meaningful event to `events.jsonl`:
 
 Useful event types include `goal.created`, `goal.updated`, `task.created`, `task.started`, `task.completed`, `task.blocked`, `design.created`, `review.completed`, `test.passed`, `test.failed`, `commit.created`, `evidence.captured`, and `gap.recorded`.
 
+## Codex Only: Subagent Model Routing
+
+This section applies only when the active harness is Codex. Other agent
+harnesses must ignore these mechanics and use their own native model, reasoning,
+and delegation controls.
+
+For each tracker task that may be delegated, record one Codex model/reasoning
+combination in `tasks.md`. Choose the lowest-cost combination that is still
+adequate for the task:
+
+- `gpt-5.6-luna`: bounded, reversible, high-volume, or mechanical work with an
+  exact oracle, such as file inventories, deterministic checks, and routine
+  transformations.
+- `gpt-5.6-terra`: normal implementation, testing, reconciliation, review, and
+  codebase exploration where moderate judgment is required.
+- `gpt-5.6-sol`: ambiguous architecture, cross-system diagnosis, causal
+  analysis, optimization, or consequential decisions where frontier capability
+  materially reduces risk.
+- `medium`: balanced default for clear tasks.
+- `high`: complex multi-step work, edge cases, or critical review.
+- `xhigh`: difficult root-cause analysis, optimization, or integration with
+  several competing hypotheses.
+- `max`: reserve for the hardest quality-first task where failure is costly and
+  additional latency and token use are justified.
+
+Do not assign every task the strongest combination. Escalate only when the
+task's ambiguity, consequence, or failed evidence warrants it. Reassign the
+tracker row if the task becomes materially harder or simpler.
+
+### Custom-agent bootstrap
+
+If the required presets do not exist, create `~/.codex/agents/` and add one
+standalone TOML file per combination. The recommended reusable matrix is
+`{sol,terra,luna}_{medium,high,xhigh,max}`. For example,
+`~/.codex/agents/terra_high.toml` contains:
+
+```toml
+name = "terra_high"
+description = "GPT-5.6 Terra with high reasoning for careful implementation and review."
+model = "gpt-5.6-terra"
+model_reasoning_effort = "high"
+developer_instructions = """
+Execute the delegated task within its stated scope. Preserve the parent agent's
+constraints, return concrete evidence, and make autonomous decisions only where
+the task permits.
+"""
+```
+
+For the other presets, change `name`, `description`, `model`, and
+`model_reasoning_effort` consistently. Valid model values for this matrix are
+`gpt-5.6-sol`, `gpt-5.6-terra`, and `gpt-5.6-luna`; effort values are `medium`,
+`high`, `xhigh`, and `max`. Omit sandbox and tool settings unless a role needs a
+deliberate restriction so the agent inherits the parent session's controls.
+Custom-agent registries may be loaded at session start, so restart Codex after
+adding presets when the active spawn tool does not expose them.
+
+To spawn with the recorded combination:
+
+1. Use Codex's native `spawn_agent`; do not invoke nested `codex exec`.
+2. Prefer explicit `model` and `model_reasoning_effort` spawn fields when the
+   active tool schema exposes them.
+3. Otherwise select a custom agent whose name encodes the combination, such as
+   `luna_medium`, `terra_high`, or `sol_xhigh`. Personal custom agents live in
+   `~/.codex/agents/`; project-scoped agents live in `.codex/agents/`.
+4. Pass the custom agent through the tool's actual agent-role/type selector.
+   A `task_name` or prose instruction does not select a model.
+5. If the active spawn schema exposes neither model/effort fields nor an agent
+   selector, exact routing is unavailable in that session. Do not claim
+   otherwise. Restart after installing custom agents if needed, or record that
+   the task used the session default.
+6. When exact routing matters, verify runtime evidence shows the selected role
+   and effective model/reasoning combination; keep that evidence with the task.
+
 ## Operating Loop
 
 Repeat until the tracked work is genuinely complete:
