@@ -241,8 +241,8 @@
       "sourceUrl": "https://github.com/vercel-labs/skills.git",
       "skillPath": "skills/find-skills/SKILL.md",
       "skillFolderHash": "76a98a285cb0434f3d39e1a873823556330e398b",
-      "installedAt": "2026-04-25T00:14:34.011Z",
-      "updatedAt": "2026-07-12T14:59:41.103Z"
+      "installedAt": "2026-07-28T17:23:09.559Z",
+      "updatedAt": "2026-07-28T17:23:09.559Z"
     },
     "frontend-design": {
       "source": "anthropics/skills",
@@ -250,8 +250,9 @@
       "sourceUrl": "https://github.com/anthropics/skills.git",
       "skillPath": "skills/frontend-design/SKILL.md",
       "skillFolderHash": "0d5b74a14bdf3ebcd64f352d06376a2ef05ed296",
-      "installedAt": "2026-04-25T00:14:36.280Z",
-      "updatedAt": "2026-06-10T23:44:20.663Z"
+      "pluginName": "example-skills",
+      "installedAt": "2026-07-28T17:23:11.647Z",
+      "updatedAt": "2026-07-28T17:23:11.647Z"
     },
     "postgres": {
       "source": "planetscale/database-skills",
@@ -259,8 +260,8 @@
       "sourceUrl": "https://github.com/planetscale/database-skills.git",
       "skillPath": "skills/postgres/SKILL.md",
       "skillFolderHash": "d88c9e1d9ef50949b8ce4fde20629a31378afe8e",
-      "installedAt": "2026-04-25T00:15:12.846Z",
-      "updatedAt": "2026-04-25T00:15:12.846Z"
+      "installedAt": "2026-07-28T17:23:15.505Z",
+      "updatedAt": "2026-07-28T17:23:15.505Z"
     },
     "supabase-postgres-best-practices": {
       "source": "supabase/agent-skills",
@@ -268,8 +269,9 @@
       "sourceUrl": "https://github.com/supabase/agent-skills.git",
       "skillPath": "skills/supabase-postgres-best-practices/SKILL.md",
       "skillFolderHash": "d11b54a2ab36d33940504ca9ec3a57bfd6126f26",
-      "installedAt": "2026-04-25T00:15:18.607Z",
-      "updatedAt": "2026-07-12T14:59:42.303Z"
+      "pluginName": "postgres-best-practices",
+      "installedAt": "2026-07-28T17:23:17.859Z",
+      "updatedAt": "2026-07-28T17:23:17.859Z"
     },
     "test-driven-development": {
       "source": "obra/superpowers",
@@ -277,8 +279,8 @@
       "sourceUrl": "https://github.com/obra/superpowers.git",
       "skillPath": "skills/test-driven-development/SKILL.md",
       "skillFolderHash": "a82cf8b413600c6bd7c4b482272d7990e9588cf1",
-      "installedAt": "2026-04-25T00:15:20.162Z",
-      "updatedAt": "2026-07-27T13:43:31.751Z"
+      "installedAt": "2026-07-28T17:23:21.505Z",
+      "updatedAt": "2026-07-28T17:23:21.505Z"
     },
     "visual-explainer": {
       "source": "nicobailon/visual-explainer",
@@ -286,8 +288,8 @@
       "sourceUrl": "https://github.com/nicobailon/visual-explainer.git",
       "skillPath": "plugins/visual-explainer/SKILL.md",
       "skillFolderHash": "e1778142a9e13d41c9f06d3ac1fafabed07ab160",
-      "installedAt": "2026-04-25T00:15:23.831Z",
-      "updatedAt": "2026-06-25T14:21:21.415Z"
+      "installedAt": "2026-07-28T17:23:24.550Z",
+      "updatedAt": "2026-07-28T17:23:24.550Z"
     }
   }
 }
