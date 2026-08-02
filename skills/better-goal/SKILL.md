@@ -1,6 +1,6 @@
 ---
 name: better-goal
-description: Use this skill for durable agent work that should use `~/.sdd` tracking. Trigger when a task is likely to span 3+ meaningful steps, 30+ minutes, multiple turns, multiple files/modules, multiple agents, or a restart/resume boundary; when it involves design decisions, PR/CI refreshes, research spikes, UI/e2e evidence, live-provider validation, migrations, backfills, deployments, coordinated commits, completion audits, or false-completion risk; or when the user invokes/refers to `/goal`, resume, audit, tracker, or completion proof. Do not use for one-shot answers, tiny edits, or single-command checks.
+description: Use this skill for durable agent work that should use `~/.sdd` tracking. Trigger when a task is likely to span 3+ meaningful steps, 30+ minutes, multiple turns, multiple files/modules, multiple agents, or a restart/resume boundary; when it involves design decisions, PR/CI refreshes, research spikes, UI/e2e evidence, live-provider validation, migrations, backfills, deployments, coordinated commits, completion audits, or false-completion risk; or when the user invokes/refers to `/goal`, resume, sitrep, audit, tracker, or completion proof. Do not use for one-shot answers, tiny edits, or single-command checks.
 ---
 
 # Better Goal
@@ -17,7 +17,7 @@ Use `~/.sdd` tracking when any threshold is met:
 - Multiple files, modules, services, agents, or coordinated commits.
 - Design decisions, research spikes, PR/CI refreshes, migrations, data backfills, deployments, or live-system proof.
 - UI/e2e evidence, live-provider validation, screenshots, browser artifacts, or completion audit needed.
-- User mentions `/goal`, resume, audit, tracker, completion proof, or false-completion concerns.
+- User mentions `/goal`, resume, sitrep, audit, tracker, completion proof, or false-completion concerns.
 
 Do not use this skill for one-shot answers, tiny edits, or single-command checks where the final response plus command output is sufficient evidence.
 
@@ -49,7 +49,11 @@ Append one JSON object per meaningful event to `events.jsonl`:
 {"ts":"2026-06-08T00:00:00Z","type":"task.completed","task_id":"T3","summary":"Implemented the tracer bullet","commands":["cargo test ..."],"artifacts":["screenshots/T3/thread.png"],"decision":"Kept the API contract unchanged"}
 ```
 
-Useful event types include `goal.created`, `goal.updated`, `task.created`, `task.started`, `task.completed`, `task.blocked`, `design.created`, `review.completed`, `test.passed`, `test.failed`, `commit.created`, `evidence.captured`, and `gap.recorded`.
+Useful event types include `goal.created`, `goal.updated`, `task.created`, `task.started`, `task.completed`, `task.blocked`, `design.created`, `decision.recorded`, `review.completed`, `test.passed`, `test.failed`, `commit.created`, `evidence.captured`, `gap.recorded`, and `sitrep.reported`.
+
+Record every autonomous decision when it happens so later sitreps do not have to infer intent from edits. Include `task_id`, `agent`, `decision`, `rationale`, `impact`, and whether the decision is `reversible`.
+
+Likewise, record every complication, blocker, failed approach, unexpected issue, and changed expectation when encountered, plus later disposition changes. Use the most specific event type, such as `task.blocked`, `test.failed`, or `gap.recorded`, and retain resolved items in the append-only history.
 
 ## Codex Only: Subagent Model Routing
 
@@ -123,6 +127,34 @@ To spawn with the recorded combination:
    the task used the session default.
 6. When exact routing matters, verify runtime evidence shows the selected role
    and effective model/reasoning combination; keep that evidence with the task.
+
+## Sitrep
+
+When the user asks for a `sitrep`, report the current goal state from the canonical live tracker. Read `goal.md`, `tasks.md`, `events.jsonl`, and relevant recent evidence or handoffs before answering; do not rely on conversational memory when the durable record can resolve the state.
+
+Use this structure:
+
+### Tasks
+
+- Include every tracker task exactly once, preserving tracker order. Put each task on one physical line in the form: ``- `T1` — <one or two concise sentences describing the task> — Model: `<model / reasoning>` — Status: `<status>` ``.
+- Report the model/reasoning combination actually recorded for the task. If exact routing was unavailable or was changed, say so rather than inferring a model from the task type.
+
+### Complications and changed expectations
+
+- List every recorded blocker, complication, failed approach, unexpected issue, and material difference from the original expectation, including resolved items.
+- State the consequence and current disposition: open, mitigated, superseded, accepted, or resolved. Say `None recorded` when there are none; do not invent a complication to fill the section.
+
+### Autonomous decisions
+
+- Explain every decision agents made without contemporaneous user direction. Name the agent/task, decision, rationale, effect on scope, design, sequencing, evidence, or risk, and whether it remains reversible.
+- Use `decision.recorded` events and structured decision fields as evidence; never infer intent from an edit alone. Distinguish an autonomous decision from a user-approved decision. If there are no decision records, say `No autonomous decisions recorded`; when the ledger predates this requirement or otherwise lacks complete decision coverage, also state that the decision history is incomplete rather than implying that no autonomous decisions occurred.
+
+### Since the last check-in
+
+- Summarize other noteworthy progress, evidence, commits, status changes, new gaps, and the current or next gate strictly after the most recent `sitrep.reported` event and through the current report timestamp.
+- If no prior sitrep is recorded, say that this is the baseline sitrep and summarize the recorded work to date.
+
+Keep the sitrep concise but complete. Surface stale, missing, or contradictory tracker data explicitly, and update the tracker before reporting when current evidence resolves the contradiction. Before yielding the finalized report to the user, append a `sitrep.reported` event with the reporting timestamp, window start, and a compact summary so the next sitrep has a durable boundary.
 
 ## Operating Loop
 
