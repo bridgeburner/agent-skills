@@ -55,11 +55,54 @@ Record every autonomous decision when it happens so later sitreps do not have to
 
 Likewise, record every complication, blocker, failed approach, unexpected issue, and changed expectation when encountered, plus later disposition changes. Use the most specific event type, such as `task.blocked`, `test.failed`, or `gap.recorded`, and retain resolved items in the append-only history.
 
-## Codex Only: Subagent Model Routing
+## Harness-Specific Subagent Model Routing
+
+The routing guidance below is harness-specific. Apply only the section matching
+the active harness; do not transfer another harness's model, reasoning, or
+delegation mechanics by analogy. Additional harness-specific sections may be
+added here as their routing conventions are established.
+
+### Shared five-tier model ladder
+
+Classify the task once, then select the route from the column for the active
+harness. Every tier has one Codex route and one Claude route; these are
+harness-local defaults, not cross-harness alternatives.
+
+| Tier | Use for | Codex route | Claude route |
+|---|---|---|---|
+| 1 — bounded | Mechanical, reversible work with an exact oracle | `gpt-5.6-luna / high` | `claude-sonnet-5 (non-reasoning) / high` |
+| 2 — routine judgment | Straightforward implementation, testing, and review | `gpt-5.6-luna / xhigh` | `claude-opus-5 / low` |
+| 3 — substantive | Multi-step reasoning, reconciliation, and non-trivial review | `gpt-5.6-luna / max` | `claude-opus-5 / medium` |
+| 4 — complex | Ambiguous, consequential, or cross-system work | `gpt-5.6-sol / high` | `claude-opus-5 / high` |
+| 5 — frontier | Hardest quality-first work where failure is costly | `gpt-5.6-sol / xhigh` | `claude-opus-5 / xhigh` |
+
+Apply the ladder as follows:
+
+1. Choose the lowest tier whose task profile is adequate.
+2. In a Codex harness, use only the Codex route. In a Claude harness, use only
+   the Claude route.
+3. Do not use the other harness's route as a fallback, and do not substitute a
+   different model merely because its name or effort label sounds equivalent.
+4. Treat Tier 1's Claude route as mechanical-only; use Tier 2 or higher when
+   the task requires meaningful judgment.
+5. Reserve `gpt-5.6-sol / max` and `claude-opus-5 / max` for an explicit
+   quality escalation above Tier 5. Use them only when Tier 5 failed or the
+   cost of failure justifies the extra token use, and record the reason in
+   `tasks.md`.
+
+This is benchmark-informed guidance, not a claim that model scores or effort
+labels are interchangeable. Benchmark scores, pricing, model availability,
+and harness controls can change; re-check the routes when those inputs change.
+
+### Codex: Subagent Model Routing
 
 This section applies only when the active harness is Codex. Other agent
-harnesses must ignore these mechanics and use their own native model, reasoning,
-and delegation controls.
+harnesses must use their own native model, reasoning, and delegation controls
+or the unlisted-harness fallback below.
+
+When the shared ladder applies, its exact route overrides the generic model and
+effort descriptions below. Use the generic descriptions only when documenting
+an explicit same-harness exception or when no ladder tier applies.
 
 For each tracker task that may be delegated, record one Codex model/reasoning
 combination in `tasks.md`. Choose the lowest-cost combination that is still
@@ -73,7 +116,8 @@ adequate for the task:
 - `gpt-5.6-sol`: ambiguous architecture, cross-system diagnosis, causal
   analysis, optimization, or consequential decisions where frontier capability
   materially reduces risk.
-- `medium`: balanced default for clear tasks.
+- `medium`: balanced effort for clear tasks when a same-harness exception or
+  non-ladder task calls for it; it is not a default route in the shared ladder.
 - `high`: complex multi-step work, edge cases, or critical review.
 - `xhigh`: difficult root-cause analysis, optimization, or integration with
   several competing hypotheses.
@@ -84,11 +128,11 @@ Do not assign every task the strongest combination. Escalate only when the
 task's ambiguity, consequence, or failed evidence warrants it. Reassign the
 tracker row if the task becomes materially harder or simpler.
 
-### Custom-agent bootstrap
+#### Codex custom-agent bootstrap
 
 If the required presets do not exist, create `~/.codex/agents/` and add one
 standalone TOML file per combination. The recommended reusable matrix is
-`{sol,terra,luna}_{medium,high,xhigh,max}`. For example,
+`{luna}_{high,xhigh,max}` plus `{terra,sol}_{medium,high,xhigh,max}`. For example,
 `~/.codex/agents/terra_high.toml` contains:
 
 ```toml
@@ -117,7 +161,7 @@ To spawn with the recorded combination:
 2. Prefer explicit `model` and `model_reasoning_effort` spawn fields when the
    active tool schema exposes them.
 3. Otherwise select a custom agent whose name encodes the combination, such as
-   `luna_medium`, `terra_high`, or `sol_xhigh`. Personal custom agents live in
+   `luna_high`, `terra_high`, or `sol_xhigh`. Personal custom agents live in
    `~/.codex/agents/`; project-scoped agents live in `.codex/agents/`.
 4. Pass the custom agent through the tool's actual agent-role/type selector.
    A `task_name` or prose instruction does not select a model.
@@ -127,6 +171,28 @@ To spawn with the recorded combination:
    the task used the session default.
 6. When exact routing matters, verify runtime evidence shows the selected role
    and effective model/reasoning combination; keep that evidence with the task.
+
+### Claude: Subagent Model Routing
+
+This section applies only when the active harness is Claude. Use Claude's native
+delegation and model/effort controls to select the exact Claude route from the
+shared ladder. Do not apply Codex spawn fields, custom-agent TOML, or Codex
+model names to a Claude task.
+
+For each delegated tracker task, record the requested Claude model/effort
+combination in `tasks.md`. If the Claude harness cannot expose or verify the
+exact route, use its session default only when it is adequate, and record both
+the routing limitation and the effective model/effort. Do not claim exact
+routing and do not silently switch to a Codex model.
+
+### Unlisted harness fallback
+
+If the active harness is not covered by a section above, use appropriate
+judgment to select the model, reasoning level, and skill combination that best
+fits the task and the harness's native capabilities. Prefer the lowest-cost
+combination that is adequate, record the selected combination in `tasks.md`,
+and state when exact routing or runtime identity could not be verified. Do not
+infer or apply the Codex matrix to an unlisted harness.
 
 ## Sitrep
 
