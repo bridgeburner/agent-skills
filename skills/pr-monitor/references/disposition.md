@@ -89,6 +89,23 @@ just implement them.
 4. Record in `events.jsonl`: tests run, commit SHA, evidence, decisions taken
    autonomously, and any residual risk.
 5. Push, then post exactly **one** top-level comment per cycle.
+6. **Resolve the review threads you actually addressed.** For each thread whose finding you
+   fixed, mark it resolved after the fix is pushed and the comment is posted:
+
+   ```bash
+   gh api graphql -f threadId=<id> -f query='
+   mutation($threadId:ID!){ resolveReviewThread(input:{threadId:$threadId}){
+     thread{ isResolved } } }'
+   ```
+
+   Leave pushback and `insufficient_context` threads **open** — those are the reviewer's to
+   close, and resolving them yourself would hide a disagreement you have not settled.
+
+   Without this, the unresolved-thread set only ever grows: the merge gate's
+   "no unresolved thread maps to an unaddressed finding" condition then depends entirely on
+   in-session memory of what was fixed, which does not survive a compaction, so the gate
+   becomes progressively harder to pass and eventually blocks a PR whose findings were all
+   handled.
 
 ## Writing the response comment
 

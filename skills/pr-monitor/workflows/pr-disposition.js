@@ -62,6 +62,25 @@ function findingKey(finding, i) {
 
 const FINDING_KEYS = FINDINGS.map(findingKey)
 
+// Findings reach a PUBLIC comment, so they must never be rendered as raw JSON. The agent is
+// expected to pass {author, path, line, body} objects (or plain strings); anything else is
+// summarised rather than dumped, so a stray GraphQL node cannot leak internal structure onto
+// a reviewer's thread.
+function renderFinding(finding) {
+  if (typeof finding === 'string') return finding
+  if (!finding || typeof finding !== 'object') return String(finding)
+  const where = [finding.path, finding.line != null ? 'line ' + finding.line : null]
+    .filter(Boolean).join(':')
+  const body = finding.body || finding.summary || finding.text
+  if (!body) return where || 'unlabelled finding'
+  return [
+    finding.author ? finding.author + ' wrote' : 'Reviewer wrote',
+    where ? ' (' + where + ')' : '',
+    ': ',
+    String(body).trim(),
+  ].join('')
+}
+
 const CONTEXT = [
   'PR: #' + PR + ' in ' + REPO,
   'Head branch: ' + BRANCH,
@@ -166,7 +185,8 @@ const IMPL_SCHEMA = {
     testsRun: { type: 'array', items: { type: 'string' } },
     testsPassed: { type: 'boolean' },
     committed: { type: 'boolean' },
-    commitSha: { type: 'string' },
+    commitSha: { type: 'string', description: 'Required whenever committed is true. Never report a fix without it.' },
+    newHeadSha: { type: 'string', description: 'git -C <worktree> rev-parse HEAD after the push. The caller seeds its cross-tick memory from this; returning the pre-push SHA makes the agent unable to recognise its own push next tick.' },
     pushed: { type: 'boolean' },
     recordedPush: { type: 'boolean', description: 'Whether pr.push.completed was appended to the child tracker events.jsonl' },
     guardFailed: { type: 'boolean', description: 'true if the worktree HEAD guard failed and nothing was edited' },
@@ -396,6 +416,26 @@ const disposed = await pipeline(
 
     const counted = votes.filter(Boolean)
     const refutations = counted.filter(v => v.refuted).length
+
+    // Total verifier outage is not evidence about the pushback either way. Converting to
+    // "fix" would publish a rationale reading "refuted (0/0 lenses). Refutation:" — the
+    // direction is safe but the reviewer-facing text is gibberish. Escalate instead.
+    if (counted.length === 0) {
+      log('All ' + REFUTE_LENSES.length + ' refuters failed on PR #' + PR + ' finding ' +
+          (result.index + 1) + ' — no verification signal; escalating rather than guessing.')
+      return {
+        ...result,
+        triage: {
+          ...result.triage,
+          verdict: 'insufficient_context',
+          openQuestion: 'A pushback was proposed but every adversarial verifier failed to ' +
+            'run, so it was never checked. Original ground: ' +
+            (result.triage.pushbackGround || 'unstated') + '. Original rationale: ' +
+            result.triage.rationale,
+        },
+        verifierOutage: true,
+      }
+    }
     // Survives only on a majority failing to refute. A dead/failed verifier counts
     // against the pushback: fewer than 2 usable votes cannot clear it.
     const survives = counted.length >= 2 && refutations < Math.ceil(counted.length / 2)
@@ -484,6 +524,12 @@ if (REPORT_ONLY) {
     '   `pr.push.completed` with the commit SHA. Write-ahead ordering is required: pushing',
     '   first and dying before recording leaves no trace, and the next cycle re-does the',
     '   work and dismisses the approval a second time.',
+    '',
+    '   NEVER force-push. Not --force, not --force-with-lease, not a rebase that rewrites',
+    '   pushed history. If the push is rejected as non-fast-forward, a reviewer or teammate',
+    '   has pushed since head ' + HEAD_SHA + ': stop, add it to blockers, set pushed=false,',
+    '   and return. Their commit is not yours to discard, and the next tick will re-ground',
+    '   against the new head. Do not improvise a way to land the push.',
     '8. Append events.jsonl entries for tasks, tests, and the commit as you go.',
     '   Get timestamps with: date -u +%Y-%m-%dT%H:%M:%SZ',
     '',
@@ -504,9 +550,13 @@ if (REPORT_ONLY) {
     log('Worktree HEAD guard FAILED for PR #' + PR + ' — stale mapping, nothing edited.')
     return { pr: PR, branch: BRANCH, headSha: HEAD_SHA, grounding, verdicts: results, implemented: impl, responded: false, cycleComplete: false, blockers: ['worktree ' + WORKTREE + ' no longer owns branch ' + BRANCH + ' (or is dirty); nothing was edited'], nextAction: 'report-drift', error: 'worktree-guard-failed' }
   }
-  if (!impl.testsPassed || !impl.pushed) {
-    log('PR #' + PR + ' not pushed (testsPassed=' + impl.testsPassed + ', pushed=' + impl.pushed +
-        '). Skipping the response comment so it cannot describe unpushed work.')
+  // commitSha is validated alongside the booleans: without it the response comment renders
+  // "Commit: (unrecorded)" while asserting to a reviewer that a fix landed.
+  if (!impl.testsPassed || !impl.pushed || !impl.committed || !impl.commitSha) {
+    log('PR #' + PR + ' not fully landed (testsPassed=' + impl.testsPassed +
+        ', committed=' + impl.committed + ', commitSha=' + (impl.commitSha || 'MISSING') +
+        ', pushed=' + impl.pushed + '). Skipping the response comment so it cannot claim ' +
+        'work that is unpushed or unidentifiable.')
     return { pr: PR, branch: BRANCH, headSha: HEAD_SHA, grounding, verdicts: results, implemented: impl, responded: false, cycleComplete: false, blockers: ((impl.blockers || []).length ? impl.blockers : ['fixes did not pass tests and were not pushed']), nextAction: 'needs-attention', error: 'fixes-incomplete' }
   }
 }
@@ -526,22 +576,19 @@ const respond = await agent([
   CONTEXT,
   '',
   '--- FIXED ---',
-  ...(toFix.length ? toFix.map((r, n) => (n + 1) + '. ' +
-      (typeof r.finding === 'string' ? r.finding : JSON.stringify(r.finding)) +
+  ...(toFix.length ? toFix.map((r, n) => (n + 1) + '. ' + renderFinding(r.finding) +
       '\n   Root cause: ' + r.triage.rationale) : ['(none)']),
   impl ? 'Commit: ' + (impl.commitSha || '(unrecorded)') + '\nTests: ' + (impl.testsRun || []).join(', ') : '',
   impl && (impl.remainingRisks || []).length ? 'Remaining risks: ' + impl.remainingRisks.join('; ') : '',
   '',
   '--- PUSHING BACK (each survived adversarial review) ---',
-  ...(toPush.length ? toPush.map((r, n) => (n + 1) + '. ' +
-      (typeof r.finding === 'string' ? r.finding : JSON.stringify(r.finding)) +
+  ...(toPush.length ? toPush.map((r, n) => (n + 1) + '. ' + renderFinding(r.finding) +
       '\n   Ground: ' + (r.triage.pushbackGround || '') +
       '\n   Reasoning: ' + r.triage.rationale +
       '\n   Evidence: ' + r.triage.evidence) : ['(none)']),
   '',
   '--- NEEDS THE AUTHOR\'S CALL ---',
-  ...(toEscalate.length ? toEscalate.map((r, n) => (n + 1) + '. ' +
-      (typeof r.finding === 'string' ? r.finding : JSON.stringify(r.finding)) +
+  ...(toEscalate.length ? toEscalate.map((r, n) => (n + 1) + '. ' + renderFinding(r.finding) +
       '\n   Open question: ' + (r.triage.openQuestion || r.triage.rationale)) : ['(none)']),
   '',
   '--- DEDUP: DO THIS FIRST, BEFORE WRITING ANYTHING ---',
@@ -614,6 +661,14 @@ return {
   pr: PR,
   branch: BRANCH,
   headSha: HEAD_SHA,
+  // Seed the agent's cross-tick memory from the POST-push head. Returning only the pre-push
+  // SHA is what leaves the agent unable to recognise its own push on the next tick, which in
+  // turn makes it re-read its own comment as new review activity.
+  newHeadSha: (impl && impl.newHeadSha) || HEAD_SHA,
+  openQuestions: toEscalate.map(r => ({
+    finding: renderFinding(r.finding),
+    question: r.triage.openQuestion || r.triage.rationale,
+  })),
   grounding,
   verdicts: results,
   counts: { fix: toFix.length, pushback: toPush.length, escalate: toEscalate.length, dropped },

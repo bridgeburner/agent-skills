@@ -269,6 +269,11 @@ Workflow({
 
 Expand `~` to the real home path — `scriptPath` is not shell-expanded.
 
+Pass each finding as `{author, path, line, body}` — or a plain string. Do **not** pass raw
+`gh`/GraphQL nodes: findings are rendered into a comment a reviewer reads, and an unexpected
+shape risks dumping internal JSON onto their thread. The workflow summarises anything it does
+not recognise rather than stringifying it, but that is a backstop, not a licence.
+
 `branch`, `worktree`, and `childTracker` are load-bearing, and the workflow refuses to run
 without them rather than degrading:
 
@@ -292,9 +297,15 @@ One block per tick, in this order:
    this, or should it stay unmonitored? Put this first. It is the only part of the report
    that needs the user to act, and an unanswered mapping request means real work is sitting
    untouched.
-2. **Admitted PRs** — number, title, short head SHA, worktree, CI, review state,
+2. **Open questions** — every `insufficient_context` verdict from any workflow, as the
+   specific question, with its PR. These need you as much as an admission request does. The
+   workflow returns them in `openQuestions`; also append them to the child tracker so they
+   survive a compaction, because a question that exists only as a PR comment is a question
+   you are not watching — you watch these reports.
+3. **Admitted PRs** — number, title, short head SHA, worktree, CI, review state,
    mergeability, and what you did or why you did nothing.
-3. **Drift** — any admitted PR newly moved to `drift`, and why.
+4. **Drift** — any admitted PR newly moved to `drift`, and why. Include PRs that hit their
+   third consecutive incomplete cycle, with the accumulated blockers.
 
 If a mapping request has gone unanswered for several ticks, say so once rather than
 repeating the full request every tick.

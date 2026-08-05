@@ -30,8 +30,11 @@ Plus unresolved threads (see the GraphQL query in `SKILL.md` §5).
 Merge only if **every** condition holds. Any failure ends the merge attempt for this tick.
 
 1. `state == "OPEN"` and `isDraft == false`.
-2. `mergeable == "MERGEABLE"` and `mergeStateStatus` is not `DIRTY` (conflicted) or
-   `BEHIND` where the branch protection requires up-to-date.
+2. `mergeable == "MERGEABLE"` **and `mergeStateStatus == "CLEAN"`.** Require `CLEAN`
+   explicitly rather than excluding a blocklist of bad values: `mergeable` is still
+   `MERGEABLE` when `mergeStateStatus` is `BLOCKED`, so an exclusion list that omits
+   `BLOCKED` lets a PR through on a repo without branch protection to reject it.
+   `CLEAN` is GitHub's own affirmative verdict; anything else fails.
 3. **Required checks pass — established by asking GitHub, not by re-deriving it.** Run:
 
    ```bash
@@ -60,7 +63,10 @@ Merge only if **every** condition holds. Any failure ends the merge attempt for 
 5. The approving review is at or after `headRefOid`. If the approval predates the current
    head, it is stale — usable only after you have reconciled the current head and every
    newer review submission against your last disposition.
-6. No unresolved review thread maps to an unaddressed actionable finding.
+6. No unresolved review thread maps to an unaddressed actionable finding. Fixed threads are
+   resolved by the disposition cycle (`disposition.md` fix loop step 6), so a still-open
+   thread here means either a live pushback, an open question, or something genuinely
+   unhandled — evaluate it on that basis rather than assuming memory of a past fix.
 7. Every actionable current-head finding is either fixed or explicitly pushed back, with
    the pushback posted.
 8. **No review arrived since your last disposition.** If one did, abort the merge, load
@@ -113,8 +119,13 @@ Cleanup is destructive. Do not run any of it until both checks pass:
 ```bash
 gh pr view <n> --repo <repo> --json state,mergedAt,mergeCommit   # state must be MERGED
 git -C <main-repo> fetch origin main --quiet
-git -C <main-repo> branch --contains <mergeCommitOid> -r | grep -q 'origin/main'
+git -C <main-repo> merge-base --is-ancestor <mergeCommitOid> origin/main
 ```
+
+Use `merge-base --is-ancestor` — it exits 0 only if the commit really is an ancestor of
+`origin/main`. Do **not** use `branch --contains <oid> -r | grep -q 'origin/main'`: that
+substring match also succeeds on `origin/main-backup`, `origin/mainline`, or
+`origin/release/main`, and this is the gate on every destructive step that follows.
 
 If either fails — including `--auto` armed but not yet landed — the PR is not merged.
 Leave everything in place and report. Never delete a worktree, branch, or evidence while
@@ -127,12 +138,27 @@ In this order. The ordering is load-bearing.
 ### 0. Guard against touching your own worktree — before anything else
 
 ```bash
-git rev-parse --show-toplevel   # if this equals <worktree>, STOP HERE
+SESSION_ROOT=$(cd "$(git rev-parse --show-toplevel)" && pwd -P)
+TARGET=$(cd <worktree> && pwd -P)
+MAIN_ROOT=$(cd <main-repo> && pwd -P)
+[ "$SESSION_ROOT" = "$TARGET" ] && echo "SELF — STOP HERE"
+[ "$MAIN_ROOT" = "$TARGET" ] && echo "PRIMARY CHECKOUT — see below"
 ```
+
+Compare **resolved** physical paths via `pwd -P`, not raw strings. A worktree under `/tmp`
+resolves to `/private/tmp/...` on macOS while the registry may hold `/tmp/...`, so a plain
+string equality is a false negative on exactly the case the guard exists to catch.
 
 If the session is running inside the worktree slated for removal, stop **before any step
 below runs**. Not after recording, not after archiving — before. `git worktree remove` fails
 from inside anyway, and forcing it strands the session in a deleted directory.
+
+**If the mapping is the primary checkout** (the main working tree, which §3 of `SKILL.md`
+explicitly permits as an owner), there is no worktree to remove and its branch is checked
+out, so neither `git worktree remove` nor `git branch -d` can apply. Do steps 1–3, then skip
+steps 4 and 5, note in the report that the primary checkout was left in place with its branch
+still checked out, and continue with steps 6–8. Never switch the user's main working tree to
+another branch to make the deletion possible.
 
 This guard is first because the steps that follow are mutating. Running it late means a
 self-worktree case still gets its live tracker reset and its evidence moved, while the
