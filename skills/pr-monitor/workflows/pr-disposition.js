@@ -17,18 +17,26 @@ const input = args || {}
 const PR = input.pr
 const REPO = input.repo
 const WORKTREE = input.worktree
+const BRANCH = input.branch
 const CHILD_TRACKER = input.childTracker
 const PARENT_TRACKER = input.parentTracker
 const HEAD_SHA = input.headSha
 const REPORT_ONLY = input.reportOnly === true
 const FINDINGS = Array.isArray(input.findings) ? input.findings : []
 
-if (!PR || !REPO || !WORKTREE || !HEAD_SHA) {
-  throw new Error('pr-disposition requires args {pr, repo, worktree, headSha}; got ' + JSON.stringify(Object.keys(input)))
+// BRANCH is required because the worktree guard is a string comparison against it — a
+// guard with no right-hand side silently passes and lets a fix land on another PR's
+// branch. CHILD_TRACKER is required because it is the only durable dedup store; without
+// it, "did I already post this?" has nowhere to look and comments duplicate.
+const missing = ['pr', 'repo', 'worktree', 'branch', 'headSha', 'childTracker']
+  .filter(k => !input[k])
+if (missing.length) {
+  throw new Error('pr-disposition missing required args: ' + missing.join(', ') +
+    '. Refusing to run — each of these is load-bearing for a safety check, not optional metadata.')
 }
 if (!FINDINGS.length) {
   log('No findings passed — nothing to disposition.')
-  return { pr: PR, headSha: HEAD_SHA, verdicts: [], implemented: null, responded: false, note: 'no findings' }
+  return { pr: PR, branch: BRANCH, headSha: HEAD_SHA, verdicts: [], implemented: null, responded: false, cycleComplete: true, blockers: [], nextAction: 'evaluate-merge-gate', note: 'no findings' }
 }
 
 // A single PR maps to a single worktree, so all editing is serialized through one
@@ -39,19 +47,49 @@ if (!FINDINGS.length) {
 const MAX_PUSHBACK_VERIFY = 4
 const REFUTE_LENSES = ['correctness', 'security-and-data-exposure', 'does-the-premise-hold']
 
+// Dedup keys must be head-INDEPENDENT. Keying an "already responded" record to a head SHA
+// is self-defeating, because a successful cycle pushes and therefore moves the head — so
+// the next lookup always misses and the comment posts again. Key on the finding's own
+// identity instead, which survives both a head move and a context compaction.
+function findingKey(finding, i) {
+  const text = typeof finding === 'string'
+    ? finding
+    : [finding && finding.path, finding && finding.line, finding && finding.author,
+       finding && finding.body || finding && finding.summary].filter(Boolean).join(' ')
+  const norm = String(text || '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '')
+  return 'pr' + PR + '/f' + (i + 1) + '/' + (norm.slice(0, 48) || 'unlabelled')
+}
+
+const FINDING_KEYS = FINDINGS.map(findingKey)
+
 const CONTEXT = [
   'PR: #' + PR + ' in ' + REPO,
+  'Head branch: ' + BRANCH,
   'Head SHA: ' + HEAD_SHA,
   'Owning worktree: ' + WORKTREE,
-  'Child tracker: ' + (CHILD_TRACKER || '(none recorded)'),
+  'Child tracker: ' + CHILD_TRACKER,
   'Parent tracker: ' + (PARENT_TRACKER || '(none recorded)'),
 ].join('\n')
 
+// The agent guarded this mapping at tick time, but Ground + Triage + refutation can take
+// many minutes, during which the user may check out another branch in this worktree. This
+// re-guard closes that window, so it must be at least as strict as the tick-time one.
 const WORKTREE_GUARD = [
-  'Before any edit, verify the worktree still owns this PR:',
+  'GUARD — run both checks before making ANY edit:',
+  '',
   '  git -C ' + WORKTREE + ' rev-parse --abbrev-ref HEAD',
-  'It must equal the PR head branch. On mismatch, make NO edits and report the drift —',
-  'a stale mapping means your fix would land on the wrong branch.',
+  '      must print exactly: ' + BRANCH,
+  '',
+  '  git -C ' + WORKTREE + ' status --porcelain',
+  '      must print nothing. Pre-existing uncommitted changes are not yours to commit.',
+  '',
+  'If either check fails: set guardFailed=true, make NO edits, do not commit, do not push,',
+  'and return immediately. A mismatch means the worktree no longer owns PR #' + PR + ', so',
+  'editing would land this fix on branch "' + BRANCH + '"\'s replacement — i.e. on a',
+  'different PR. Never "fix" the mismatch by checking out ' + BRANCH + ' yourself; the',
+  'user may be mid-task in that worktree.',
+  '',
+  'All git and push operations use -C ' + WORKTREE + ' and target branch ' + BRANCH + '.',
 ].join('\n')
 
 // ---------------------------------------------------------------- schemas
@@ -59,7 +97,7 @@ const WORKTREE_GUARD = [
 const GROUNDING_SCHEMA = {
   type: 'object',
   additionalProperties: false,
-  required: ['trackerPresent', 'declaredScope', 'nonGoals', 'priorDecisions', 'diffSummary'],
+  required: ['trackerPresent', 'declaredScope', 'nonGoals', 'priorDecisions', 'diffSummary', 'coverageGaps'],
   properties: {
     trackerPresent: { type: 'boolean', description: 'Whether a child tracker with real content was found' },
     declaredScope: { type: 'string' },
@@ -91,6 +129,9 @@ const TRIAGE_SCHEMA = {
   type: 'object',
   additionalProperties: false,
   required: ['verdict', 'rationale', 'evidence', 'groundedInTracker'],
+  // pushbackGround is deliberately not globally required (it is meaningless for a fix),
+  // but a pushback without it is rejected in code below — schema optionality must not
+  // become a way to smuggle an ungrounded dismissal past the rubric.
   properties: {
     verdict: { type: 'string', enum: ['fix', 'pushback', 'insufficient_context'] },
     rationale: { type: 'string' },
@@ -127,6 +168,7 @@ const IMPL_SCHEMA = {
     committed: { type: 'boolean' },
     commitSha: { type: 'string' },
     pushed: { type: 'boolean' },
+    recordedPush: { type: 'boolean', description: 'Whether pr.push.completed was appended to the child tracker events.jsonl' },
     guardFailed: { type: 'boolean', description: 'true if the worktree HEAD guard failed and nothing was edited' },
     remainingRisks: { type: 'array', items: { type: 'string' } },
     blockers: { type: 'array', items: { type: 'string' } },
@@ -184,16 +226,46 @@ log('Grounded PR #' + PR + ' — tracker ' + (grounding.trackerPresent ? 'presen
     ', ' + (grounding.priorDecisions || []).length + ' prior decisions, ' +
     ((grounding.coverageGaps || []).length) + ' coverage gaps, ' + FINDINGS.length + ' findings')
 
+// If there is no tracker, or grounding surfaced no prior decisions, then there is no
+// recorded reasoning for a pushback to stand on — so pushback is forbidden outright for
+// this run rather than merely discouraged. The previous formulation rendered an absent
+// coverageGaps list as "GAPS: (none)", which told triage the exact inverse of the truth:
+// that nothing was off-limits.
+const NO_GROUNDING = grounding.trackerPresent !== true ||
+  !(grounding.priorDecisions || []).length
+
 const GROUND_BRIEF = [
   'Declared scope: ' + grounding.declaredScope,
   'Non-goals: ' + ((grounding.nonGoals || []).join('; ') || '(none recorded)'),
   'Tracker present: ' + grounding.trackerPresent,
   'Prior recorded decisions:',
-  ...((grounding.priorDecisions || []).map(d => '  - ' + d.decision + ' — ' + d.rationale + ' [' + d.source + ']')),
-  'Tracker coverage GAPS (pushback forbidden in these areas):',
-  ...(((grounding.coverageGaps || []).length ? grounding.coverageGaps : ['(none)']).map(g => '  - ' + g)),
+  ...((grounding.priorDecisions || []).length
+    ? grounding.priorDecisions.map(d => '  - ' + d.decision + ' — ' + d.rationale + ' [' + d.source + ']')
+    : ['  (NONE RECORDED — no decision history to ground a pushback on)']),
+  'Tracker coverage GAPS — pushback is FORBIDDEN in these areas:',
+  ...((grounding.coverageGaps || []).length
+    ? grounding.coverageGaps.map(g => '  - ' + g)
+    : ['  (none itemised — see the blanket rule below if it applies)']),
+  '',
+  NO_GROUNDING
+    ? 'PUSHBACK IS FORBIDDEN FOR THIS ENTIRE RUN. ' +
+      (grounding.trackerPresent !== true
+        ? 'This PR has no child tracker, '
+        : 'The tracker records no prior decisions, ') +
+      'so there is no recorded reasoning any pushback could cite. Every finding must be ' +
+      'either "fix" or "insufficient_context". A pushback here would be refusal with no ' +
+      'evidence behind it, which costs far more than an unnecessary fix.'
+    : 'Pushback is permitted only outside the gap list above, and only with concrete ' +
+      'evidence you have personally verified.',
+  '',
   'Diff summary: ' + grounding.diffSummary,
 ].join('\n')
+
+if (NO_GROUNDING) {
+  log('PR #' + PR + ': no usable tracker grounding (present=' + grounding.trackerPresent +
+      ', priorDecisions=' + (grounding.priorDecisions || []).length +
+      ') — pushback disabled for this run; findings resolve to fix or insufficient_context.')
+}
 
 // ------------------------------------------------- 2+3. triage, then verify pushbacks
 
@@ -241,6 +313,34 @@ const disposed = await pipeline(
   async (result) => {
     if (!result || !result.triage) return result
     if (result.triage.verdict !== 'pushback') return result
+
+    // Enforce the cardinal rule in code, not only in the rubric prose. A pushback that
+    // cannot name a ground, admits it is not tracker-grounded, or arrives in a run with no
+    // grounding at all becomes insufficient_context and goes to the user. These fields
+    // were previously required by the schema and then read by nothing.
+    const ungrounded = NO_GROUNDING ||
+      result.triage.groundedInTracker !== true ||
+      !result.triage.pushbackGround
+    if (ungrounded) {
+      const why = NO_GROUNDING
+        ? 'the run has no usable tracker grounding'
+        : result.triage.groundedInTracker !== true
+          ? 'triage reported groundedInTracker=false'
+          : 'triage named no pushbackGround'
+      log('Rejecting ungrounded pushback on PR #' + PR + ' finding ' + (result.index + 1) +
+          ' (' + why + ') — escalating to the user instead.')
+      return {
+        ...result,
+        triage: {
+          ...result.triage,
+          verdict: 'insufficient_context',
+          openQuestion: 'Triage wanted to push back on this, but ' + why + ', so it was ' +
+            'not permitted to. Original rationale: ' + result.triage.rationale +
+            ' — your call on whether this is genuinely out of scope or should be fixed.',
+        },
+        ungroundedPushbackRejected: true,
+      }
+    }
 
     if (pushbackVerifyBudget <= 0) {
       log('Pushback verification budget exhausted — demoting finding ' + (result.index + 1) +
@@ -374,13 +474,21 @@ if (REPORT_ONLY) {
     '4. If a test fails and you cannot fix it, stop, set testsPassed=false, list it in',
     '   blockers, and do NOT commit or push. A red push wastes a reviewer cycle.',
     '5. Commit with a message describing the fixes only — no references to agentic tools.',
-    '6. Push to the PR branch.',
-    '7. Append events.jsonl entries in the child tracker for tests, commit, and push.',
+    '6. BEFORE pushing, check ' + CHILD_TRACKER + '/events.jsonl for a `pr.push.attempting`',
+    '   or `pr.push.completed` event covering these finding keys:',
+    ...FINDING_KEYS.map(k => '     ' + k),
+    '   An `attempting` with no `completed` means a previous cycle may already have pushed:',
+    '   run `git -C ' + WORKTREE + ' status -sb` and `git -C ' + WORKTREE + ' log origin/' +
+      BRANCH + '..HEAD` to see whether the commits are already upstream. Do not blind-push.',
+    '7. Append `pr.push.attempting`, then push to ' + BRANCH + ', then append',
+    '   `pr.push.completed` with the commit SHA. Write-ahead ordering is required: pushing',
+    '   first and dying before recording leaves no trace, and the next cycle re-does the',
+    '   work and dismisses the approval a second time.',
+    '8. Append events.jsonl entries for tasks, tests, and the commit as you go.',
     '   Get timestamps with: date -u +%Y-%m-%dT%H:%M:%SZ',
     '',
     'Pushing is outward-facing and dismisses existing approvals. Push exactly once, only',
-    'after tests pass. If the worktree HEAD guard fails, set guardFailed=true, change',
-    'nothing, and return immediately.',
+    'after tests pass. Set recordedPush=true only if step 7\'s completed event was written.',
   ].join('\n'), {
     label: 'implement:pr-' + PR,
     phase: 'Implement',
@@ -390,23 +498,23 @@ if (REPORT_ONLY) {
 
   if (!impl) {
     log('Implement agent failed on PR #' + PR + '. No comment will be posted; the tick must retry.')
-    return { pr: PR, headSha: HEAD_SHA, grounding, verdicts: results, implemented: null, responded: false, error: 'implement-failed' }
+    return { pr: PR, branch: BRANCH, headSha: HEAD_SHA, grounding, verdicts: results, implemented: null, responded: false, cycleComplete: false, blockers: ['the implement agent died; no fixes were verified as applied'], nextAction: 'retry-disposition', error: 'implement-failed' }
   }
   if (impl.guardFailed) {
     log('Worktree HEAD guard FAILED for PR #' + PR + ' — stale mapping, nothing edited.')
-    return { pr: PR, headSha: HEAD_SHA, grounding, verdicts: results, implemented: impl, responded: false, error: 'worktree-guard-failed' }
+    return { pr: PR, branch: BRANCH, headSha: HEAD_SHA, grounding, verdicts: results, implemented: impl, responded: false, cycleComplete: false, blockers: ['worktree ' + WORKTREE + ' no longer owns branch ' + BRANCH + ' (or is dirty); nothing was edited'], nextAction: 'report-drift', error: 'worktree-guard-failed' }
   }
   if (!impl.testsPassed || !impl.pushed) {
     log('PR #' + PR + ' not pushed (testsPassed=' + impl.testsPassed + ', pushed=' + impl.pushed +
         '). Skipping the response comment so it cannot describe unpushed work.')
-    return { pr: PR, headSha: HEAD_SHA, grounding, verdicts: results, implemented: impl, responded: false, error: 'fixes-incomplete' }
+    return { pr: PR, branch: BRANCH, headSha: HEAD_SHA, grounding, verdicts: results, implemented: impl, responded: false, cycleComplete: false, blockers: ((impl.blockers || []).length ? impl.blockers : ['fixes did not pass tests and were not pushed']), nextAction: 'needs-attention', error: 'fixes-incomplete' }
   }
 }
 
 // ---------------------------------------------------------------- 5. respond
 
 if (REPORT_ONLY) {
-  return { pr: PR, headSha: HEAD_SHA, grounding, verdicts: results, implemented: null, responded: false, reportOnly: true, dropped }
+  return { pr: PR, branch: BRANCH, headSha: HEAD_SHA, grounding, verdicts: results, implemented: null, responded: false, cycleComplete: true, blockers: [], nextAction: 'report-only', reportOnly: true, dropped }
 }
 
 phase('Respond')
@@ -436,12 +544,32 @@ const respond = await agent([
       (typeof r.finding === 'string' ? r.finding : JSON.stringify(r.finding)) +
       '\n   Open question: ' + (r.triage.openQuestion || r.triage.rationale)) : ['(none)']),
   '',
-  '--- HOW TO WRITE IT ---',
-  'Before posting, check the child tracker events.jsonl for an outward-facing comment',
-  'already recorded against these findings at head ' + HEAD_SHA + '. If one exists, do',
-  'NOT post again — set posted=false and say so. Duplicate comments on a reviewer thread',
-  'are the worst failure mode this system has.',
+  '--- DEDUP: DO THIS FIRST, BEFORE WRITING ANYTHING ---',
+  'Finding keys covered by this comment:',
+  ...FINDING_KEYS.map(k => '  ' + k),
   '',
+  'Read ' + CHILD_TRACKER + '/events.jsonl and search for these keys. Note that the keys',
+  'are deliberately head-independent — do NOT scope your search to head ' + HEAD_SHA + ',',
+  'because our own push moves the head and a head-scoped search would always miss.',
+  '',
+  '- A `pr.comment.posted` event covering all of these keys → already answered. Set',
+  '  posted=false, explain, and STOP. Duplicate comments on a reviewer thread are the',
+  '  worst failure mode this system has.',
+  '- A `pr.comment.attempting` event with NO matching `pr.comment.posted` → a previous',
+  '  cycle died mid-post. Do not assume either way: run',
+  '    gh pr view ' + PR + ' --repo ' + REPO + ' --json comments',
+  '  and look for our own prior comment. If it is there, record the missing',
+  '  `pr.comment.posted` event and STOP. Only post if it is genuinely absent.',
+  '- Neither → proceed, covering only the keys with no prior record.',
+  '',
+  '--- WRITE-AHEAD: record intent BEFORE acting ---',
+  'Append a `pr.comment.attempting` event with these keys to ' + CHILD_TRACKER +
+    '/events.jsonl BEFORE calling gh, then post, then append `pr.comment.posted`.',
+  'Ordering matters: if you post first and die before recording, the next cycle has no',
+  'trace and posts again. Recording first turns that crash into a detectable ambiguity',
+  'rather than a silent duplicate.',
+  '',
+  '--- HOW TO WRITE IT ---',
   'Three sections, omitting any that is empty: what was fixed (with commit SHA and one',
   'line of root cause each), what is being pushed back on (with the concrete evidence,',
   'phrased as information and explicitly inviting correction — you may be wrong), and',
@@ -449,12 +577,15 @@ const respond = await agent([
   '',
   'Be direct and short. No agentic-tool references, no status-update filler, no apology.',
   '',
-  'Post with: gh pr comment ' + PR + ' --repo ' + REPO + ' --body-file <tmpfile>',
-  'Then request re-review from the reviewers who left the findings.',
-  'Then append an events.jsonl entry in the child tracker recording the posted comment,',
-  'timestamped with: date -u +%Y-%m-%dT%H:%M:%SZ',
-  'Recording the post durably matters more than the post itself — it is what stops a',
-  'later tick from posting it twice.',
+  'Sequence, in this exact order:',
+  '  1. append pr.comment.attempting (with the finding keys)',
+  '  2. gh pr comment ' + PR + ' --repo ' + REPO + ' --body-file <tmpfile>',
+  '  3. append pr.comment.posted (with the finding keys and the comment URL)',
+  '  4. request re-review from the reviewers who left the findings',
+  'Timestamps come from: date -u +%Y-%m-%dT%H:%M:%SZ',
+  '',
+  'Set recordedEvent=true only if step 3 actually succeeded. It is checked by the caller,',
+  'and a false value means the next cycle cannot tell whether you posted.',
 ].join('\n'), {
   label: 'respond:pr-' + PR,
   phase: 'Respond',
@@ -462,17 +593,40 @@ const respond = await agent([
   effort: 'medium',
 })
 
+const responded = respond ? respond.posted === true : false
+
+// Anything that means a reviewer has NOT been fully and accurately answered must block the
+// unattended merge paths. Arming --auto on a PR with a dropped finding is irreversible the
+// moment a human approves: the comment reads as a complete disposition, the reviewer
+// approves, and GitHub merges work that was never triaged.
+const blockers = []
+if (dropped > 0) blockers.push(dropped + ' finding(s) failed triage and were never dispositioned')
+if (!responded) blockers.push('the response comment was not posted')
+if (respond && respond.recordedEvent !== true) blockers.push('the posted comment was not durably recorded, so a later tick cannot tell it happened')
+if (impl && impl.pushed && impl.recordedPush !== true) blockers.push('the push was not durably recorded')
+if (toEscalate.length) blockers.push(toEscalate.length + ' finding(s) need the author\'s decision')
+
+if (blockers.length) {
+  log('PR #' + PR + ' will NOT be advanced toward merge: ' + blockers.join('; ') + '.')
+}
+
 return {
   pr: PR,
+  branch: BRANCH,
   headSha: HEAD_SHA,
   grounding,
   verdicts: results,
   counts: { fix: toFix.length, pushback: toPush.length, escalate: toEscalate.length, dropped },
   implemented: impl,
-  responded: respond ? respond.posted === true : false,
+  responded,
   response: respond,
+  // A completed cycle means every finding reached a verdict AND the reviewer was answered
+  // and that fact was recorded. The agent uses this to decide whether to re-dispatch: a
+  // failed cycle produces no provider-side change, so without this flag the PR livelocks.
+  cycleComplete: blockers.length === 0,
+  blockers,
   // The agent, not this workflow, owns the merge gate and cleanup.
-  nextAction: toEscalate.length ? 'await-author-decision'
+  nextAction: blockers.length ? 'needs-attention'
     : (impl && impl.pushed) ? 'arm-auto-merge'
     : 'evaluate-merge-gate',
 }

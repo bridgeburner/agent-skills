@@ -46,7 +46,9 @@ Passed through `/pr-monitor <args>`, all optional:
 - `--repo <owner/name>` — default: the repo of the current working directory.
 - `--pillar <name>` — `~/.sdd` pillar for trackers. Default: inferred by
   `better-goal`'s `scripts/sdd_path.py`.
-- `--report-only` — never push, merge, or clean up. Observe and report.
+- `--report-only` — observe and report only. No commit, push, comment, merge, auto-merge
+  arming, worktree removal, branch deletion, tracker archiving, or `TaskStop`. It covers the
+  cleanup path too, which is reachable without passing through the merge gate.
 - `--pr <n>[,<n>...]` — restrict the tick to specific PRs. This narrows what is monitored;
   it does not admit anything. An unadmitted PR named here still gets a mapping request
   rather than action.
@@ -96,6 +98,15 @@ already exists from the work that created the PR. This is the grounding source: 
 tried, what was decided, what was deliberately not done. It is what lets a pushback be
 evidence-based rather than a reflex.
 
+If an admitted PR has no child tracker — the worktree predates the monitor, or `better-goal`
+was never run there — **create it via `better-goal` before dispatching any workflow**, seeded
+from the PR body and commit history. Two consequences follow from its absence, and both are
+worse than the cost of creating it: the workflow has nowhere to record that it posted a
+comment (so a later tick can duplicate it), and a tracker with no recorded decisions disables
+pushback entirely for that PR, since there is no evidence for one to cite. An empty tracker is
+honest and fixes the first problem; it correctly leaves the second in place until real
+decisions accumulate.
+
 On first run, if the parent tracker is absent, create it via `better-goal` with an **empty**
 registry. Do not seed it from the first provider read — that would auto-admit every open
 PR, which is precisely what §3 forbids. The first tick's job is to discover open PRs and
@@ -121,6 +132,29 @@ Never reason about whether a workflow is probably done. Ask.
 gh pr list --author @me --state open --repo <repo> \
   --json number,title,headRefName,headRefOid,isDraft,mergeable,mergeStateStatus,reviewDecision,statusCheckRollup,url,updatedAt
 ```
+
+#### Reconcile the registry against this read — every tick
+
+A registry row that does **not** appear in the open list is not "quiet", it is closed. Query
+each one directly:
+
+```bash
+gh pr view <n> --repo <repo> --json state,mergedAt,mergeCommit
+```
+
+- `MERGED` → run cleanup now (`references/merge-cleanup.md`, from Phase 4).
+- `CLOSED` unmerged → report it and set the row to `archived` with no destructive cleanup.
+
+**This reconciliation is what makes cleanup work at all.** Cleanup cannot depend on
+remembering the PR was open last tick, because the primary merge path is `--auto`: fixes are
+pushed, auto-merge is armed, the session ends, and GitHub lands the merge hours later on
+human approval. A new session's registry is intact but its memory is empty, and the merged PR
+is absent from `--state open`. Without this step every `--auto` merge leaks its worktree,
+local branch, unextracted evidence, and a permanent `awaiting-approval` row — silently, and
+once per merged PR.
+
+Rows in `awaiting-approval` are the ones most likely to have landed while you were away.
+Check them first.
 
 ### 3. Admission — the registry is an allowlist
 
@@ -171,8 +205,22 @@ against what you remember.
 
 Only admitted PRs reach this step.
 
-- **Nothing changed, nothing mergeable** → emit one compact status line and end the
-  tick. This is the common case. Stop here.
+**First, check for an incomplete previous cycle.** If this PR's last workflow returned
+`cycleComplete: false` (or died outright), re-dispatch it regardless of whether anything
+changed provider-side, and carry its `blockers` into the new dispatch.
+
+This ordering is not optional. A failed cycle changes *nothing* the diff below looks at — the
+head, review decision, check rollup, and comment set are all untouched, because the failure
+happened before any of them were written. So a purely diff-driven tick classifies a livelocked
+PR as "quiet" forever: the reviewer never gets an answer, the finding is never fixed, and the
+loop reports the PR as healthy. Track completion per PR and drive retries off that.
+
+After three consecutive incomplete cycles on the same PR, stop retrying, set the row to
+`drift`, and escalate to the user with the accumulated blockers. Silent infinite retry is only
+marginally better than silent livelock.
+
+- **Nothing changed, nothing mergeable, last cycle complete** → emit one compact status
+  line and end the tick. This is the common case. Stop here.
 - **New review activity** → read `references/disposition.md`, then dispatch the
   workflow (§6).
 - **Mergeable** → read `references/merge-cleanup.md` and run the gate.
@@ -183,6 +231,12 @@ For per-PR review detail:
 ```bash
 gh pr view <n> --repo <repo> --json reviews,comments,latestReviews
 ```
+
+**Exclude your own comments and bot comments from the finding set.** The monitor posts a
+top-level comment every cycle, so without this filter its own output becomes both a diff
+trigger and a candidate "finding" — the loop reads its own reply as new review activity and
+disposition it. Filter on author login: drop anything authored by the PR author (you) or by a
+bot, and keep only comments and review bodies from human reviewers.
 
 Unresolved *thread* state needs GraphQL:
 
@@ -202,12 +256,27 @@ One workflow per PR with new activity, launched with the absolute script path:
 
 ```
 Workflow({
-  scriptPath: "~/.claude/skills/pr-monitor/workflows/pr-disposition.js",
-  args: { pr, repo, worktree, childTracker, headSha, findings, reportOnly }
+  scriptPath: "/Users/<you>/.claude/skills/pr-monitor/workflows/pr-disposition.js",
+  args: {
+    pr, repo,
+    branch,          // headRefName — REQUIRED
+    worktree,        // REQUIRED
+    childTracker,    // REQUIRED
+    headSha, findings, parentTracker, reportOnly,
+  }
 })
 ```
 
 Expand `~` to the real home path — `scriptPath` is not shell-expanded.
+
+`branch`, `worktree`, and `childTracker` are load-bearing, and the workflow refuses to run
+without them rather than degrading:
+
+- `branch` is the right-hand side of the worktree guard. Omit it and the guard becomes a
+  command whose output has nothing to compare against, so it always passes — and a fix lands
+  on whatever branch the worktree happens to be on.
+- `childTracker` is the only durable dedup store. Omit it and "did I already post this?" has
+  nowhere to look, so comments duplicate on a reviewer's thread.
 
 The workflow triages each finding, adversarially verifies any `pushback` verdict at
 higher effort, implements accepted fixes, runs tests, commits, and pushes. It returns a

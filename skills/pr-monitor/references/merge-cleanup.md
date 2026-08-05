@@ -3,6 +3,17 @@
 Loaded only when a PR looks mergeable, or has merged since the last tick. Every
 precondition here is a **check**, never an inference. Both phases are irreversible.
 
+## `--report-only` halts this entire file
+
+If the run was started with `--report-only`, **every phase below is observation only**.
+Do not merge. Do not arm auto-merge. Do not remove a worktree, delete a branch, archive or
+reset a tracker, or stop a task. Evaluate the gate, report what *would* happen, and stop.
+
+This is stated here at the top rather than inside one phase because cleanup is reachable
+without passing through the merge gate at all — the tick routes a PR that merged since the
+last tick straight to Phase 4 — so a guard placed only before Phase 3 does not cover the
+destructive half.
+
 ## Phase 1 — Fresh readback
 
 Workflow-start state is minutes stale. Re-read immediately before deciding, in one call:
@@ -21,8 +32,30 @@ Merge only if **every** condition holds. Any failure ends the merge attempt for 
 1. `state == "OPEN"` and `isDraft == false`.
 2. `mergeable == "MERGEABLE"` and `mergeStateStatus` is not `DIRTY` (conflicted) or
    `BEHIND` where the branch protection requires up-to-date.
-3. Every required check has `conclusion == "SUCCESS"` **for `headRefOid`**. Pending is not
-   green. A success recorded against an older SHA is not green.
+3. **Required checks pass — established by asking GitHub, not by re-deriving it.** Run:
+
+   ```bash
+   gh pr checks <n> --repo <repo> --required
+   ```
+
+   Non-zero exit, or any row not in a passing/skipped state, fails this condition.
+
+   Do **not** try to satisfy this by scanning `statusCheckRollup` for
+   `conclusion == "SUCCESS"` on every entry. That formulation is wrong three ways and will
+   permanently wedge the merge path:
+
+   - The rollup carries no `isRequired` field, so requiredness cannot be read from it at
+     all — only inferred, which this file forbids.
+   - `SKIPPED` is not `SUCCESS`, but GitHub treats a conditionally-skipped required check as
+     satisfied. Path-filtered and `if:`-conditioned jobs report `SKIPPED` routinely, so an
+     all-`SUCCESS` test is false on healthy PRs.
+   - Check *names repeat* when a check has been re-run. A per-entry test fails whenever any
+     superseded run concluded non-success, even though the latest run passed.
+
+   `mergeStateStatus == "CLEAN"` from Phase 1 is GitHub's own aggregate verdict that
+   required checks and approvals are satisfied. Treat it as the authoritative signal and
+   `gh pr checks --required` as the human-readable detail for the report. If the two
+   disagree, do not merge — report the disagreement.
 4. `reviewDecision == "APPROVED"`.
 5. The approving review is at or after `headRefOid`. If the approval predates the current
    head, it is stale — usable only after you have reconciled the current head and every
@@ -42,17 +75,29 @@ If `--report-only` is set, stop here and report that the gate passed.
 Which command depends on whether you pushed during this cycle, because a push dismisses
 the approval the gate just verified:
 
+**Always pass `--match-head-commit <headRefOid>`**, using the exact SHA Phase 1 read and
+Phase 2 verified. Without it, the merge is not bound to the state you checked: the gate takes
+tens of seconds to evaluate, and a force-push inside that window means GitHub merges a commit
+that was never reviewed or CI-verified. With it, GitHub rejects the call instead — which is
+the correct outcome, and turns an unbounded race into a retry on the next tick.
+
 **Nothing pushed this cycle** — approval is intact and current:
 
 ```bash
-gh pr merge <n> --repo <repo> --squash --delete-branch
+gh pr merge <n> --repo <repo> --squash --delete-branch --match-head-commit <headRefOid>
 ```
 
 **Fixes pushed this cycle** — the approval is now dismissed; arm auto-merge instead:
 
 ```bash
-gh pr merge <n> --repo <repo> --auto --squash --delete-branch
+gh pr merge <n> --repo <repo> --auto --squash --delete-branch --match-head-commit <headRefOid>
 ```
+
+Pinning the `--auto` arm to the verified head is deliberate: any later push should require
+re-arming after a fresh gate evaluation, not inherit this one's approval.
+
+**`--delete-branch` deletes the local branch too, not just the remote.** Phase 5 §6 accounts
+for this; do not treat the local branch's later absence as an error.
 
 Set the registry status to `awaiting-approval` and stop. GitHub lands it the instant a
 human approves, including long after this session ends. Do not hold the loop open waiting,
@@ -79,7 +124,25 @@ the PR is open, conflicted, or unverified on protected main.
 
 In this order. The ordering is load-bearing.
 
-### 1. Record outcomes first
+### 0. Guard against touching your own worktree — before anything else
+
+```bash
+git rev-parse --show-toplevel   # if this equals <worktree>, STOP HERE
+```
+
+If the session is running inside the worktree slated for removal, stop **before any step
+below runs**. Not after recording, not after archiving — before. `git worktree remove` fails
+from inside anyway, and forcing it strands the session in a deleted directory.
+
+This guard is first because the steps that follow are mutating. Running it late means a
+self-worktree case still gets its live tracker reset and its evidence moved, while the
+registry is never updated — leaving a half-cleaned PR that later grounding reads as having
+no tracker at all, which in turn suppresses that PR's ability to push back on anything.
+
+Report the situation and let the user relocate. For every other case, `cd` to the main repo
+root and continue.
+
+### 1. Record outcomes
 
 Parent tracker: merge commit SHA, final head, tests run, review outcomes, delivery status.
 Child tracker: mark tasks complete, record final autonomous decisions.
@@ -92,8 +155,18 @@ Record before destroying anything, so a failure mid-cleanup leaves an accurate t
 the worktree does not — `.tv/`, local logs, generated artifacts:
 
 ```bash
-cp -R <worktree>/.tv <child-tracker>/evidence/<pr>-tv 2>/dev/null || true
+mkdir -p <child-tracker>/evidence/<pr>-tv
+if [ -d <worktree>/.tv ]; then
+  cp -R <worktree>/.tv/. <child-tracker>/evidence/<pr>-tv/ || exit 1
+  # prove it landed before anything deletes the source
+  diff -rq <worktree>/.tv <child-tracker>/evidence/<pr>-tv
+fi
 ```
+
+Never suppress this with `2>/dev/null || true`. A swallowed copy failure followed by
+`git worktree remove` destroys the evidence permanently, and the silence makes success
+indistinguishable from loss. If the copy or the verification fails, that is information:
+stop cleanup and report, exactly as you would for a refused `worktree remove`.
 
 Take only what is worth keeping. This is also the moment to delete bulky evidence from the
 child tracker, per the archive policy.
@@ -105,18 +178,7 @@ Follow `better-goal`'s archiving protocol: copy the surfaces to
 `manifest.md`, then reset the live child tracker with a pointer back to the archive.
 Preserve the `goal.md` / `tasks.md` summary; drop the bulk.
 
-### 4. Guard against removing your own worktree
-
-```bash
-git rev-parse --show-toplevel   # if this equals <worktree>, STOP
-```
-
-If the session is running inside the worktree slated for removal, do not remove it.
-`git worktree remove` fails from inside, and forcing it strands the session in a deleted
-directory. Report it and let the user relocate. For every other case, `cd` to the main repo
-root before proceeding.
-
-### 5. Remove the worktree
+### 4. Remove the worktree
 
 ```bash
 git -C <main-repo> worktree remove <worktree>
@@ -125,19 +187,32 @@ git -C <main-repo> worktree remove <worktree>
 No `--force`. If it refuses, something is uncommitted or the path is unexpected — that is
 information, not an obstacle. Investigate and report rather than overriding.
 
-### 6. Delete the local branch
+### 5. Delete the local branch — only if it still exists
+
+`gh pr merge --delete-branch` deletes the **local and remote** branch, so on the direct-merge
+path the local branch is usually already gone. Check before acting:
 
 ```bash
-git -C <main-repo> branch -d <branch>
+if git -C <main-repo> show-ref --verify --quiet refs/heads/<branch>; then
+  git -C <main-repo> branch -d <branch>
+else
+  echo "local branch already deleted by --delete-branch — nothing to do"
+fi
 ```
 
-`-d`, never `-D`. Git itself refuses an unmerged branch, so the safety check is the tool
-rather than your judgment. If it refuses, the branch is not fully merged — stop and report.
+**A missing branch is success, not failure.** Running `branch -d` unconditionally yields
+`error: branch '<branch>' not found`, and reading that as "the branch is not fully merged"
+halts cleanup before the registry update — every single time the direct-merge path is taken,
+leaving a stale `active` row and an un-pruned worktree while reporting that a merged branch
+is unmerged.
 
-Branch deletion must follow worktree removal; git will not delete a branch that is checked
-out in a worktree.
+When the branch *does* exist: `-d`, never `-D`. Git itself refuses an unmerged branch, so the
+safety check is the tool rather than your judgment. A refusal there is real — stop and report.
 
-### 7. Remote branch
+Branch deletion must follow worktree removal; git will not delete a branch checked out in a
+worktree.
+
+### 6. Remote branch
 
 `--delete-branch` on the merge normally handles this. Verify, and only if it survived:
 
@@ -145,7 +220,7 @@ out in a worktree.
 git -C <main-repo> push origin --delete <branch>
 ```
 
-### 8. Prune and update the registry
+### 7. Prune and update the registry
 
 ```bash
 git -C <main-repo> worktree prune
@@ -155,16 +230,19 @@ In the parent tracker: set status `archived`, replace the active worktree mappin
 compact archive pointer, and leave the PR row as history. Merged PRs are retained as
 history; only open PRs are monitored.
 
-### 9. Stop PR-scoped work
+### 8. Stop PR-scoped work
 
 `TaskStop` any monitor or task scoped solely to that PR. Do not stop anything shared.
 
 ## Never
 
-- Merge with required checks failing, unexpectedly pending, or green only against an
-  obsolete head.
+- Run any of this under `--report-only`.
+- Merge without `--match-head-commit` bound to the SHA the gate verified.
+- Merge with required checks failing or unexpectedly pending, or when
+  `gh pr checks --required` and `mergeStateStatus` disagree.
 - Merge on a stale approval without reconciling the current head and all newer reviews.
 - Merge when a review arrived after your last disposition.
 - Delete a worktree, branch, or evidence before the protected-main readback passes.
 - Use `git worktree remove --force` or `git branch -D` to get past a refusal.
-- Remove the worktree the session is running in.
+- Touch the worktree the session is running in — check this before step 1, not after.
+- Suppress an evidence-copy failure, or delete a source before verifying the copy landed.
