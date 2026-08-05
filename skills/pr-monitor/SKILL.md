@@ -82,16 +82,41 @@ no worktree of its own. Do not "fix" this by relocating it.
 
 `tasks.md` carries the registry as its top table:
 
-| PR | Title | Head SHA | Branch | Worktree | Child tracker | Status |
-|---|---|---|---|---|---|---|
+| PR | Title | Head SHA | Branch | Worktree | Child tracker | Status | Incomplete | Armed SHA |
+|---|---|---|---|---|---|---|---|---|
 
-`Status` is one of `active`, `drift` (an admitted PR whose worktree guard failed or whose
-mapping became ambiguous — observed but never edited), `awaiting-approval` (fixes pushed,
-auto-merge armed), `archived`. A PR that is not a row in this table is **unadmitted** and is
-not monitored — see §3.
+`Incomplete` is the count of consecutive incomplete cycles, and it must live **here** rather
+than in context — a counter that resets on compaction gives either silent infinite retry (a
+full agent fleet every 15 minutes) or a PR retired on strike one. Reset it to 0 on any complete
+cycle. `Armed SHA` records the head that auto-merge was armed against, so head drift can be
+detected later.
+
+`Status` is one of `active`, `drift` (an admitted PR whose worktree guard failed, whose mapping
+became ambiguous, or which exhausted its retry budget — observed but never edited),
+`awaiting-approval` (fixes pushed, auto-merge armed), `archived`. A PR that is not a row in
+this table is **unadmitted** and is not monitored — see §3.
 
 `drift` is a registry status; `--report-only` is a run flag that suppresses all writes for
 every PR. They are unrelated.
+
+### `drift` is transient, never terminal
+
+**Every tick, re-evaluate every `drift` row and return it to `active` the moment its cause no
+longer holds.** Re-running a guard is a *check*, not the mapping-repair-by-guessing that §3
+forbids — so re-run it:
+
+- worktree HEAD matches the branch again, or the tree is clean again → `active`, `Incomplete` 0
+- the ambiguous second worktree is gone → `active`
+- the user answered an open question or fixed the blocker → `active`, `Incomplete` 0
+
+And **report every standing `drift` row on a decay schedule** (first recurrence, then hourly),
+not only on the tick it transitions. Reporting only transitions means a PR goes silent one tick
+after it stops being monitored.
+
+This matters more than any single guard, because a lot of correct detection drains into this one
+status. Without a clearing rule and a standing report, the skill's honest default posture is
+*inaction that looks like health*: a quiet one-line status reads identically whether the loop is
+idle or structurally unable to act on anything.
 
 **Child (`~/.sdd/<pillar>/<worktree-name>/`).** One per PR-owning worktree — usually
 already exists from the work that created the PR. This is the grounding source: what was
@@ -135,8 +160,14 @@ gh pr list --author @me --state open --repo <repo> \
 
 #### Reconcile the registry against this read — every tick
 
-A registry row that does **not** appear in the open list is not "quiet", it is closed. Query
-each one directly:
+Reconcile only rows whose status is **not `archived`**. Archived rows are permanent history and
+never appear in `--state open`, so reconciling them re-queries every PR you have ever merged,
+every tick, forever — 200 merged PRs is 800 extra calls an hour against a 5,000/hour limit, and
+at scale the loop starves its own provider read and stops monitoring everything. The cost is
+invisible precisely because it accrues to successful history.
+
+Among the rest, a row that does **not** appear in the open list is not "quiet", it is closed.
+Query each one directly:
 
 ```bash
 gh pr view <n> --repo <repo> --json state,mergedAt,mergeCommit
@@ -156,6 +187,14 @@ once per merged PR.
 Rows in `awaiting-approval` are the ones most likely to have landed while you were away.
 Check them first.
 
+**Also verify each `awaiting-approval` row's head still matches its `Armed SHA`.** If it moved,
+someone pushed after auto-merge was armed. Do not assume the arm protects you: pinning with
+`--match-head-commit` is an *arming-time* precondition, and GitHub only disables auto-merge when
+someone **without** write access pushes — a teammate with write access leaves it armed, and
+GitHub will land whatever the head is once requirements are met. On drift, disarm
+(`gh pr merge <n> --disable-auto`), set the row back to `active`, and re-run the gate from
+scratch on the new head.
+
 ### 3. Admission — the registry is an allowlist
 
 **Never adopt the open-PR list as the monitored set.** `gh pr list` is *discovery*. The
@@ -173,7 +212,19 @@ For every discovered open PR that is not already a registry row:
    branch checked out in the main working directory is a legitimate owner). Present it as
    a proposal to confirm. **A derived candidate is never an admission.** Deriving a
    plausible mapping and proceeding on it is exactly the failure this rule exists to stop.
-4. On the user's answer, write the row into the registry and monitor it from the next tick.
+4. **Validate the answer before writing it.** Confirm the named path is a worktree of this repo
+   and that its HEAD is the PR's head branch:
+
+   ```bash
+   git -C <answer> rev-parse --abbrev-ref HEAD   # must equal headRefName
+   git -C <answer> rev-parse --git-common-dir     # must resolve into this repo
+   ```
+
+   If it does not match, reject the answer and ask again with what you found. Do not write a
+   mapping you could not verify: §4's guard would catch it next tick and set `drift`, so a single
+   mistyped path would otherwise cost the PR its monitoring until someone noticed.
+
+5. Write the row into the registry with `Incomplete` 0 and monitor it from the next tick.
 
 This is why the rule matters: an authored open PR is not necessarily work you want an
 autonomous loop touching. Drafts, spikes, experiments, long-parked branches, and PRs owned
@@ -215,9 +266,16 @@ happened before any of them were written. So a purely diff-driven tick classifie
 PR as "quiet" forever: the reviewer never gets an answer, the finding is never fixed, and the
 loop reports the PR as healthy. Track completion per PR and drive retries off that.
 
-After three consecutive incomplete cycles on the same PR, stop retrying, set the row to
-`drift`, and escalate to the user with the accumulated blockers. Silent infinite retry is only
-marginally better than silent livelock.
+Increment the registry's `Incomplete` column on each one; reset it to 0 on any complete cycle.
+At 3, stop retrying, set `drift`, and escalate with the accumulated blockers. Keep the count in
+the registry, not in context — see the note under the registry table.
+
+**`awaitingAuthor` is not an incomplete cycle.** A workflow that returns `cycleComplete: true`
+with `awaitingAuthor: true` did everything it could; a human now owes an answer. Do **not**
+re-dispatch it and do **not** increment `Incomplete` — re-running the workflow cannot resolve
+an open question, and treating it as a fault marches a perfectly healthy PR to `drift` in three
+ticks while burning a full agent fleet each time. Surface the question in the report and wait.
+Re-dispatch only when the user answers or new review activity arrives.
 
 - **Nothing changed, nothing mergeable, last cycle complete** → emit one compact status
   line and end the tick. This is the common case. Stop here.
@@ -290,7 +348,16 @@ child tracker when it completes.
 
 ### 7. Report
 
-One block per tick, in this order:
+**Every report opens with this line, unconditionally, even when nothing happened:**
+
+```
+N admitted · N unadmitted (awaiting your mapping) · N drift · N awaiting your answer · N awaiting approval
+```
+
+It is one line and it is the difference between a quiet loop and a stalled one. Without it, a
+tick where every PR is blocked renders exactly like a tick where every PR is healthy.
+
+Then, in this order:
 
 1. **Awaiting admission** — every discovered open PR that is not in the registry, with its
    candidate worktree if one was derived, phrased as a direct question: which worktree owns

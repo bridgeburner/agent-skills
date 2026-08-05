@@ -41,7 +41,24 @@ Merge only if **every** condition holds. Any failure ends the merge attempt for 
    gh pr checks <n> --repo <repo> --required
    ```
 
-   Non-zero exit, or any row not in a passing/skipped state, fails this condition.
+   Any row not in a passing or skipped state fails this condition.
+
+   **"No required checks reported" is satisfied, not failed.** `gh pr checks --required` exits
+   non-zero on a repo with no required contexts configured, which is common — `agent-skills`,
+   the repo hosting this skill, has branch protection with zero required checks. Treating that
+   exit code as a gate failure wedges the merge path permanently and silently on every such
+   repo. Distinguish the two cases:
+
+   ```bash
+   out=$(gh pr checks <n> --repo <repo> --required 2>&1); rc=$?
+   case "$out" in
+     *"no required checks"*) echo "satisfied: no required contexts configured" ;;
+     *) [ $rc -eq 0 ] || echo "FAIL: required checks not green" ;;
+   esac
+   ```
+
+   When no required contexts exist, `mergeStateStatus == "CLEAN"` (condition 2) is the only
+   check-related signal available, and it is sufficient — it is GitHub's own verdict.
 
    Do **not** try to satisfy this by scanning `statusCheckRollup` for
    `conclusion == "SUCCESS"` on every entry. That formulation is wrong three ways and will
@@ -59,7 +76,15 @@ Merge only if **every** condition holds. Any failure ends the merge attempt for 
    required checks and approvals are satisfied. Treat it as the authoritative signal and
    `gh pr checks --required` as the human-readable detail for the report. If the two
    disagree, do not merge — report the disagreement.
-4. `reviewDecision == "APPROVED"`.
+4. **An approval exists.** `reviewDecision == "APPROVED"` satisfies this.
+
+   On a repo that does not *require* reviews, `reviewDecision` is `""` rather than `APPROVED`
+   even when the PR is approved and `mergeStateStatus` is `CLEAN` — so testing only for
+   `APPROVED` fails permanently on every unprotected repo. When it is empty, accept the
+   condition only if `mergeStateStatus == "CLEAN"` **and** `latestReviews` contains at least one
+   `APPROVED` state with no later `CHANGES_REQUESTED` from the same reviewer. An empty
+   `reviewDecision` with no approving review at all is still a failure — never merge work no
+   human has approved just because the repo does not force it.
 5. The approving review is at or after `headRefOid`. If the approval predates the current
    head, it is stale — usable only after you have reconciled the current head and every
    newer review submission against your last disposition.
@@ -99,8 +124,14 @@ gh pr merge <n> --repo <repo> --squash --delete-branch --match-head-commit <head
 gh pr merge <n> --repo <repo> --auto --squash --delete-branch --match-head-commit <headRefOid>
 ```
 
-Pinning the `--auto` arm to the verified head is deliberate: any later push should require
-re-arming after a fresh gate evaluation, not inherit this one's approval.
+Pinning the `--auto` arm is cheap and harmless, but be clear about what it does **not** buy:
+`expectedHeadOid` is an *arming-time* precondition only. GitHub disables auto-merge just when
+someone **without** write access pushes, so a teammate with write access leaves it armed and
+GitHub lands whatever the head is once requirements are met. The pin does not force re-arming.
+
+What actually protects this path is approval dismissal on push — which is repo configuration,
+not a guarantee. So the real mitigation lives in the tick: record the armed SHA in the registry
+and re-check it every tick, disarming and re-gating if the head moved. See `SKILL.md` §2.
 
 **`--delete-branch` deletes the local branch too, not just the remote.** Phase 5 §6 accounts
 for this; do not treat the local branch's later absence as an error.
@@ -141,9 +172,27 @@ In this order. The ordering is load-bearing.
 SESSION_ROOT=$(cd "$(git rev-parse --show-toplevel)" && pwd -P)
 TARGET=$(cd <worktree> && pwd -P)
 MAIN_ROOT=$(cd <main-repo> && pwd -P)
-[ "$SESSION_ROOT" = "$TARGET" ] && echo "SELF — STOP HERE"
-[ "$MAIN_ROOT" = "$TARGET" ] && echo "PRIMARY CHECKOUT — see below"
+if [ "$TARGET" = "$MAIN_ROOT" ]; then
+  echo "PRIMARY CHECKOUT — skip steps 4 and 5, continue 6-8"
+elif [ "$TARGET" = "$SESSION_ROOT" ]; then
+  echo "SELF — STOP HERE"
+else
+  echo "OK — proceed through all steps"
+fi
 ```
+
+**The order is deliberate and the branches are mutually exclusive.** Primary-checkout is tested
+first and wins, *even when the target is also the session root* — which is the most ordinary
+setup there is: the user on a branch in the main checkout, a PR opened from it, and the loop
+started from that directory. With independent `&&` tests both fired and gave contradictory
+instructions ("stop before any step" vs "do steps 1–3 then continue"), and an agent taking the
+louder SELF instruction stopped without recording or archiving, leaving the row
+`awaiting-approval` — which reconciliation then retried every 15 minutes forever, making no
+progress and never escalating, because the 3-strikes counter tracks *workflow* cycles and not
+cleanup attempts.
+
+Primary-checkout wins safely because that path attempts nothing destructive on the target: it
+skips both the worktree removal and the branch delete.
 
 Compare **resolved** physical paths via `pwd -P`, not raw strings. A worktree under `/tmp`
 resolves to `/private/tmp/...` on macOS while the registry may hold `/tmp/...`, so a plain
