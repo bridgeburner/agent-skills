@@ -17,9 +17,11 @@ This repo manages skills for Claude Code (and compatible agents like Codex). It 
 
 These live in `skills/` and are symlinked into `~/.claude/skills/` and `~/.codex/skills/` by `install-local`:
 
-**Engineering workflow:** `architect`, `better-goal`
+**Engineering workflow:** `architect`, `better-goal`, `pr-monitor`
 
-**Utilities:** `codex-cli`, `gwsctx`, `claude-spawn`
+**Utilities:** `codex-cli`, `gwsctx`, `claude-spawn`, `[retired-skill]`
+
+`pr-monitor` is Claude Code only — it hard-depends on the `Workflow` tool, `TaskList`/`TaskGet`, per-agent model/effort overrides, and the built-in `loop` skill. Its frontmatter gates other harnesses. Do not make it portable; reimplement against its `references/` instead.
 
 ## External skills
 

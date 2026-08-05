@@ -27,6 +27,7 @@ npx skills add -g <owner/repo>     # install globally across all agents
 |---|---|
 | `architect` | Routes you into the right engineering posture (Building / Exploratory / Debugging) at the start of a task |
 | `better-goal` | Runs durable agent work through `~/.sdd` trackers, evidence ledgers, and completion audits |
+| `pr-monitor` | Babysits open authored PRs on a cadence: tracker-grounded review disposition, fixes, merge gate, and post-merge cleanup — **Claude Code only** |
 
 ### Utilities
 
@@ -35,6 +36,11 @@ npx skills add -g <owner/repo>     # install globally across all agents
 | `codex-cli` | Delegates tasks to a headless OpenAI Codex agent for parallel or cross-model work |
 | `gwsctx` | Manages multiple Google Workspace CLI account contexts with explicit aliases |
 | `claude-spawn` | Spawns persistent, human-reachable Claude/Codex/shell sessions on a dedicated tmux server |
+| `[retired-skill]` | Refreshes the daily cross-surface activity dashboard (GitHub / Linear / Slack) for altius-ai |
+
+### Harness compatibility
+
+Most skills here work in any compatible harness. `pr-monitor` is the exception: it hard-depends on Claude Code's `Workflow` tool, `TaskList`/`TaskGet`, per-agent model/effort overrides, and the built-in `loop` skill, so its frontmatter tells other harnesses not to invoke it. Its `references/` files are harness-agnostic procedure if you want to reimplement against them.
 
 ## Installing Individual Skills
 

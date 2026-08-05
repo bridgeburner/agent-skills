@@ -1,0 +1,478 @@
+export const meta = {
+  name: 'pr-disposition',
+  description: 'Triage one PR\'s new review findings against its tracker, verify pushbacks adversarially, implement accepted fixes, then push and respond',
+  whenToUse: 'Dispatched by the pr-monitor skill for a single PR that has new review activity and a guarded worktree mapping. One in-flight run per PR.',
+  phases: [
+    { title: 'Ground', detail: 'read child tracker, parent goal, and the current diff' },
+    { title: 'Triage', detail: 'classify each finding as fix / pushback / insufficient_context' },
+    { title: 'Verify', detail: 'adversarially refute each pushback with distinct lenses' },
+    { title: 'Implement', detail: 'apply accepted fixes, test, commit, push (single agent, one worktree)' },
+    { title: 'Respond', detail: 'post one top-level comment and record outward actions' },
+  ],
+}
+
+// ---------------------------------------------------------------- inputs
+
+const input = args || {}
+const PR = input.pr
+const REPO = input.repo
+const WORKTREE = input.worktree
+const CHILD_TRACKER = input.childTracker
+const PARENT_TRACKER = input.parentTracker
+const HEAD_SHA = input.headSha
+const REPORT_ONLY = input.reportOnly === true
+const FINDINGS = Array.isArray(input.findings) ? input.findings : []
+
+if (!PR || !REPO || !WORKTREE || !HEAD_SHA) {
+  throw new Error('pr-disposition requires args {pr, repo, worktree, headSha}; got ' + JSON.stringify(Object.keys(input)))
+}
+if (!FINDINGS.length) {
+  log('No findings passed — nothing to disposition.')
+  return { pr: PR, headSha: HEAD_SHA, verdicts: [], implemented: null, responded: false, note: 'no findings' }
+}
+
+// A single PR maps to a single worktree, so all editing is serialized through one
+// agent. Never fan out the Implement phase: concurrent agents in one worktree corrupt
+// each other's index. Never use isolation:'worktree' either — that creates an ephemeral
+// throwaway checkout, the opposite of this PR's persistent owning worktree.
+
+const MAX_PUSHBACK_VERIFY = 4
+const REFUTE_LENSES = ['correctness', 'security-and-data-exposure', 'does-the-premise-hold']
+
+const CONTEXT = [
+  'PR: #' + PR + ' in ' + REPO,
+  'Head SHA: ' + HEAD_SHA,
+  'Owning worktree: ' + WORKTREE,
+  'Child tracker: ' + (CHILD_TRACKER || '(none recorded)'),
+  'Parent tracker: ' + (PARENT_TRACKER || '(none recorded)'),
+].join('\n')
+
+const WORKTREE_GUARD = [
+  'Before any edit, verify the worktree still owns this PR:',
+  '  git -C ' + WORKTREE + ' rev-parse --abbrev-ref HEAD',
+  'It must equal the PR head branch. On mismatch, make NO edits and report the drift —',
+  'a stale mapping means your fix would land on the wrong branch.',
+].join('\n')
+
+// ---------------------------------------------------------------- schemas
+
+const GROUNDING_SCHEMA = {
+  type: 'object',
+  additionalProperties: false,
+  required: ['trackerPresent', 'declaredScope', 'nonGoals', 'priorDecisions', 'diffSummary'],
+  properties: {
+    trackerPresent: { type: 'boolean', description: 'Whether a child tracker with real content was found' },
+    declaredScope: { type: 'string' },
+    nonGoals: { type: 'array', items: { type: 'string' } },
+    priorDecisions: {
+      type: 'array',
+      description: 'Decisions already recorded in the tracker that a reviewer finding might collide with',
+      items: {
+        type: 'object',
+        additionalProperties: false,
+        required: ['decision', 'rationale', 'source'],
+        properties: {
+          decision: { type: 'string' },
+          rationale: { type: 'string' },
+          source: { type: 'string', description: 'File and line or event ts' },
+        },
+      },
+    },
+    diffSummary: { type: 'string' },
+    coverageGaps: {
+      type: 'array',
+      description: 'Areas the reviewer touches that the tracker does NOT cover',
+      items: { type: 'string' },
+    },
+  },
+}
+
+const TRIAGE_SCHEMA = {
+  type: 'object',
+  additionalProperties: false,
+  required: ['verdict', 'rationale', 'evidence', 'groundedInTracker'],
+  properties: {
+    verdict: { type: 'string', enum: ['fix', 'pushback', 'insufficient_context'] },
+    rationale: { type: 'string' },
+    evidence: { type: 'string', description: 'Specific file:line, commit, event ts, or test. Required for pushback.' },
+    groundedInTracker: { type: 'boolean' },
+    pushbackGround: {
+      type: 'string',
+      enum: ['premise-wrong', 'already-handled', 'out-of-scope', 'speculative', 'regresses-recorded-decision'],
+    },
+    proposedFix: { type: 'string' },
+    openQuestion: { type: 'string', description: 'For insufficient_context: the specific question for the user' },
+  },
+}
+
+const REFUTE_SCHEMA = {
+  type: 'object',
+  additionalProperties: false,
+  required: ['refuted', 'reasoning'],
+  properties: {
+    refuted: { type: 'boolean', description: 'true = the pushback is wrong and the reviewer is right' },
+    reasoning: { type: 'string' },
+  },
+}
+
+const IMPL_SCHEMA = {
+  type: 'object',
+  additionalProperties: false,
+  required: ['applied', 'testsRun', 'testsPassed', 'committed', 'pushed'],
+  properties: {
+    applied: { type: 'array', items: { type: 'string' } },
+    filesChanged: { type: 'array', items: { type: 'string' } },
+    testsRun: { type: 'array', items: { type: 'string' } },
+    testsPassed: { type: 'boolean' },
+    committed: { type: 'boolean' },
+    commitSha: { type: 'string' },
+    pushed: { type: 'boolean' },
+    guardFailed: { type: 'boolean', description: 'true if the worktree HEAD guard failed and nothing was edited' },
+    remainingRisks: { type: 'array', items: { type: 'string' } },
+    blockers: { type: 'array', items: { type: 'string' } },
+  },
+}
+
+const RESPOND_SCHEMA = {
+  type: 'object',
+  additionalProperties: false,
+  required: ['posted', 'commentBody'],
+  properties: {
+    posted: { type: 'boolean' },
+    commentBody: { type: 'string' },
+    reviewRequested: { type: 'boolean' },
+    recordedEvent: { type: 'boolean', description: 'Whether the outward action was appended to the child tracker events.jsonl' },
+  },
+}
+
+// ---------------------------------------------------------------- 1. ground
+
+phase('Ground')
+
+const grounding = await agent([
+  'Build the grounding context for disposing of review findings on this PR.',
+  '',
+  CONTEXT,
+  '',
+  'Do all of the following, reading files in full rather than skimming:',
+  '1. Read the child tracker goal.md (declared scope and non-goals), tasks.md, and',
+  '   events.jsonl. If the path does not exist or is effectively empty, set',
+  '   trackerPresent=false — do not invent grounding.',
+  '2. Read the parent tracker goal.md if a path was given.',
+  '3. Read the CURRENT diff at the current head: gh pr diff ' + PR + ' --repo ' + REPO,
+  '4. Read the affected source files in full, not only the diff hunks.',
+  '',
+  'Extract every decision already recorded in the tracker that a reviewer might now be',
+  'questioning, with its rationale and where you found it. Then list coverageGaps: areas',
+  'the review touches that the tracker does NOT record any reasoning about.',
+  '',
+  'coverageGaps is the most important field. Downstream triage is forbidden from pushing',
+  'back on anything in it, so under-reporting a gap causes a wrongful dismissal of a',
+  'reviewer. When unsure whether the tracker really covers something, call it a gap.',
+].join('\n'), {
+  label: 'ground:pr-' + PR,
+  phase: 'Ground',
+  schema: GROUNDING_SCHEMA,
+  effort: 'medium',
+})
+
+if (!grounding) {
+  throw new Error('Grounding failed for PR #' + PR + '; refusing to triage findings without grounding.')
+}
+
+log('Grounded PR #' + PR + ' — tracker ' + (grounding.trackerPresent ? 'present' : 'MISSING') +
+    ', ' + (grounding.priorDecisions || []).length + ' prior decisions, ' +
+    ((grounding.coverageGaps || []).length) + ' coverage gaps, ' + FINDINGS.length + ' findings')
+
+const GROUND_BRIEF = [
+  'Declared scope: ' + grounding.declaredScope,
+  'Non-goals: ' + ((grounding.nonGoals || []).join('; ') || '(none recorded)'),
+  'Tracker present: ' + grounding.trackerPresent,
+  'Prior recorded decisions:',
+  ...((grounding.priorDecisions || []).map(d => '  - ' + d.decision + ' — ' + d.rationale + ' [' + d.source + ']')),
+  'Tracker coverage GAPS (pushback forbidden in these areas):',
+  ...(((grounding.coverageGaps || []).length ? grounding.coverageGaps : ['(none)']).map(g => '  - ' + g)),
+  'Diff summary: ' + grounding.diffSummary,
+].join('\n')
+
+// ------------------------------------------------- 2+3. triage, then verify pushbacks
+
+// pipeline, not parallel: each finding flows triage -> verify independently, so a
+// finding needing three refuters does not hold up a finding that was a clean fix.
+let pushbackVerifyBudget = MAX_PUSHBACK_VERIFY
+
+const disposed = await pipeline(
+  FINDINGS,
+
+  (finding, _orig, i) => agent([
+    'Classify ONE reviewer finding on this PR as fix / pushback / insufficient_context.',
+    '',
+    CONTEXT,
+    '',
+    '--- GROUNDING ---',
+    GROUND_BRIEF,
+    '',
+    '--- FINDING ---',
+    typeof finding === 'string' ? finding : JSON.stringify(finding, null, 2),
+    '',
+    '--- RUBRIC ---',
+    'Read the rubric in full and apply it exactly:',
+    '  ~/.claude/skills/pr-monitor/references/disposition.md',
+    '',
+    'Treat the finding as a hypothesis. Verify it against the real code at the current',
+    'head before deciding — read the files, do not rely on the diff summary.',
+    '',
+    'Hard constraints:',
+    '- "pushback" requires a specific pushbackGround AND concrete evidence (file:line,',
+    '  commit, or event). No evidence means no pushback.',
+    '- If the finding falls in a tracker coverage gap listed above, you MUST return',
+    '  insufficient_context or fix. Never pushback there.',
+    '- If the fix is smaller than the argument against it, return fix. Cheap compliance',
+    '  beats relitigating trivia.',
+    '- A wrong pushback costs far more than a wrong fix. Under genuine uncertainty,',
+    '  the reviewer is right.',
+  ].join('\n'), {
+    label: 'triage:' + PR + '#' + (i + 1),
+    phase: 'Triage',
+    schema: TRIAGE_SCHEMA,
+    effort: 'high',
+  }).then(t => ({ finding, index: i, triage: t })),
+
+  async (result) => {
+    if (!result || !result.triage) return result
+    if (result.triage.verdict !== 'pushback') return result
+
+    if (pushbackVerifyBudget <= 0) {
+      log('Pushback verification budget exhausted — demoting finding ' + (result.index + 1) +
+          ' on PR #' + PR + ' from pushback to insufficient_context and escalating to the user.')
+      return {
+        ...result,
+        triage: {
+          ...result.triage,
+          verdict: 'insufficient_context',
+          openQuestion: 'Triage proposed pushback but the per-run verification budget (' +
+            MAX_PUSHBACK_VERIFY + ') was exhausted, so it was not adversarially checked. ' +
+            'Original ground: ' + (result.triage.pushbackGround || 'unstated') + '. ' +
+            'Original rationale: ' + result.triage.rationale,
+        },
+        budgetDemoted: true,
+      }
+    }
+    pushbackVerifyBudget -= 1
+
+    // Perspective-diverse refutation: distinct lenses catch failure modes that
+    // redundant identical skeptics cannot.
+    const votes = await parallel(REFUTE_LENSES.map(lens => () => agent([
+      'You are refuting a proposed PUSHBACK against a code reviewer. Your job is to show',
+      'the reviewer is RIGHT and the pushback is wrong. Examine it through this lens:',
+      '  ' + lens,
+      '',
+      CONTEXT,
+      '',
+      '--- REVIEWER FINDING ---',
+      typeof result.finding === 'string' ? result.finding : JSON.stringify(result.finding, null, 2),
+      '',
+      '--- PROPOSED PUSHBACK ---',
+      'Ground: ' + (result.triage.pushbackGround || '(unstated)'),
+      'Rationale: ' + result.triage.rationale,
+      'Evidence offered: ' + result.triage.evidence,
+      '',
+      '--- GROUNDING ---',
+      GROUND_BRIEF,
+      '',
+      'Verify the offered evidence actually says what the pushback claims — open the cited',
+      'file and line. Fabricated or misread evidence means refuted=true.',
+      '',
+      'Set refuted=true if the reviewer is right, if the evidence does not hold up, or if',
+      'you cannot confirm the pushback. Default to refuted=true under uncertainty: the',
+      'cost of wrongly dismissing a correct reviewer is much higher than the cost of',
+      'making a fix that turns out to be unnecessary.',
+    ].join('\n'), {
+      label: 'refute:' + PR + '#' + (result.index + 1) + ':' + lens,
+      phase: 'Verify',
+      schema: REFUTE_SCHEMA,
+      effort: 'xhigh',
+    })))
+
+    const counted = votes.filter(Boolean)
+    const refutations = counted.filter(v => v.refuted).length
+    // Survives only on a majority failing to refute. A dead/failed verifier counts
+    // against the pushback: fewer than 2 usable votes cannot clear it.
+    const survives = counted.length >= 2 && refutations < Math.ceil(counted.length / 2)
+
+    if (survives) {
+      log('Pushback on PR #' + PR + ' finding ' + (result.index + 1) + ' survived ' +
+          counted.length + ' lenses (' + refutations + ' refuted).')
+      return { ...result, verified: true, refutations, voters: counted.length }
+    }
+
+    log('Pushback on PR #' + PR + ' finding ' + (result.index + 1) + ' REFUTED (' +
+        refutations + '/' + counted.length + ') — converting to fix.')
+    return {
+      ...result,
+      triage: {
+        ...result.triage,
+        verdict: 'fix',
+        rationale: 'Proposed pushback was refuted on adversarial review (' + refutations + '/' +
+          counted.length + ' lenses). Refutation: ' +
+          counted.filter(v => v.refuted).map(v => v.reasoning).join(' | '),
+        proposedFix: result.triage.proposedFix || 'Address the reviewer finding as stated.',
+      },
+      verified: true,
+      refutations,
+      voters: counted.length,
+      convertedFromPushback: true,
+    }
+  },
+)
+
+const results = disposed.filter(Boolean).filter(r => r.triage)
+const dropped = FINDINGS.length - results.length
+if (dropped > 0) {
+  log('WARNING: ' + dropped + ' of ' + FINDINGS.length + ' findings on PR #' + PR +
+      ' failed triage and were dropped. They are NOT dispositioned and must be re-run.')
+}
+
+const toFix = results.filter(r => r.triage.verdict === 'fix')
+const toPush = results.filter(r => r.triage.verdict === 'pushback')
+const toEscalate = results.filter(r => r.triage.verdict === 'insufficient_context')
+
+log('PR #' + PR + ' disposition: ' + toFix.length + ' fix, ' + toPush.length +
+    ' pushback, ' + toEscalate.length + ' escalate' + (dropped ? ', ' + dropped + ' dropped' : ''))
+
+// ---------------------------------------------------------------- 4. implement
+
+let impl = null
+
+if (REPORT_ONLY) {
+  log('--report-only: skipping implement, commit, push, and comment for PR #' + PR + '.')
+} else if (toFix.length) {
+  phase('Implement')
+  impl = await agent([
+    'Implement the accepted review fixes for this PR in its owning worktree.',
+    '',
+    CONTEXT,
+    '',
+    WORKTREE_GUARD,
+    '',
+    '--- ACCEPTED FINDINGS ---',
+    ...toFix.map((r, n) => [
+      (n + 1) + '. ' + (typeof r.finding === 'string' ? r.finding : JSON.stringify(r.finding)),
+      '   Rationale: ' + r.triage.rationale,
+      '   Proposed fix: ' + (r.triage.proposedFix || '(derive the smallest root-cause fix)'),
+    ].join('\n')),
+    '',
+    '--- HOW ---',
+    'Work only inside ' + WORKTREE + '. Never edit any other worktree or repo.',
+    '',
+    '1. Add a task to the child tracker tasks.md for each finding BEFORE editing.',
+    '2. Implement the smallest ROOT-CAUSE fix for each. If a reviewer identified a',
+    '   symptom, fix the cause. Do not bundle unrelated cleanups — it makes re-review',
+    '   harder and invites new findings.',
+    '3. Test narrowest-first: the specific failing case, then the file/module suite, then',
+    '   the relevant broader checks. Run the repo formatter and linter before committing.',
+    '4. If a test fails and you cannot fix it, stop, set testsPassed=false, list it in',
+    '   blockers, and do NOT commit or push. A red push wastes a reviewer cycle.',
+    '5. Commit with a message describing the fixes only — no references to agentic tools.',
+    '6. Push to the PR branch.',
+    '7. Append events.jsonl entries in the child tracker for tests, commit, and push.',
+    '   Get timestamps with: date -u +%Y-%m-%dT%H:%M:%SZ',
+    '',
+    'Pushing is outward-facing and dismisses existing approvals. Push exactly once, only',
+    'after tests pass. If the worktree HEAD guard fails, set guardFailed=true, change',
+    'nothing, and return immediately.',
+  ].join('\n'), {
+    label: 'implement:pr-' + PR,
+    phase: 'Implement',
+    schema: IMPL_SCHEMA,
+    effort: 'high',
+  })
+
+  if (!impl) {
+    log('Implement agent failed on PR #' + PR + '. No comment will be posted; the tick must retry.')
+    return { pr: PR, headSha: HEAD_SHA, grounding, verdicts: results, implemented: null, responded: false, error: 'implement-failed' }
+  }
+  if (impl.guardFailed) {
+    log('Worktree HEAD guard FAILED for PR #' + PR + ' — stale mapping, nothing edited.')
+    return { pr: PR, headSha: HEAD_SHA, grounding, verdicts: results, implemented: impl, responded: false, error: 'worktree-guard-failed' }
+  }
+  if (!impl.testsPassed || !impl.pushed) {
+    log('PR #' + PR + ' not pushed (testsPassed=' + impl.testsPassed + ', pushed=' + impl.pushed +
+        '). Skipping the response comment so it cannot describe unpushed work.')
+    return { pr: PR, headSha: HEAD_SHA, grounding, verdicts: results, implemented: impl, responded: false, error: 'fixes-incomplete' }
+  }
+}
+
+// ---------------------------------------------------------------- 5. respond
+
+if (REPORT_ONLY) {
+  return { pr: PR, headSha: HEAD_SHA, grounding, verdicts: results, implemented: null, responded: false, reportOnly: true, dropped }
+}
+
+phase('Respond')
+
+const respond = await agent([
+  'Post exactly ONE top-level comment on this PR summarizing the disposition, then',
+  'request re-review.',
+  '',
+  CONTEXT,
+  '',
+  '--- FIXED ---',
+  ...(toFix.length ? toFix.map((r, n) => (n + 1) + '. ' +
+      (typeof r.finding === 'string' ? r.finding : JSON.stringify(r.finding)) +
+      '\n   Root cause: ' + r.triage.rationale) : ['(none)']),
+  impl ? 'Commit: ' + (impl.commitSha || '(unrecorded)') + '\nTests: ' + (impl.testsRun || []).join(', ') : '',
+  impl && (impl.remainingRisks || []).length ? 'Remaining risks: ' + impl.remainingRisks.join('; ') : '',
+  '',
+  '--- PUSHING BACK (each survived adversarial review) ---',
+  ...(toPush.length ? toPush.map((r, n) => (n + 1) + '. ' +
+      (typeof r.finding === 'string' ? r.finding : JSON.stringify(r.finding)) +
+      '\n   Ground: ' + (r.triage.pushbackGround || '') +
+      '\n   Reasoning: ' + r.triage.rationale +
+      '\n   Evidence: ' + r.triage.evidence) : ['(none)']),
+  '',
+  '--- NEEDS THE AUTHOR\'S CALL ---',
+  ...(toEscalate.length ? toEscalate.map((r, n) => (n + 1) + '. ' +
+      (typeof r.finding === 'string' ? r.finding : JSON.stringify(r.finding)) +
+      '\n   Open question: ' + (r.triage.openQuestion || r.triage.rationale)) : ['(none)']),
+  '',
+  '--- HOW TO WRITE IT ---',
+  'Before posting, check the child tracker events.jsonl for an outward-facing comment',
+  'already recorded against these findings at head ' + HEAD_SHA + '. If one exists, do',
+  'NOT post again — set posted=false and say so. Duplicate comments on a reviewer thread',
+  'are the worst failure mode this system has.',
+  '',
+  'Three sections, omitting any that is empty: what was fixed (with commit SHA and one',
+  'line of root cause each), what is being pushed back on (with the concrete evidence,',
+  'phrased as information and explicitly inviting correction — you may be wrong), and',
+  'what needs the author\'s decision (as specific questions).',
+  '',
+  'Be direct and short. No agentic-tool references, no status-update filler, no apology.',
+  '',
+  'Post with: gh pr comment ' + PR + ' --repo ' + REPO + ' --body-file <tmpfile>',
+  'Then request re-review from the reviewers who left the findings.',
+  'Then append an events.jsonl entry in the child tracker recording the posted comment,',
+  'timestamped with: date -u +%Y-%m-%dT%H:%M:%SZ',
+  'Recording the post durably matters more than the post itself — it is what stops a',
+  'later tick from posting it twice.',
+].join('\n'), {
+  label: 'respond:pr-' + PR,
+  phase: 'Respond',
+  schema: RESPOND_SCHEMA,
+  effort: 'medium',
+})
+
+return {
+  pr: PR,
+  headSha: HEAD_SHA,
+  grounding,
+  verdicts: results,
+  counts: { fix: toFix.length, pushback: toPush.length, escalate: toEscalate.length, dropped },
+  implemented: impl,
+  responded: respond ? respond.posted === true : false,
+  response: respond,
+  // The agent, not this workflow, owns the merge gate and cleanup.
+  nextAction: toEscalate.length ? 'await-author-decision'
+    : (impl && impl.pushed) ? 'arm-auto-merge'
+    : 'evaluate-merge-gate',
+}
