@@ -1,6 +1,6 @@
 ---
 name: pr-monitor
-description: "Claude Code only. This skill hard-depends on the `Workflow` tool, `TaskList`/`TaskGet`, per-agent model/effort overrides, and the built-in `loop` skill. Do not invoke it from Codex or any other harness: those lack the primitives and cannot run its per-PR disposition workflow — use that harness's native PR review facility instead. In Claude Code, use for an autonomous, tracker-grounded babysitting loop over open authored PRs: polling review activity and CI on a cadence, disposing of each reviewer finding as fix / pushback / insufficient-context grounded in `~/.sdd` trackers, implementing and pushing accepted fixes, gating and executing merges, and running post-merge worktree/branch/tracker cleanup. Trigger on /pr-monitor, 'monitor my PRs', 'babysit my open PRs', 'watch for new review comments', 'keep my PRs moving', or whenever the user pairs it with /loop for a recurring cadence. Do NOT trigger for a one-off review of a single PR (use /review or /code-review) or for generic gh CLI questions."
+description: "Claude Code only — needs the `Workflow` tool, `TaskList`/`TaskGet`, per-agent model/effort overrides, and the built-in `loop` skill. Do not invoke from Codex or other harnesses; use their native PR review facility. In Claude Code, runs an autonomous tracker-grounded babysitting loop over open authored PRs the user has explicitly admitted to its registry — it never adopts the open-PR list on its own, and a PR with no known worktree mapping gets a mapping request first. Once admitted it polls review activity and CI on a cadence, disposes each reviewer finding as fix / pushback / insufficient-context grounded in `~/.sdd` trackers, implements and pushes accepted fixes, gates and executes merges, and runs post-merge worktree/branch/tracker cleanup. Trigger on /pr-monitor, 'monitor my PRs', 'babysit my open PRs', 'watch for new review comments', 'keep my PRs moving', or when paired with /loop. Do NOT trigger for a one-off review of a single PR (use /review or /code-review) or for generic gh CLI questions."
 ---
 
 # pr-monitor — Autonomous Tracker-Grounded PR Babysitting
@@ -47,7 +47,9 @@ Passed through `/pr-monitor <args>`, all optional:
 - `--pillar <name>` — `~/.sdd` pillar for trackers. Default: inferred by
   `better-goal`'s `scripts/sdd_path.py`.
 - `--report-only` — never push, merge, or clean up. Observe and report.
-- `--pr <n>[,<n>...]` — restrict to specific PRs.
+- `--pr <n>[,<n>...]` — restrict the tick to specific PRs. This narrows what is monitored;
+  it does not admit anything. An unadmitted PR named here still gets a mapping request
+  rather than action.
 
 ## The state model
 
@@ -62,6 +64,7 @@ the head moves for an unrelated reason and every thread re-renders as new.
 **Durable (`~/.sdd`, survives everything).** Only two things:
 
 1. The **PR registry** in the parent tracker — the PR → worktree → child-tracker map.
+   This is an **allowlist, not a cache**: a PR absent from it is not monitored at all.
 2. An **append-only record of outward-facing actions already taken** — comments posted,
    branches pushed, merges executed — in the child tracker's `events.jsonl`.
 
@@ -80,16 +83,23 @@ no worktree of its own. Do not "fix" this by relocating it.
 | PR | Title | Head SHA | Branch | Worktree | Child tracker | Status |
 |---|---|---|---|---|---|---|
 
-`Status` is one of `active`, `report-only` (no worktree mapping, or a mapping that
-failed its guard), `awaiting-approval` (fixes pushed, auto-merge armed), `archived`.
+`Status` is one of `active`, `drift` (an admitted PR whose worktree guard failed or whose
+mapping became ambiguous — observed but never edited), `awaiting-approval` (fixes pushed,
+auto-merge armed), `archived`. A PR that is not a row in this table is **unadmitted** and is
+not monitored — see §3.
+
+`drift` is a registry status; `--report-only` is a run flag that suppresses all writes for
+every PR. They are unrelated.
 
 **Child (`~/.sdd/<pillar>/<worktree-name>/`).** One per PR-owning worktree — usually
 already exists from the work that created the PR. This is the grounding source: what was
 tried, what was decided, what was deliberately not done. It is what lets a pushback be
 evidence-based rather than a reflex.
 
-On first run, if the parent tracker is absent, create it via `better-goal` and seed the
-registry from the first provider read.
+On first run, if the parent tracker is absent, create it via `better-goal` with an **empty**
+registry. Do not seed it from the first provider read — that would auto-admit every open
+PR, which is precisely what §3 forbids. The first tick's job is to discover open PRs and
+ask which ones to admit.
 
 ## The tick
 
@@ -105,51 +115,66 @@ started.
 
 Never reason about whether a workflow is probably done. Ask.
 
-### 2. One batched provider read
+### 2. One batched provider read (discovery only)
 
 ```bash
 gh pr list --author @me --state open --repo <repo> \
   --json number,title,headRefName,headRefOid,isDraft,mergeable,mergeStateStatus,reviewDecision,statusCheckRollup,url,updatedAt
 ```
 
-### 3. Resolve worktrees
+### 3. Admission — the registry is an allowlist
 
-For each PR, match `headRefName` against:
+**Never adopt the open-PR list as the monitored set.** `gh pr list` is *discovery*. The
+registry is *admission*. Only PRs that are rows in the registry, with a mapping the user
+provided or confirmed, are monitored.
 
-```bash
-git worktree list --porcelain
-```
+For every discovered open PR that is not already a registry row:
 
-Include the primary checkout — a branch checked out in the main working directory is a
-legitimate mapping. Resolution is *derivation*, not creation.
+1. It is **unadmitted**. Take no action on it — no disposition, no workflow, no edit, no
+   comment, no merge, not even a read of its review threads.
+2. **Requesting the mapping is the first step.** Surface the PR to the user and ask which
+   worktree owns it. Do not proceed on that PR until they answer.
+3. To make the request concrete, you may derive a *candidate* worktree by matching
+   `headRefName` against `git worktree list --porcelain` (the primary checkout counts — a
+   branch checked out in the main working directory is a legitimate owner). Present it as
+   a proposal to confirm. **A derived candidate is never an admission.** Deriving a
+   plausible mapping and proceeding on it is exactly the failure this rule exists to stop.
+4. On the user's answer, write the row into the registry and monitor it from the next tick.
 
-- **No match** → status `report-only`. Track and report it; take no edit action. Never
-  silently skip, or "no worktree" becomes "invisible PR".
-- **Two or more matches** → ambiguous. `report-only`, and surface it.
-- **Never** run `git worktree add` on your own initiative. Creating a worktree requires
-  the user asking for it in that tick. Once created, record the mapping in the registry
-  and proceed normally.
+This is why the rule matters: an authored open PR is not necessarily work you want an
+autonomous loop touching. Drafts, spikes, experiments, long-parked branches, and PRs owned
+by a different machine all show up in `gh pr list`. Admission is the user's decision, made
+once per PR, and it is cheap.
+
+Never run `git worktree add` on your own initiative. Creating a worktree requires the user
+asking for it in that tick; once created, record the mapping and proceed normally.
+
+For PRs **already admitted**, a mapping that no longer resolves — or resolves ambiguously
+to two or more worktrees — is drift, not a re-admission opportunity. Set status `drift`,
+surface it, and do not repair the mapping by guessing.
 
 ### 4. Guard every mapping before any edit
 
 ```bash
 git -C <worktree> rev-parse --abbrev-ref HEAD   # must equal headRefName
-git -C <worktree> status --porcelain            # unexpected dirt → report-only
+git -C <worktree> status --porcelain            # unexpected dirt → status drift
 ```
 
 A registry entry can rot: the worktree may have been removed or repurposed to another
 branch. Without this guard a fix for PR A lands on branch B. On mismatch, demote to
-`report-only` and report the drift — do not repair the mapping by guessing.
+status `drift` and report it — do not repair the mapping by guessing.
 
 ### 5. Diff against last tick, then branch
 
 Compare each PR's head SHA, `reviewDecision`, check rollup, and review/comment set
 against what you remember.
 
+Only admitted PRs reach this step.
+
 - **Nothing changed, nothing mergeable** → emit one compact status line and end the
   tick. This is the common case. Stop here.
-- **New review activity on a mapped PR** → read `references/disposition.md`, then
-  dispatch the workflow (§6).
+- **New review activity** → read `references/disposition.md`, then dispatch the
+  workflow (§6).
 - **Mergeable** → read `references/merge-cleanup.md` and run the gate.
 - **Merged since last tick** → read `references/merge-cleanup.md` and run cleanup.
 
@@ -191,9 +216,19 @@ child tracker when it completes.
 
 ### 7. Report
 
-One block per tick. Per PR: number, title, head SHA (short), worktree, CI, review state,
-mergeability, and what you did or why you did nothing. Then any PRs newly in
-`report-only` and why.
+One block per tick, in this order:
+
+1. **Awaiting admission** — every discovered open PR that is not in the registry, with its
+   candidate worktree if one was derived, phrased as a direct question: which worktree owns
+   this, or should it stay unmonitored? Put this first. It is the only part of the report
+   that needs the user to act, and an unanswered mapping request means real work is sitting
+   untouched.
+2. **Admitted PRs** — number, title, short head SHA, worktree, CI, review state,
+   mergeability, and what you did or why you did nothing.
+3. **Drift** — any admitted PR newly moved to `drift`, and why.
+
+If a mapping request has gone unanswered for several ticks, say so once rather than
+repeating the full request every tick.
 
 ## Reason vs. check
 
@@ -204,6 +239,7 @@ The rule that keeps this safe. Getting it backwards is the failure mode.
 | Is this reviewer finding actually new? | **Reason** |
 | Is the reviewer correct? | **Reason**, grounded in the child tracker |
 | Is this objection already answered by prior recorded work? | **Reason** |
+| Is this PR admitted to the registry? | **Check** — never infer admission from a derivable worktree |
 | Is a workflow in flight for this PR? | **Check** (`TaskList`) |
 | Is this the current head SHA? | **Check**, immediately before acting |
 | Are required checks green? | **Check** |
