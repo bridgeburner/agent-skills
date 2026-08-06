@@ -62,19 +62,46 @@ the active harness; do not transfer another harness's model, reasoning, or
 delegation mechanics by analogy. Additional harness-specific sections may be
 added here as their routing conventions are established.
 
+### Deterministic bypass (outside the model ladder)
+
+Before selecting a model tier, check whether the task can be expressed as a
+deterministic script, command, or fixed workflow with a reliable oracle. If it
+can, use that bypass in either harness; do not spend model tokens to make a
+decision that code can make directly.
+
 ### Shared five-tier model ladder
 
 Classify the task once, then select the route from the column for the active
-harness. Every tier has one Codex route and one Claude route; these are
+harness. Every model tier has one Codex route and one Claude route; these are
 harness-local defaults, not cross-harness alternatives.
 
-| Tier | Use for | Codex route | Claude route |
+The scores below are the Artificial Analysis Intelligence Index v4.1 snapshot
+checked on 2026-08-06. The Index is a composite signal across agents (34%),
+coding (24%), scientific reasoning (24%), and general evaluations (18%); it is
+not an IQ score or a guarantee of success on a particular task. See the
+[Artificial Analysis methodology](https://artificialanalysis.ai/methodology/intelligence-benchmarking)
+and [current model pages](https://artificialanalysis.ai/models/) for the
+definition and live values.
+
+| Tier | Capability band | Codex route (AA score) | Claude route (AA score) |
 |---|---|---|---|
-| 1 — bounded | Mechanical, reversible work with an exact oracle | `gpt-5.6-luna / high` | `claude-sonnet-5 (non-reasoning) / high` |
-| 2 — routine judgment | Straightforward implementation, testing, and review | `gpt-5.6-luna / xhigh` | `claude-opus-5 / low` |
-| 3 — substantive | Multi-step reasoning, reconciliation, and non-trivial review | `gpt-5.6-luna / max` | `claude-opus-5 / medium` |
-| 4 — complex | Ambiguous, consequential, or cross-system work | `gpt-5.6-sol / high` | `claude-opus-5 / high` |
-| 5 — frontier | Hardest quality-first work where failure is costly | `gpt-5.6-sol / xhigh` | `claude-opus-5 / xhigh` |
+| 1 — mechanical | Mechanical, reversible work with an exact oracle | [`gpt-5.6-luna / high`](https://artificialanalysis.ai/models/gpt-5-6-luna-high) — **46** | [`claude-sonnet-5 (non-reasoning) / high`](https://artificialanalysis.ai/models/claude-sonnet-5-non-reasoning) — **42** |
+| 2 — bounded judgment | Straightforward implementation, testing, and review with constrained ambiguity | [`gpt-5.6-luna / xhigh`](https://artificialanalysis.ai/models/gpt-5-6-luna-xhigh) — **49** | [`claude-opus-5 / low`](https://artificialanalysis.ai/models/claude-opus-5-low) — **51** |
+| 3 — substantive worker | Multi-step reasoning, reconciliation, and non-trivial review without owning the whole workflow | [`gpt-5.6-luna / max`](https://artificialanalysis.ai/models/gpt-5-6-luna) — **51** | [`claude-opus-5 / medium`](https://artificialanalysis.ai/models/claude-opus-5-medium) — **56** |
+| 4 — orchestrator / complex | Semantic decomposition, delegation, integration, or ambiguous consequential work | [`gpt-5.6-sol / high`](https://artificialanalysis.ai/models/gpt-5-6-sol-high) — **56** | [`claude-opus-5 / high`](https://artificialanalysis.ai/models/claude-opus-5-high) — **59** |
+| 5 — frontier / failure-sensitive | Hardest quality-first work where Tier 4 failed or failure is unusually costly | [`gpt-5.6-sol / xhigh`](https://artificialanalysis.ai/models/gpt-5-6-sol-xhigh) — **58** | [`claude-opus-5 / xhigh`](https://artificialanalysis.ai/models/claude-opus-5-xhigh) — **60** |
+
+The explicit quality override is above the ladder, not a sixth default tier:
+[`gpt-5.6-sol / max`](https://artificialanalysis.ai/models/gpt-5-6-sol) —
+**59** and [`claude-opus-5 / max`](https://artificialanalysis.ai/models/claude-opus-5)
+— **61**.
+
+Treat the benchmark as a prior, not a precise ranking. A one-point
+difference is a tie for routing purposes; do not choose one route over another
+on that difference alone. For close scores, prefer task fit, native harness
+controls, latency, effective token cost, and evidence from the task's own
+evaluation. Larger score gaps can inform a judgment call, but still do not
+override a known task-specific advantage.
 
 Apply the ladder as follows:
 
@@ -89,10 +116,38 @@ Apply the ladder as follows:
    quality escalation above Tier 5. Use them only when Tier 5 failed or the
    cost of failure justifies the extra token use, and record the reason in
    `tasks.md`.
+6. If the active harness intentionally exposes both model families, it may
+   choose either route using the score as secondary evidence. Prefer task fit,
+   native controls, effective cost, and observed task performance; record the
+   actual provider/model/effort rather than treating the two routes as
+   interchangeable.
 
 This is benchmark-informed guidance, not a claim that model scores or effort
 labels are interchangeable. Benchmark scores, pricing, model availability,
 and harness controls can change; re-check the routes when those inputs change.
+
+### Top-level orchestrator routing
+
+An agent is a semantic top-level orchestrator when it classifies the goal,
+chooses decomposition, delegates work, integrates worker outputs, resolves
+conflicts, or owns the completion decision. It is not merely an orchestrator
+because it happens to launch a fixed sequence of commands.
+
+Apply these rules:
+
+1. A semantic top-level orchestrator for a meaningful multi-step goal starts at
+   Tier 4: `gpt-5.6-sol / high` in Codex or `claude-opus-5 / high` in Claude.
+2. Use Tier 3 for a bounded controller with a fixed workflow, explicit guards,
+   and little semantic integration. Use the deterministic bypass when the
+   controller can be ordinary code.
+3. Escalate the orchestrator to Tier 5 when decomposition is ambiguous, worker
+   outputs conflict, the work is long-horizon or cross-system, failure is
+   costly, or the Tier 4 orchestrator has already failed or needed a major
+   re-plan.
+4. Route delegated workers independently at the lowest adequate tier. A Tier 4
+   orchestrator does not imply Tier 4 workers.
+5. `sol / max` and `opus / max` are recovery or quality overrides above Tier 5,
+   not a normal orchestrator default. Record the trigger in `tasks.md`.
 
 ### Codex: Subagent Model Routing
 
