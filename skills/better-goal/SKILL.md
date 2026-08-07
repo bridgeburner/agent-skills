@@ -125,9 +125,9 @@ Apply the ladder as follows:
 4. Treat Tier 1's Claude route as mechanical-only; use Tier 2 or higher when
    the task requires meaningful judgment.
 5. Reserve `gpt-5.6-sol / max` and `claude-opus-5 / max` for an explicit
-   quality escalation above Tier 5. Use them only when Tier 5 failed or the
-   cost of failure justifies the extra token use, and record the reason in
-   `tasks.md`.
+   quality escalation above Tier 5. They may be selected proactively when the
+   cost of failure or required quality justifies the extra token use; otherwise
+   use them after Tier 5 failed. Record the trigger in `tasks.md`.
 6. If the active harness intentionally exposes both model families, it may
    choose either route using the score as secondary evidence. Prefer task fit,
    native controls, effective cost, and observed task performance; record the
@@ -161,7 +161,8 @@ Apply these rules:
 4. Route delegated workers independently at the lowest adequate tier. A Tier 4
    orchestrator does not imply Tier 4 workers.
 5. `sol / max` and `opus / max` are recovery or quality overrides above Tier 5,
-   not a normal orchestrator default. Record the trigger in `tasks.md`.
+   not a normal orchestrator default. They can be chosen at the outset when
+   the task is clearly quality-first; record the trigger in `tasks.md`.
 
 ### Codex: Subagent Model Routing
 
@@ -192,6 +193,43 @@ adequate for the task:
   several competing hypotheses.
 - `max`: reserve for the hardest quality-first task where failure is costly and
   additional latency and token use are justified.
+
+#### Codex coding-task overlay
+
+When the deliverable is code or a codebase change, classify the coding shape
+before selecting the Codex route. This overlay changes only Codex selection;
+Claude tasks continue to use the Claude section. See the [current Artificial
+Analysis Coding Agent Index](https://artificialanalysis.ai/agents/coding-agents)
+for the dated benchmark and cost reference; do not treat its composite as a
+replacement for task-specific evidence.
+
+- **Reliable workhorse for known tasks:** requirements are well-defined, the
+  solution pattern is familiar, the patch is bounded, and tests, builds, lint,
+  or a verifier provide a clear oracle. Reliable means high-quality code that
+  passes the oracle, not merely fast code. Start with `gpt-5.6-luna / high`;
+  use `luna / xhigh` for bounded multi-file or higher-quality work, and
+  `luna / max` for the hardest still-testable worker. Prefer this Luna ladder
+  before paying for Terra or Sol.
+- **Mixed coding orchestrator:** the agent must investigate enough to
+  implement, debug, and validate, but a strong oracle exists. Use
+  `gpt-5.6-terra / max` as the cost-conscious default. Use
+  `gpt-5.6-sol / medium` when architecture quality or failure cost dominates.
+- **Architect:** the root cause is unknown, the change is cross-system, or
+  performance, concurrency, migration, security boundaries, or design tradeoffs
+  are central. Use `sol / medium` for normal architecture work; `sol / high`
+  for competing hypotheses or high stakes; and `sol / xhigh` for frontier
+  coding problems where deeper exploration is likely to change the design or
+  solution.
+- **Sol max:** choose it proactively or after `xhigh` only for the hardest
+  quality-first work: irreversible or highly consequential changes, no adequate
+  oracle, exhaustive design or optimization, or an unresolved `xhigh` failure.
+  It is not a routine default; record the trigger in `tasks.md`.
+- Do not choose `sol / low` as the coding equivalent of `luna / xhigh` merely
+  because Sol is the larger model. Current coding evidence shows no meaningful
+  architect-proxy gain at materially higher cost.
+- If work starts as architecture, use the Sol route for investigation and
+  design, then delegate the validated patch to the lowest adequate workhorse.
+  Do not use a frontier route for every coding worker.
 
 Do not assign every task the strongest combination. Escalate only when the
 task's ambiguity, consequence, or failed evidence warrants it. Reassign the
