@@ -75,25 +75,37 @@ Classify the task once, then select the route from the column for the active
 harness. Every model tier has one Codex route and one Claude route; these are
 harness-local defaults, not cross-harness alternatives.
 
-The scores below are the Artificial Analysis Intelligence Index v4.1 snapshot
-checked on 2026-08-06. The Index is a composite signal across agents (34%),
+The scores below are the Artificial Analysis Intelligence Index v4.1.1 snapshot
+checked on 2026-08-07. The Index is a composite signal across agents (34%),
 coding (24%), scientific reasoning (24%), and general evaluations (18%); it is
 not an IQ score or a guarantee of success on a particular task. See the
 [Artificial Analysis methodology](https://artificialanalysis.ai/methodology/intelligence-benchmarking)
 and [current model pages](https://artificialanalysis.ai/models/) for the
 definition and live values.
 
+For cost-aware choices, use Artificial Analysis's full-index cost as the
+token-efficiency signal: it reflects the provider-reported tokens and cache
+rates needed to run the fixed benchmark suite, not a per-user task quote. In
+the current GPT-5.6 snapshot, Terra costs roughly 6–10x Luna at the same
+effort and Sol roughly 16–27x Luna; nominal OpenAI list-price ratios are 1x,
+10x, and 25x respectively for Luna, Terra, and Sol. Treat those as broad cost
+bands, not precise forecasts. When scores are within one point, treat them as
+a tie and normally prefer the cheaper adequate route; pay the premium for a
+larger score gap only when task-specific evidence or failure cost justifies it.
+See the [OpenAI model comparison](https://developers.openai.com/api/docs/models/compare)
+for current list prices.
+
 | Tier | Capability band | Codex route (AA score) | Claude route (AA score) |
 |---|---|---|---|
-| 1 — mechanical | Mechanical, reversible work with an exact oracle | [`gpt-5.6-luna / high`](https://artificialanalysis.ai/models/gpt-5-6-luna-high) — **46** | [`claude-sonnet-5 (non-reasoning) / high`](https://artificialanalysis.ai/models/claude-sonnet-5-non-reasoning) — **42** |
+| 1 — mechanical | Mechanical, reversible work with an exact oracle | [`gpt-5.6-luna / high`](https://artificialanalysis.ai/models/gpt-5-6-luna-high) — **47** | [`claude-sonnet-5 (non-reasoning) / high`](https://artificialanalysis.ai/models/claude-sonnet-5-non-reasoning) — **42** |
 | 2 — bounded judgment | Straightforward implementation, testing, and review with constrained ambiguity | [`gpt-5.6-luna / xhigh`](https://artificialanalysis.ai/models/gpt-5-6-luna-xhigh) — **49** | [`claude-opus-5 / low`](https://artificialanalysis.ai/models/claude-opus-5-low) — **51** |
-| 3 — substantive worker | Multi-step reasoning, reconciliation, and non-trivial review without owning the whole workflow | [`gpt-5.6-luna / max`](https://artificialanalysis.ai/models/gpt-5-6-luna) — **51** | [`claude-opus-5 / medium`](https://artificialanalysis.ai/models/claude-opus-5-medium) — **56** |
-| 4 — orchestrator / complex | Semantic decomposition, delegation, integration, or ambiguous consequential work | [`gpt-5.6-sol / high`](https://artificialanalysis.ai/models/gpt-5-6-sol-high) — **56** | [`claude-opus-5 / high`](https://artificialanalysis.ai/models/claude-opus-5-high) — **59** |
-| 5 — frontier / failure-sensitive | Hardest quality-first work where Tier 4 failed or failure is unusually costly | [`gpt-5.6-sol / xhigh`](https://artificialanalysis.ai/models/gpt-5-6-sol-xhigh) — **58** | [`claude-opus-5 / xhigh`](https://artificialanalysis.ai/models/claude-opus-5-xhigh) — **60** |
+| 3 — substantive worker | Multi-step reasoning, reconciliation, and non-trivial review without owning the whole workflow | [`gpt-5.6-luna / max`](https://artificialanalysis.ai/models/gpt-5-6-luna) — **52** | [`claude-opus-5 / medium`](https://artificialanalysis.ai/models/claude-opus-5-medium) — **56** |
+| 4 — orchestrator / complex | Semantic decomposition, delegation, integration, or ambiguous consequential work | [`gpt-5.6-sol / medium`](https://artificialanalysis.ai/models/gpt-5-6-sol-medium) — **56** | [`claude-opus-5 / high`](https://artificialanalysis.ai/models/claude-opus-5-high) — **59** |
+| 5 — frontier / failure-sensitive | Hardest quality-first work where Tier 4 failed or failure is unusually costly | [`gpt-5.6-sol / xhigh`](https://artificialanalysis.ai/models/gpt-5-6-sol-xhigh) — **59** | [`claude-opus-5 / xhigh`](https://artificialanalysis.ai/models/claude-opus-5-xhigh) — **60** |
 
 The explicit quality override is above the ladder, not a sixth default tier:
 [`gpt-5.6-sol / max`](https://artificialanalysis.ai/models/gpt-5-6-sol) —
-**59** and [`claude-opus-5 / max`](https://artificialanalysis.ai/models/claude-opus-5)
+**61** and [`claude-opus-5 / max`](https://artificialanalysis.ai/models/claude-opus-5)
 — **61**.
 
 Treat the benchmark as a prior, not a precise ranking. A one-point
@@ -136,7 +148,9 @@ because it happens to launch a fixed sequence of commands.
 Apply these rules:
 
 1. A semantic top-level orchestrator for a meaningful multi-step goal starts at
-   Tier 4: `gpt-5.6-sol / high` in Codex or `claude-opus-5 / high` in Claude.
+   Tier 4: `gpt-5.6-sol / medium` in Codex or `claude-opus-5 / high` in Claude.
+   In Codex, use `sol / high` when the goal is high-stakes, decomposition is
+   unusually ambiguous, or measured task evidence shows a material gain.
 2. Use Tier 3 for a bounded controller with a fixed workflow, explicit guards,
    and little semantic integration. Use the deterministic bypass when the
    controller can be ordinary code.
