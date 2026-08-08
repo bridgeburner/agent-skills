@@ -30,8 +30,8 @@ Do not use this skill for one-shot answers, tiny edits, or single-command checks
 2. Use the canonical live tracker: `~/.sdd/<project-pillar>/<worktree-name>/`, where `<worktree-name>` is the git root basename. Prefer running `scripts/sdd_path.py --create` from this skill to avoid hand-rolled path inference.
 3. If the pillar cannot be inferred, ask the user before creating tracker files. Do not create repo-local `.sdd` directories.
 4. Create or update:
-   - `goal.md`: current objective, scope, non-goals, success criteria, and any approved objective changes.
-   - `tasks.md`: top table of tasks with status, plus linked detail sections as needed.
+   - `goal.md`: the strategic entry point described below.
+   - `tasks.md`: the concise execution ledger described below.
    - `events.jsonl`: append-only event ledger.
    - `designs/`: non-trivial designs, specs, spike reports, review outputs.
    - `evidence/`: command outputs, generated artifacts, data proofs, and validation bundles grouped by task id or run id.
@@ -40,6 +40,35 @@ Do not use this skill for one-shot answers, tiny edits, or single-command checks
 5. Optionally create `operating-philosophy.md` only when the work needs a local copy or deviations from this skill. Prefer avoiding boilerplate drift.
 
 Use task statuses consistently: `pending`, `in_progress`, `blocked`, `complete`, `parked`.
+
+## Tracker Information Architecture
+
+Treat `goal.md` as the first document a zero-context agent reads. It preserves
+the reason the work exists and routes the agent to deeper material without
+forcing the execution queue to carry that context.
+
+- State the larger outcome, why it matters, scope and non-goals, governing
+  principles, and completion evidence.
+- For a goal organized into arcs, explain what each arc achieves, why it exists
+  in that sequence, and the product-path or evidence boundary that completes
+  it. Link from the arc to detailed plans, designs, runbooks, or evidence only
+  when those resources are needed.
+- Simpler goals do not need artificial arcs. They still use `goal.md` for the
+  strategic outcome and higher-level constraints that must survive a restart.
+- Route to authoritative resources instead of copying their contents into
+  `goal.md`. Mark stale or superseded sources so an agent does not have to infer
+  which design governs current work.
+
+Keep `tasks.md` operational: current task, order, dependencies, status, and the
+lowest adequate model/effort route. A short outcome sentence is normally
+enough. Do not require a brief or design document for every task; create deeper
+material only when the work contains a genuine contract, design decision, or
+cross-agent handoff that cannot be understood from `goal.md` and current source.
+
+Use `designs/` for those detailed contracts and `events.jsonl` for append-only
+history. Neither should become mandatory archaeology for understanding the
+current objective: `goal.md` owns strategic orientation and links to the exact
+history or design that remains relevant.
 
 ## Event Ledger
 
@@ -378,7 +407,23 @@ When tracked work reaches a meaningful milestone or the user asks to archive the
 2. Copy the completed tracker surfaces into that archive: `goal.md`, `tasks.md`, `events.jsonl`, completion audits, relevant `designs/`, and any evidence indexes needed to understand the arc.
 3. Add `SUMMARY.md`: a compact but readable summary of what was accomplished, important decisions, final metrics, artifacts, verification, remaining gaps, and the recommended next starting point.
 4. Add `manifest.md`: a minified entry point that links to `SUMMARY.md`, lists archived files, names the final commit/artifacts, and gives the shortest useful status snapshot.
-5. Reset the live `goal.md`, `tasks.md`, and `events.jsonl` to a fresh starting point that links back to the archive and waits for the next objective.
+5. Reseed the live tracker rather than carrying completed history in its active
+   surfaces:
+   - If the objective continues, rewrite `goal.md` as the current strategic
+     entry point and keep only unfinished tasks (`pending`, `in_progress`,
+     `blocked`, or `parked`) in `tasks.md`. Preserve their task IDs and order;
+     record dependencies on archived completed tasks as satisfied prerequisites
+     instead of leaving dangling task references.
+   - If no objective continues, leave a minimal starting point that links to the
+     archive and waits for the next objective.
+   - If no unfinished task remains, run the completion audit rather than
+     inventing a continuing live queue.
+   - Start a fresh `events.jsonl` with one `tracker.reseeded` event naming the
+     archive and carried task IDs.
+   - Link the new `goal.md` to the archive manifest/summary and to archived plans
+     or evidence when they remain authoritative. Bring a design forward only
+     when it will continue changing; do not copy or move documents merely to
+     make the live tree look self-contained.
 6. Keep archives under `~/.sdd`; do not move them into the repo unless the user explicitly asks.
 
 This gives progressive disclosure: `manifest.md` for orientation, `SUMMARY.md` for context, and the raw tracker files for audit.
