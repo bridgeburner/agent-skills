@@ -49,6 +49,16 @@ forcing the execution queue to carry that context.
 
 - State the larger outcome, why it matters, scope and non-goals, governing
   principles, and completion evidence.
+- Ground the goal in current source truth: name the governing code, config,
+  contract, artifact, or live state and its freshness. Treat tickets, plans,
+  review prose, and prior tracker claims as hypotheses until reconciled with
+  that source.
+- Keep the objective strategically honest as evidence changes. When current
+  source contradicts the tracker, record the contradiction, revise the goal or
+  explicitly retain it with rationale, and re-plan before continuing.
+- Define completion at the proof boundary actually required. Distinguish code,
+  tests, retained artifacts, provider state, deployment, and product behavior;
+  never let evidence from one tier silently stand in for another.
 - For a goal organized into arcs, explain what each arc achieves, why it exists
   in that sequence, and the product-path or evidence boundary that completes
   it. Link from the arc to detailed plans, designs, runbooks, or evidence only
@@ -60,10 +70,17 @@ forcing the execution queue to carry that context.
   which design governs current work.
 
 Keep `tasks.md` operational: current task, order, dependencies, status, and the
-lowest adequate model/effort route. A short outcome sentence is normally
-enough. Do not require a brief or design document for every task; create deeper
-material only when the work contains a genuine contract, design decision, or
-cross-agent handoff that cannot be understood from `goal.md` and current source.
+lowest adequate model/effort route. Write every task as an independently
+executable contract for a separate zero-context agent. State its outcome,
+owned scope, non-goals and constraints, authoritative inputs, smallest useful
+oracles, acceptance evidence and proof tier, and stop or escalation conditions.
+
+Keep the top ledger compact. Put detailed reasoning, requirements, sequencing,
+examples, and handoff context in a linked plan or `designs/` document when they
+would make the task entry bulky. Link that exact document from the task and say
+which section governs; do not duplicate its full context across task entries.
+A link does not replace the task contract: the entry must still make ownership,
+the expected outcome, acceptance, and stop conditions unambiguous.
 
 Use `designs/` for those detailed contracts and `events.jsonl` for append-only
 history. Neither should become mandatory archaeology for understanding the
