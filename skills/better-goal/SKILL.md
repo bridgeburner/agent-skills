@@ -1,6 +1,6 @@
 ---
 name: better-goal
-description: Use this skill for durable agent work that should use `~/.sdd` tracking. Trigger when a task is likely to span 3+ meaningful steps, 30+ minutes, multiple turns, multiple files/modules, multiple agents, or a restart/resume boundary; when it involves design decisions, PR/CI refreshes, research spikes, UI/e2e evidence, live-provider validation, migrations, backfills, deployments, coordinated commits, completion audits, or false-completion risk; or when the user invokes/refers to `/goal`, resume, sitrep, audit, tracker, or completion proof. Do not use for one-shot answers, tiny edits, or single-command checks.
+description: Use this skill for durable agent work that should use `~/.sdd` tracking, including seeding or recovering restart-safe tasks for zero-context executors. Trigger when a task is likely to span 3+ meaningful steps, 30+ minutes, multiple turns, multiple files/modules, multiple agents, or a restart/resume boundary; when it involves design decisions, PR/CI refreshes, research spikes, UI/e2e evidence, live-provider validation, migrations, backfills, deployments, coordinated commits, completion audits, or false-completion risk; or when the user invokes/refers to `/goal`, resume, sitrep, audit, tracker, task seeding, handoff, or completion proof. Do not use for one-shot answers, tiny edits, or single-command checks.
 ---
 
 # Better Goal
@@ -31,7 +31,8 @@ Do not use this skill for one-shot answers, tiny edits, or single-command checks
 3. If the pillar cannot be inferred, ask the user before creating tracker files. Do not create repo-local `.sdd` directories.
 4. Create or update:
    - `goal.md`: current objective, scope, non-goals, success criteria, and any approved objective changes.
-   - `tasks.md`: top table of tasks with status, plus linked detail sections as needed.
+   - `tasks.md`: compact top table of tasks with status, plus executable detail
+     sections for every pending or in-progress task.
    - `events.jsonl`: append-only event ledger.
    - `designs/`: non-trivial designs, specs, spike reports, review outputs.
    - `evidence/`: command outputs, generated artifacts, data proofs, and validation bundles grouped by task id or run id.
@@ -40,6 +41,50 @@ Do not use this skill for one-shot answers, tiny edits, or single-command checks
 5. Optionally create `operating-philosophy.md` only when the work needs a local copy or deviations from this skill. Prefer avoiding boilerplate drift.
 
 Use task statuses consistently: `pending`, `in_progress`, `blocked`, `complete`, `parked`.
+Record `Depends on`, `Ready when`, and `Owner / lease` in the task table.
+`pending` is dispatchable only when every readiness condition is true;
+`in_progress` is owned, and another executor must stop unless a transfer event
+or handoff explicitly releases it. `blocked`, `parked`, and `complete` are not
+dispatchable.
+
+## Zero-context task contracts
+
+Assume a future executor receives only the tracker path and one task ID, with no
+conversation history. From those inputs, first open `tasks.md`, locate exactly
+one matching task heading, and follow its `Required context` links in order. A
+missing or duplicate heading is a stop condition. A task is not ready merely
+because its intent is clear.
+Every pending or in-progress task must make these fields discoverable without
+inference:
+
+- required reading and exact predecessor artifact paths;
+- canonical inputs and preconditions, including identities that must be
+  refreshed at execution time;
+- allowed repositories, branches, services, external surfaces, and mutations;
+- explicit prohibitions and stop-or-ask conditions;
+- bounded actions and autonomous decision authority;
+- canonical output paths and the proof required for completion;
+- the downstream consumer and handoff path.
+
+Keep the task table compact. Put repeated project context in one canonical
+`designs/executor-bootstrap.md`, and make every task
+explicitly link it. Put task-specific inputs, outputs, proof, and stop conditions
+in that task's detail section. Use stable paths such as
+`evidence/<TASK_ID>/result.json` and `evidence/<TASK_ID>/handoff.md`; never rely
+on phrases such as "the prior result", "current branch", or "as above".
+
+Before declaring a task executable or delegating it, perform a cold-start audit
+using only the tracker path and task ID. Audit every pending or in-progress task,
+or one recorded equivalence class only when its tasks share the same template,
+authority, dependency shape, output schema, and proof path and all task-specific
+substitutions are checked mechanically. Repair any missing read path, authority
+boundary, input, output, proof, ownership, or stop condition first.
+
+When seeding or materially restructuring any task intended for zero-context
+delegation or recovery, read
+[`references/zero-context-task-contracts.md`](references/zero-context-task-contracts.md)
+for the templates, publication protocol, and audit checklist. For multiple
+homogeneous tasks, reuse its equivalence-class audit rule.
 
 ## Event Ledger
 
@@ -161,6 +206,11 @@ Keep the sitrep concise but complete. Surface stale, missing, or contradictory t
 Repeat until the tracked work is genuinely complete:
 
 1. Pick the most impactful next task, with architectural risk reduction before demo momentum unless the user says otherwise.
+   Delegate only a ready, unowned task. The coordinating agent is the sole
+   dispatcher and lease writer: it records executor identity, claim ID, and
+   claim timestamp in the task-table row before delegation. The executor
+   verifies the supplied claim matches that row before mutation, then appends
+   `task.started`. Executors must not self-claim Markdown tasks.
 2. Investigate with real data and live code where possible. Prefer spikes and prototypes over theory when the uncertainty is empirical.
 3. For implementation, favor tracer bullets: the thinnest end-to-end slice that crosses the necessary layers and produces a real output.
 4. Test early. After meaningful edits, run the smallest relevant oracle; after a slice touches product behavior, run an e2e path that resembles the user flow.
