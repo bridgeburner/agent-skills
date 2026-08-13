@@ -222,9 +222,9 @@
       "sourceType": "github",
       "sourceUrl": "https://github.com/vercel-labs/portless.git",
       "skillPath": "skills/portless/SKILL.md",
-      "skillFolderHash": "1a7b4b4d84ebaedf5e7901608b642d7362e44c1d",
+      "skillFolderHash": "6bcb0d4b3093792ec76e0e1ae5f594cbae8be556",
       "installedAt": "2026-04-29T23:45:24.922Z",
-      "updatedAt": "2026-07-25T14:02:44.176Z"
+      "updatedAt": "2026-08-13T04:46:22.302Z"
     },
     "ai-elements": {
       "source": "vercel/ai-elements",
