@@ -73,10 +73,10 @@ Vishwath maintains a personal LLM wiki that serves as cross-agent durable memory
 - **Non-triggers**: Pure technical work ("fix this TypeScript error"), generic questions ("how does React context work"), ephemeral tasks
 - **Mechanism**: Use the `$wiki-query` / `wiki-query` skill when available. On a fresh session the first lookup bootstraps awareness — pages and wikilinks seen tell you what the wiki covers for follow-up queries.
 
-### Write Path — when to deposit into the wiki
-- **Trigger**: The conversation produces durable value — decisions made, design rationale articulated, new insights, corrections to existing understanding, personal information worth preserving.
-- **Mechanism**: Use the `$wiki-import` / `wiki-import` skill when available. It handles mode selection (inline updates, conversation extraction, file import) internally.
-- Apply editorial judgment — decisions, rationale, and corrections compound; ephemeral debugging does not. Use `$wiki-maintain` / `wiki-maintain` for periodic health checks.
+### Write Path — temporarily disconnected
+- Wiki write-back from these repo-level instructions and skills is currently disabled.
+- Do not invoke `$wiki-import` / `wiki-import` or `$wiki-maintain` / `wiki-maintain` to modify the wiki as part of normal agent work.
+- Do not write `wiki/` or `vish/` as an automatic or skill-driven side effect. A future hook integration will reconnect this path.
 
 ### Relationship to Auto-Memory
 - Auto-memory (`MEMORY.md`) = L1 cache. Fast, lightweight, per-project. Session-to-session continuity within a project context.
