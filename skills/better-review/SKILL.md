@@ -1,5 +1,5 @@
 ---
-name: aggressive-simplification-review
+name: better-review
 description: "Review a PR or codebase through an aggressive-simplification and invariant-driven lens. Use this skill whenever the user asks for an architectural review, PR review, refinement pass, root-cause audit, parallel review agents, or asks whether a design is the simplest/elegant way to achieve a larger goal. It coordinates four independent review lanes and a synthesis pass, then supports evidence-first refinement without turning the review into a generic checklist."
 compatibility: "Works in Codex and other agent harnesses with native subagent/delegation support; GitHub access is needed only when the review includes PR threads or checks."
 ---
