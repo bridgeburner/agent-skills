@@ -1,0 +1,39 @@
+{
+  "skill_name": "aggressive-simplification-review",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "Review this small PR that adds a second cache and a retry loop to an existing request pipeline. Use the aggressive-simplification review skill. Do not edit files. Return independent lane reports and a consolidated finding ledger.",
+      "expected_output": "The review separates architecture, resilience, boundaries, and evidence; identifies duplicate mechanism/authority risks; and returns source-backed findings with invariant, failure mode, remedy, and proof fields.",
+      "files": [],
+      "expectations": [
+        "Four distinct review lanes are represented.",
+        "The report uses shared invariants rather than only implementation-specific opinions.",
+        "Findings include concrete evidence, impact, minimal remedy, and proof needed.",
+        "Duplicate findings are merged during synthesis."
+      ]
+    },
+    {
+      "id": 2,
+      "prompt": "Audit a stacked PR whose branch may be based on an outdated parent. Use the aggressive-simplification review skill and remain read-only. Explain what must be established before reviewing the delta, then review the design for hidden authorities, invalid states, crash gaps, contract mismatches, and proof gaps.",
+      "expected_output": "The response treats stack ancestry as a review boundary, avoids auditing a stale diff as final truth, and reports findings through the four review lenses with explicit uncertainty where evidence is missing.",
+      "files": [],
+      "expectations": [
+        "The review boundary and parent ancestry are handled before substantive findings.",
+        "The response distinguishes a proof gap from an implementation bug.",
+        "The response does not propose edits or external writes during discovery."
+      ]
+    },
+    {
+      "id": 3,
+      "prompt": "Refine a codebase after an initial review found several direct issues. Use the aggressive-simplification review skill. First consolidate direct and proactive findings, then recommend which fixes deserve red tests and which concerns are false positives or accepted limitations.",
+      "expected_output": "The response deduplicates by root invariant, prioritizes fixes by impact and confidence, prefers deletion or reuse over new machinery, and preserves explicit accepted limitations.",
+      "files": [],
+      "expectations": [
+        "Direct, proactive, integrated, false-positive, and accepted findings are distinguished.",
+        "The synthesis identifies cross-lane interactions.",
+        "Refinement recommendations are framed as root-cause changes with proof requirements."
+      ]
+    }
+  ]
+}
