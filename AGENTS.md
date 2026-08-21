@@ -19,7 +19,7 @@ These live in `skills/` and are symlinked into `~/.claude/skills/` and `~/.codex
 
 **Engineering workflow:** `architect`, `better-goal`, `better-review`, `pr-monitor`
 
-**Utilities:** `codex-cli`, `gwsctx`, `claude-spawn`, `[retired-skill]`
+**Utilities:** `codex-cli`, `gwsctx`, `claude-spawn`
 
 `pr-monitor` is Claude Code only — it hard-depends on the `Workflow` tool, `TaskList`/`TaskGet`, per-agent model/effort overrides, and the built-in `loop` skill. Its frontmatter gates other harnesses. Do not make it portable; reimplement against its `references/` instead.
 
