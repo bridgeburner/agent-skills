@@ -35,6 +35,30 @@ If the target is a stacked PR, establish the exact parent head and intended
 ancestry before reviewing the delta. A stale stack can make both bugs and fixes
 look real when they are artifacts of the wrong base.
 
+## Freeze the review contract
+
+Before delegation, write one compact contract from the user's stated outcome,
+the PR, and repository-owned requirements. This is a review boundary, not a new
+design: if the sources disagree or omit a consequential choice, mark it
+unproven and ask rather than silently redefining success.
+
+```markdown
+## Review contract
+- Product outcome: <observable user or system result>
+- Forbidden outcomes: <the motivating failure in user-visible terms>
+- Semantic delta: <states moving between rejected, accepted, stored, exposed, or acted upon>
+- Changed representations: <wire -> parsed -> stored -> loaded -> domain -> UI/response>
+- Downstream consumers: <production readers of each changed representation>
+- PR claims: <positive, negative, scope, compatibility, retention, and operational claims>
+- Required repository artifacts: <applicable PR-template fields, ticket convention, generated docs/checks>
+```
+
+Any previously rejected, absent, or impossible state that becomes admissible is
+a semantic delta, even when the diff describes itself as local to one layer. A
+changed representation with an uninspected production consumer is an unproven
+blocker. Declared PR scope does not turn a contradiction of the product outcome
+into an accepted limitation.
+
 ## Default delegation
 
 Use four independent workers, one per review lane, in parallel. Keep synthesis
@@ -54,8 +78,10 @@ Give every worker:
 - the frozen content identity, refreshed immediately before dispatch: the exact
   commit or PR head when clean, otherwise an immutable snapshot or diff digest
   that includes staged, tracked, and relevant untracked content;
-- the larger goal and relevant architecture/design sources;
+- the frozen review contract and relevant architecture/design sources;
 - the shared invariant reference;
+- for PR reviews, the current title/body, repository PR template, and available
+  linked-ticket metadata and repository-specific link/close convention;
 - an isolated report path, such as `/tmp/aggressive-review-<run-id>/<lane>.md`;
 - an explicit read-only boundary and stop conditions.
 
@@ -93,6 +119,12 @@ Look for:
 - architecture that conflicts with the larger system's direction;
 - opportunities to delete machinery instead of adding another mechanism.
 
+For a PR, also read its title and body as the public design explanation. Check
+that plain language says why the change exists, what behavior changes, what does
+not, and what evidence supports it. Reconcile every applicable repository
+template section and literal label; implementation bullets do not substitute
+for the motivating problem.
+
 Do not confuse elegance with cleverness. An elegant design has few concepts,
 clear ownership, local reasoning, and no special path that quietly changes the
 meaning of the operation.
@@ -123,6 +155,20 @@ For every meaningful boundary, ask what happens if the process dies immediately
 before and immediately after it. Restart should be an ordinary convergence path,
 not a separate best-effort repair story.
 
+When the semantic delta admits a previously rejected, absent, or impossible
+value, trace its exact persisted representation through every production reader
+until it is consumed, deliberately dropped, or returned. Exercise it alone,
+combined with every behaviorally distinct valid class, and through relevant
+retry or duplicate forms. Record this table:
+
+| State | Edge result | Stored form | Consumer result | Failure radius | Signal |
+|---|---|---|---|---|---|
+
+A thrown exception is not evidence of safe failure merely because it is called
+"fail closed." Prove whether its containment boundary is the record, operation,
+tenant/facility, or fleet/system, and compare that radius with the forbidden
+outcomes in the review contract.
+
 ### 3. Boundaries, contracts, and trust
 
 Ask whether every boundary agrees and whether invalid or hostile input can create
@@ -144,6 +190,23 @@ Look for:
 - changed semantics for foreign consumers that share a process, runtime,
   namespace, registry, environment, or other ambient dependency without using
   the reviewed feature's public path.
+
+For each sentinel, fallback, `UNKNOWN`, `Other`, null, or lossy normalization,
+test it alone and beside each behaviorally distinct recognized state at the
+same identity, window, or key. When several source values collapse into one
+stored form, identify what remains diagnosable and whether signals distinguish
+unknown-only, known-plus-unknown, and conflicting-known states. Compare edge
+acceptance, warning, persistence, and every reader's consumption semantics;
+layer-local consistency does not excuse cross-layer disagreement.
+Missing diagnostic fidelity is a finding only when a stated requirement or a
+concrete user/operational harm makes the distinction necessary. Otherwise
+record it as an open question or note; do not invent a reporting requirement.
+
+When a diff makes a response, request, event, diagnostic, JSON/blob, or
+"verbatim if small" object durable, recursively inventory the actual
+source-authored fields in normal and truncation paths. Check bounds,
+authorization, redaction, UI exposure, deletion/retention, and documentation
+claims. Do not stop at the headline field that motivated storage.
 
 Adapters may translate between boundaries, but they must not create a second
 semantic interpretation of the same operation.
@@ -175,6 +238,29 @@ Look for:
 - operational paths whose proof stops at unit tests when a product/integration
   path is required.
 
+If the diff adds or retains a compatibility overload, fallback, optional field,
+or best-effort write, require a rolling-version table rather than the vague
+claim "backward compatible":
+
+| Writer/reader ordering | Durable winner | User-visible result | Recovery/convergence |
+|---|---|---|---|
+
+Include old-writer/new-reader, new-writer/old-reader, concurrent old/new writers,
+and retry ordering when applicable. Name swallowed refusals and stale UI/API
+state explicitly. Mark any cell whose winner, user-visible result, or
+convergence mechanism is not established by evidence as `unproven`; never fill
+the matrix by assuming conventional overwrite or retry semantics.
+
+Classify every material fact as introduced, changed, a pre-existing
+contradiction of a PR claim, or unrelated. Pre-existing behavior is not a
+regression, but it can invalidate a global claim such as "never," "only," or
+"no source data persists." For PR reviews, reconcile each body claim and
+applicable template field with evidence. Verify repository-specific ticket
+syntax when the repository requires it, and classify omissions as process
+findings rather than runtime defects. First establish that the PR is linked,
+that the convention applies to this PR lifecycle stage, and that merge is meant
+to close the ticket. Missing operands are an open question, not a defect.
+
 Lower-fidelity evidence can support a claim, but it must not be presented as
 proof of a higher-fidelity behavior.
 
@@ -196,6 +282,9 @@ implementation-specific example.
 - Crash and restart converge to the same intended outcome.
 - Public output cannot be forged from private or untrusted data.
 - Schema, runtime, documentation, and tests describe the same contract.
+- Every newly admissible representation has a deliberate downstream meaning
+  and a proven containment boundary.
+- Durable source-authored data is inventoried and described truthfully.
 - Ambient mutations are scoped to the narrowest valid lifetime, compose safely
   under concurrency, and remain compatible with every consumer in their real
   visibility domain. Cleanup removes only its owned effect; out-of-order
@@ -214,10 +303,18 @@ Each worker writes a report with this shape:
 
 ## Findings
 ### <ID>: <short invariant-oriented title>
+- Lane: architecture | resilience | boundaries | evidence
 - Severity: P0 | P1 | P2 | P3 | note
 - Status: direct-review | proactive | integrated | false-positive | accepted
+- Claim tested: <PR/product claim, or none>
+- Goal impact: preserves | weakens | contradicts | unrelated
+- Failure radius: record | operation | tenant/facility | fleet/system | process-only | none
+- Change ownership: introduced | changed | pre-existing-claim-contradiction | unrelated
+- Proof tier: source | focused-test | integration-tracer | live-product
 - Invariant: <which shared invariant is involved>
-- Evidence: <source path, lines, test, reproduction, or explicit absence>
+- Location: <source path and lines, or explicit absence>
+- Evidence kind/detail: <source | test | reproduction | proof-gap | documentation> — <source-backed evidence>
+- Confidence: high | medium | low
 - Failure mode: <what can happen and why it matters>
 - Smallest remedy: <prefer deletion or reuse of an existing mechanism>
 - Proof needed: <test or evidence that would establish the remedy>
@@ -245,6 +342,12 @@ compatibility proof when the mutation is observable outside that feature. Test
 both teardown orders, partial installation, duplicate cleanup, and a foreign
 observer at each transition when those states are reachable.
 
+Use [`references/finding-schema.md`](references/finding-schema.md) for the
+severity rubric and machine-mergeable form. Use only its enum values; a PR body
+or other documentation artifact has evidence kind `documentation` and proof
+tier `source`. Severity follows actual goal impact and failure radius, not the
+layer where the defect happens.
+
 ## Synthesis and refinement
 
 After all lanes finish, the parent reads every report and produces one
@@ -260,6 +363,20 @@ consolidated ledger. It should:
 7. prefer a deletion, a single owner, or an existing mechanism over a new
    subsystem;
 8. state what is already protected and what remains unproven.
+
+Before completing synthesis, build a coverage ledger for every semantic delta
+and PR/template claim in the frozen contract. Mark each `proven`,
+`contradicted`, or `unproven`, with evidence. Completion is blocked when an
+entry is missing or merely assumed. In particular:
+
+- `goal_impact: contradicts` cannot be accepted only because the PR declares
+  the affected consumer out of scope;
+- every global or negative claim (`never`, `only`, `lossless`, `fail-closed`,
+  `no source ...`) needs matching evidence or narrower wording;
+- rank primary-goal contradictions and wider failure radii before elegance or
+  declared scope;
+- keep `pre-existing-claim-contradiction` separate from diff-introduced
+  regressions while still requiring the public claim to become truthful.
 
 If the user asks for implementation, turn selected findings into red tests or
 reproductions before changing production behavior. Keep refinement ownership
@@ -285,6 +402,8 @@ The review is complete when the consolidated report can answer all of these:
 - What happens at each meaningful crash, retry, cleanup, and restart boundary?
 - Do all contracts and trust boundaries agree?
 - Does the evidence match the claims, including platform and product-path limits?
+- Is every semantic delta and repository-required PR artifact proven,
+  contradicted, or explicitly unproven?
 - Which findings are fixed, accepted, false positives, or still blocked?
 
 The completion answers must come from the fresh full four-lane review of one

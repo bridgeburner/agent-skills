@@ -91,10 +91,42 @@ Vishwath maintains a personal LLM wiki that serves as cross-agent durable memory
 - ALWAYS confirm with the user before ANY write to Linear — comments, assignments, status/field/description changes, new issues, relations. Show the exact content and get an explicit yes first. Reads need no confirmation. Writes are outward-facing and post under the user's own account/name.
 
 # Commits and PRs
-When creating commits or pull requests:
-- Focus only on the changes being committed
-- Do not include references to agentic tools like Claude Code or Codex in commit messages or PR bodies
-- PR bodies should summarize changes only; do not include manual testing plans (only add/run automated tests)
+When creating or updating commits or pull requests:
+- Focus only on the changes being committed. Do not include references to
+  agentic tools such as Claude Code or Codex in commit messages or PR bodies.
+- Before drafting a PR body, read the repository's PR template and applicable
+  repository instructions from the intended current base. Preserve every
+  required section and exact literal label, and answer every required field.
+  Repository requirements override the generic preferences below.
+- Write in plain English. State **Why** the change is needed and the
+  user/operational harm being fixed, **What** behavior changed, and the
+  **Required outcome**, including the evidence that would establish it. Do not
+  hide the reason behind implementation terminology.
+- When a template asks what was removed or avoided, distinguish them
+  explicitly: **Removed** means existing code, state, dependency, or
+  operational responsibility deleted by this diff (`None` is valid); **Avoided**
+  means a new concept deliberately not introduced. Never claim an avoidance as
+  a removal.
+- Before drafting, check the task, durable tracker, user context, and available
+  hosting-service link or bot state for an associated ticket. If a ticket is
+  found, use the repository's exact association or closing syntax. Distinguish
+  final work (`Fixes ...`) from partial work (`Part of ...`) according to that
+  repository's rules. A bot link or comment proves association, not closing
+  semantics. Never claim there is no ticket without checking linked-app or bot
+  state. If final-versus-partial is not established by the task, tracker, or
+  user, ask before choosing it. Direct Linear writes still require the
+  confirmation rule above.
+- Keep retention, leakage, security, deployment, product-behavior, absence,
+  and other claims at their evidence boundary. Name the exact data classes,
+  sinks, environment, and proof tier checked. Do not turn "not observed",
+  "not added by this diff", or a lower-tier test into "never", "impossible",
+  or live-product proof.
+- After creating or editing a PR, read the live current body back from the
+  hosting service and compare it with the current base's template and ticket
+  requirement. Do not declare the body compliant from draft text, a previous
+  read, or memory.
+- Do not add a manual testing plan unless the repository template or
+  instructions require one. When they do, complete it exactly as requested.
 
 # Python
 - Put imports at the top of the file unless only used in a rarely accessed code path

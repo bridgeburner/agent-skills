@@ -1,0 +1,19 @@
+{
+  "skill_name": "architect",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "We are changing an ingest API so an identity that was previously rejected is accepted and stored as UNKNOWN. The endpoint returns 200, the database write succeeds, and the UI displays UNKNOWN. An existing scheduler later reads the stored code; its validator currently rejects UNKNOWN and catches that error at the facility-load boundary. Design the change, then state what must be true before implementation starts and before the work is handed off as complete.",
+      "expected_output": "The response rejects producer-only success in both phases. Before implementation it defines the end-to-end outcome, forbidden relocated failure, maximum failure radius, distinct UNKNOWN state combinations, every first-order consumer, retention destinations, and rolling-version behavior. Before completion it requires a tracer that carries the exact stored UNKNOWN through the scheduler and proves the facility remains usable, with explicit gaps and handoff claims no broader than the evidence.",
+      "files": [],
+      "expectations": [
+        "The design-phase gate rejects the proposal before coding because the accepted UNKNOWN still fails at a first-order consumer.",
+        "The design records a maximum failure radius and distinguishes sentinel-only, known-plus-sentinel, and materially different fallback or aggregation states.",
+        "The impact map follows the exact stored representation through every first-order consumer and inventories source-authored data retention destinations.",
+        "The rollout analysis covers old and new readers or writers sharing durable state, or explicitly records why that dimension is inapplicable.",
+        "The implementation/completion gate requires a first-consumer tracer that asserts both the changed item disposition and facility-level success, so the rejection cannot merely move or widen.",
+        "The handoff states why, what, claim-to-oracle evidence and gaps, carries issue identity using repository conventions, and keeps public claims within the evidence."
+      ]
+    }
+  ]
+}

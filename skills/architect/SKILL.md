@@ -60,10 +60,13 @@ After identifying your mode, invoke only the relevant companion skills:
 
 ### Building Mode
 1. Read the relevant router/docs/code with progressive disclosure; do not bulk-load the repo.
-2. Establish the proof path before coding: the smallest cheap oracle for each edit, plus the smoke/e2e path that proves the product behavior.
-3. Build the thinnest production-quality tracer bullet before widening implementation.
-4. Update specs/docs only when public contracts, invariants, workflows, or operating procedures changed.
-5. Read `references/testing.md` only for deep test-suite design, regression-test design, mock/fixture concerns, harness gaps, or "why did tests miss this bug?"
+2. State the positive end-to-end outcome and any failure that must not move to a later boundary or widen in scope.
+3. If the change alters accepted states, adds or reinterprets a sentinel/fallback, retains source-authored data, shares durable state across versions, or makes a broad data-flow claim, read `references/semantic-change.md` and pass its design gate before coding.
+4. Establish the proof path: the smallest cheap oracle for each edit, plus a tracer that carries the exact production representation through every first-order consumer to the final observable outcome and measures failure radius.
+5. Build the thinnest production-quality tracer bullet before widening implementation.
+6. Update specs/docs only when public contracts, data retention, invariants, rollout behavior, workflows, or operating procedures changed.
+7. Before handoff, pass the semantic-change implementation gate when it applies, then carry the outcome, evidence, gaps, and issue identity into the repository's public-decision format without broadening claims.
+8. Read `references/testing.md` only for deep test-suite design, regression-test design, mock/fixture concerns, harness gaps, or "why did tests miss this bug?" Semantic changes crossing independently maintained producer/consumer boundaries automatically require its T8 and T12 guidance.
 
 ### Exploratory Mode
 1. Build a repo map cheaply: find the router, then read only docs/code needed for the question.
@@ -85,6 +88,15 @@ Run the smallest useful oracle after each meaningful edit. Typical order is form
 For user-facing behavior, agent behavior, integrations, workflows, deployments, or configuration-sensitive work, smoke/e2e/product-path validation is the acceptance bar. Unit tests, type checks, lint, fixtures, and narrow integration tests are supporting evidence; they do not prove the user-visible behavior by themselves.
 
 When an ideal smoke/e2e path is unavailable, say what proof tier you reached, why the higher-fidelity path was unavailable, and what gap remains. Do not relabel lower-tier evidence as full proof.
+
+## Conditional Semantic-Change Gate
+
+Use `references/semantic-change.md` only when the Building route triggers it. The gate has two stops:
+
+- **Before implementation:** reject a design if the new representation has an uninspected first-order consumer, an ambiguous final disposition or failure radius, an uncovered materially distinct state, or unexplained retention/rolling-version behavior.
+- **Before completion:** reject handoff if the first-consumer tracer does not carry the exact representation to the final observable, assert both item disposition and containing-operation success, and show that the forbidden failure neither moved nor widened.
+
+This is an architecture boundary check, not a generic PR checklist. Repository instructions own exact ticket-closing syntax and PR-template policy; Architect supplies the why, what, issue identity, claim-to-oracle evidence, and explicit gaps they need.
 
 ## Repo Orientation and Specs
 
@@ -141,6 +153,8 @@ Prefer one general mechanism over separate mechanisms per role. If two things lo
 No capability is complete without a concrete test exercising a real scenario. Equally, know when to stop — ship when requirements are met, not when code is "perfect."
 
 **Agent rule:** Before marking any task done, run proof that matches the claim. For user-facing or integration behavior, that means a smoke/e2e/product-path check whenever practical. When tempted to add "one more improvement," ask: "Does this address a stated requirement or prevent a real problem?" If not, stop.
+
+When a change accepts a state that was previously rejected, carry the exact stored representation through its first-order consumers and prove that the forbidden failure did not move or widen.
 
 ***
 
@@ -240,7 +254,7 @@ Prototypes and tracer bullets serve different purposes. Prototypes are throwaway
 ### E5. Smallest Vertical Slice First (Tracer Bullet)
 Prefer a thin complete path (input to visible output) over wide shallow coverage. Build a minimal end-to-end skeleton that touches all layers — this is your tracer bullet. It proves the architecture works and provides a scaffold for features.
 
-**Agent rule:** Before building breadth, ask: "What's the thinnest path through the entire system that produces a real output?" Do that first.
+**Agent rule:** Before building breadth, ask: "What's the thinnest path through the entire system that produces a real output?" Do that first. The slice ends at the final consumer-visible outcome, not the changed service; include the containing operation so the tracer measures failure radius.
 
 ***
 

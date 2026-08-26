@@ -31,6 +31,10 @@ from any one product or implementation.
 - Untrusted input cannot forge identity, authority, or public metadata.
 - Schema, runtime, storage, clients, docs, and tests agree on the contract.
 - Public output never exposes private implementation state accidentally.
+- Every newly admissible representation has a deliberate meaning in every
+  production reader and a proven failure-containment boundary.
+- Durable source-authored data is recursively inventoried, bounded,
+  authorized, and described truthfully.
 
 ## Ambient effects
 
