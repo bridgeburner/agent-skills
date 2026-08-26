@@ -34,6 +34,34 @@
         "The synthesis identifies cross-lane interactions.",
         "Refinement recommendations are framed as root-cause changes with proof requirements."
       ]
+    },
+    {
+      "id": 4,
+      "prompt": "Review the attached request-instrumentation change using better-review. The author says the implementation is scoped to the supported request executor, and existing tests pass. Remain read-only. Recommend refinements and state the proof required before calling the final revision complete.",
+      "expected_output": "The review discovers the hidden process-wide semantic effect despite correct feature authority; analyzes visibility, lifetime, ownership-aware cleanup, teardown order, concurrency, and foreign consumers; refuses to dismiss observable collateral semantics by narrowing the intended API contract; and requires a fresh four-lane synthesis on one frozen final content identity.",
+      "files": [
+        "evals/fixtures/ambient-singleton.md"
+      ],
+      "expectations": [
+        "Authority correctness is evaluated separately from semantic compatibility.",
+        "The review traces the mutation across its real visibility domain, including foreign consumers outside the intended call path.",
+        "The review identifies stale restoration under out-of-order teardown, not only missing cleanup or locking.",
+        "Contract narrowing does not close an observable process-wide side effect.",
+        "Completion requires all four lanes to rerun from scratch on one frozen final content identity before fresh synthesis."
+      ]
+    },
+    {
+      "id": 5,
+      "prompt": "Review the attached request-local wrapper using better-review. Remain read-only and distinguish demonstrated risks from unsupported concerns.",
+      "expected_output": "The review recognizes that each request owns its wrapper and does not invent a process-wide mutation or foreign-consumer compatibility failure without evidence, while still applying the ordinary four review lanes.",
+      "files": [
+        "evals/fixtures/request-local-control.md"
+      ],
+      "expectations": [
+        "The review does not classify the request-owned wrapper as a process-wide mutation.",
+        "The review does not invent foreign consumers or teardown races absent from the fixture.",
+        "Any findings remain source-backed and use the normal four-lane synthesis contract."
+      ]
     }
   ]
 }
