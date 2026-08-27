@@ -33,6 +33,26 @@ required_phrases=(
     "Do not add a manual testing plan unless"
 )
 
+required_workflow_phrases=(
+    'top-level orchestrator'
+    '$architect'
+    '$better-goal'
+    '$better-review'
+    '$skill-creator'
+    'fresh context'
+    'context fork'
+    'independent of context mode'
+    'jointly expressible'
+)
+
+forbidden_workflow_phrases=(
+    'Delegate by default'
+    'throw more compute at it'
+    'After ANY correction from the user'
+    'spawn a subagent to act as critic'
+    'Run these Tasks in the background'
+)
+
 assert_policy_phrases() {
     local path="$1"
     local phrase
@@ -48,7 +68,61 @@ assert_policy_phrases() {
     done
 }
 
+assert_workflow_policy() {
+    local path="$1"
+    local phrase
+    local normalized
+
+    normalized="$(tr '\n' ' ' < "$path" | sed -E 's/[[:space:]]+/ /g')"
+
+    for phrase in "${required_workflow_phrases[@]}"; do
+        if [[ "$normalized" != *"$phrase"* ]]; then
+            echo "Missing workflow policy phrase in $path: $phrase"
+            exit 1
+        fi
+    done
+
+    for phrase in "${forbidden_workflow_phrases[@]}"; do
+        if [[ "$normalized" == *"$phrase"* ]]; then
+            echo "Obsolete unconditional workflow policy remains in $path: $phrase"
+            exit 1
+        fi
+    done
+}
+
+assert_skill_routing() {
+    local architect="$REPO_DIR/skills/architect/SKILL.md"
+    local better_goal="$REPO_DIR/skills/better-goal/SKILL.md"
+
+    if ! grep -Fq 'independent decisions' "$architect"; then
+        echo "Architect must treat workflow effort dimensions as independent decisions"
+        exit 1
+    fi
+
+    if ! grep -Fq 'Review is a route, not an execution mode' "$architect"; then
+        echo "Architect must route review without forcing it into a build mode"
+        exit 1
+    fi
+
+    if ! grep -Fq 'knowledge claim' "$architect"; then
+        echo "Architect must scope proof to a research or diagnosis claim"
+        exit 1
+    fi
+
+    if grep -Fq '## Design Review Gauntlet' "$better_goal"; then
+        echo "better-goal must route review instead of owning a review gauntlet"
+        exit 1
+    fi
+
+    if ! grep -Fq '$better-review' "$better_goal"; then
+        echo "better-goal must route warranted review to better-review"
+        exit 1
+    fi
+}
+
 assert_policy_phrases "$POLICY"
+assert_workflow_policy "$POLICY"
+assert_skill_routing
 
 HOME="$TMP_HOME" "$REPO_DIR/agent-skills" install-local
 
@@ -70,6 +144,7 @@ for installed in \
     fi
 
     assert_policy_phrases "$installed"
+    assert_workflow_policy "$installed"
 done
 
 echo "ok"

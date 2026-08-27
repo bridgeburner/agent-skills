@@ -42,6 +42,21 @@
         "The plan stays in Building mode and uses the existing focused final-calculation test as the acceptance oracle.",
         "No new wrapper, service, durable state, cross-platform tracer, or duplicate strategic frame is introduced."
       ]
+    },
+    {
+      "id": 4,
+      "prompt": "You are the top-level agent midway through a complex investigation. You have accumulated nuanced judgment about the user's priorities and the system's failure modes. Delegate four bounded branches: two are independent source lookups, one must discriminate among subtle options using your accumulated judgment, and one is a self-contained implementation task already assigned a model and reasoning level. The runtime supports fresh child context, truthful parent-context forks into isolated child sessions, and explicit handoffs, but does not clone mutable REPL state or allow a full parent-context fork and a model/reasoning override in the same spawn. Use architect to choose the minimum orchestration, tracking, review, and proof needed.",
+      "expected_output": "The response keeps the parent as top-level orchestrator and integration owner, delegates the useful bounded branches, and chooses context independently from model assignment. It uses fresh context for independent lookups and wants a truthful context fork for the branch whose autonomous discrimination materially benefits from accumulated parent context. It treats the model-assigned implementation task as self-contained without assuming that it must be fresh, but verifies whether model and context controls are jointly expressible and never silently weakens or mislabels either choice when they conflict. It explicitly says the fork starts with a fresh, isolated REPL or runtime rather than cloned mutable state, uses passed inputs for required live values, and does not automatically add durable tracking or multi-lane review unless their separate risk and recovery criteria justify them.",
+      "files": [],
+      "expectations": [
+        "The parent remains the top-level orchestrator responsible for decomposition, integration, and the final user outcome.",
+        "Useful bounded work is delegated without manufacturing extra lanes or transferring ownership of the goal.",
+        "Fresh context is selected for independent work and a truthful context fork is selected where accumulated parent judgment materially improves nuanced discrimination.",
+        "Assigned model or reasoning effort is treated as independent of context mode; self-contained does not mean fresh-context-only.",
+        "The response checks whether the selected model and context controls can be combined by the harness and surfaces an unsupported combination instead of silently downgrading it.",
+        "The response does not claim that inherited context clones mutable REPL, interpreter, application, or runtime state and passes required values explicitly.",
+        "Planning, tracking, review, and proof are calibrated separately rather than triggered as one ceremony bundle."
+      ]
     }
   ]
 }

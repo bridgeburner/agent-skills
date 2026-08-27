@@ -4,52 +4,72 @@
 - **Minimal Impact**: Changes should only touch what's necessary. Avoid introducing bugs.
 - **Check Early, Check Small**: After each meaningful edit, run the smallest relevant oracle. Order: format → lint → typecheck → unit tests → integration. Never batch up changes and check everything at the end.
 
-# Workflow Orchestration
-### 1. Plan Mode Default
-- Enter plan mode for non-trivial tasks (3+ steps or architectural decisions)
-- If something goes sideways, STOP and re-plan immediately - don't keep pushing
-- Use plan mode for verification steps, not just building
-- Write just enough plan/spec to reduce ambiguity. For uncertain work, start with a spike, prototype, or tracer bullet and revise the plan from feedback.
+# Workflow Routing
 
-### 2. Durable Work Tracking
-- For non-trivial work, use the `$better-goal` / `better-goal` skill when the agent runtime exposes skills. Treat that skill as the authoritative protocol; read and follow it before creating or updating durable trackers.
-- Trigger durable tracking when a task is likely to span 3+ meaningful steps, 30+ minutes, multiple turns, multiple files/modules, multiple agents, coordinated commits, design decisions, research spikes, PR/CI refreshes, migrations, deployments, live-provider validation, UI/e2e evidence, or completion-audit risk.
-- If the `better-goal` skill is unavailable, still follow the same protocol directly: use `~/.sdd/<project-pillar>/<worktree-name>/`, keep `goal.md`, `tasks.md`, `events.jsonl`, and relevant `designs/` or `evidence/` artifacts current, and record decisions, tests, blockers, gaps, commits, and completion audits so another agent can resume without reconstructing the session.
-- Do not use durable tracking for tiny edits, one-shot answers, or single-command checks where the final response plus command output is sufficient evidence.
+Scale planning, durable tracking, delegation, specialized review, and proof
+independently. Complexity in one dimension does not automatically require
+ceremony in all the others.
 
-### 3. Subagents
+- Use `$architect` for non-trivial engineering work to choose Building,
+  Exploratory, or Debugging/Triage posture and the smallest proof that matches
+  the claim.
+- Use `$better-goal` when restart safety, coordination, durable evidence, or a
+  completion audit materially protects the outcome. Its protocol owns tracker
+  structure and delegation leases; a flat step count alone is not decisive.
+- Use `$better-review` when the user requests review or when a consequential
+  design or semantic risk warrants independent review. That skill owns review
+  lanes and synthesis; do not add a second generic critic loop around it.
+- Use `$skill-creator` for skill creation or changes. It owns skill-specific
+  evaluation and forward-testing guidance.
+- If an owning skill is unavailable, apply its core principle with the least
+  local machinery needed; do not reproduce the entire skill in this file.
 
-### 3a. Subagent Delegation Strategy
-- Use subagents aggressively to keep main context window clean. Delegate by default over doing work yourself.
-- Offload research, exploration, and parallel analysis to subagents. For complex problems, throw more compute at it.
-- Prefer subagents for reconnaissance, critique, alternate hypotheses, and independent validation. Do not split implementation into layer-based lanes before a tracer bullet exists and the smoke/e2e oracle is known.
-- Subagents MUST output to files (usually temporary files unless explicitly asked otherwise) in addition to any output sent back to the top-level agent. These files serve as audit trail. The file output MUST contain a section on design decisions that were autonomously taken.
-- When passing files for subagents to look at, do not waste your context window reading the same file. Include sufficient context in prompts: names of temporary files, what they contain, and instructions on how to send context back (preferring temporary files for larger outputs).
+## Top-level orchestration and delegation
 
-### 3b. Temp File Naming
-- **Pattern:** `/tmp/{task-slug}-{short-uid}.{ext}` — e.g., `/tmp/design-proposal-a7f3bc01.md`
-- Multiple files from one task: same prefix with suffix — e.g., `-context.md`, `-output.md`, `-result.json`
-- Many intermediate files: prefer `mktemp -d` for an isolated directory: `/tmp/{task-slug}-{short-uid}/`
-- When delegating, the **parent generates the uid** and passes it in the task prompt.
-- NEVER use bare names like `/tmp/analysis.md` — these collide when agents run in parallel.
+- For a meaningful multi-step goal, remain the top-level orchestrator: preserve
+  user intent and accumulated context, choose the decomposition, delegate useful
+  bounded work, integrate results, and own final proof and completion.
+- Actively delegate where parallelism, specialized capability, independent
+  signal, or context isolation improves the outcome. Do not manufacture lanes
+  whose coordination cost exceeds their value. The same rule applies recursively
+  when a non-leaf child becomes an orchestrator for its bounded subgoal.
+- Choose child context deliberately. Use fresh context for independent or leaf
+  work. Use a truthful context fork when accumulated parent context materially
+  improves nuanced judgment or autonomous discrimination and the runtime really
+  supports inheritance. Otherwise pass an explicit static handoff and do not call
+  it a fork.
+- A task with an assigned model or reasoning effort is intended to be
+  self-contained and independently executable, but that assignment is independent
+  of context mode. Use a context fork when parent judgment is a material input
+  even if the task has a model assignment.
+- Before dispatch, verify that the selected model/reasoning and context controls
+  are jointly expressible by the active harness. Never silently weaken or
+  mislabel either one. Preserve the requirement that matters to the task and
+  record the deviation; ask when both are user-required constraints.
+- Never imply that a context fork also clones mutable REPL, interpreter,
+  application, tool authority, or runtime state unless the runtime explicitly
+  guarantees it. A fork inherits only the context the runtime actually serializes,
+  not hidden reasoning; pass critical conclusions, live values, and artifacts as
+  explicit task inputs.
+- Follow the owning skill or repository instructions for audit artifacts. When a
+  temporary file is needed, use a collision-safe path such as
+  `/tmp/{task-slug}-{short-uid}.{ext}`.
 
-### 4. Self-Improvement Loop
-- After ANY correction from the user: update `~/.agents/lessons/<repo-name>.md` with the pattern (for repos with a numeric suffix, drop the suffix eg: my-project-2 -> ~/.agents/lessons/my-project.md)
-- The lesson should not be so general it is not actionable, or so specific it cannot apply to other instances
-- Write rules for yourself that prevent the same mistake
-- Review lessons at session start for relevant project
+## Corrections and verification
 
-### 5. Verification
-- Never mark a task complete without proving it works
-- Where possible, spawn a subagent to act as critic - task it with finding issues with the code/spec in question. It should surface issues as concrete failure modes with examples - no vague descriptions of problems. When the subagent returns, use YAGNI to decide which of the issues surfaced should be resolved. Repeat until convergence.
-- Diff behavior between the parent branch and your changes when relevant
-- Ask yourself: "Would a staff engineer approve this?"
-- Run tests, check logs, demonstrate correctness
-- For user-facing behavior, integrations, workflows, deployments, and agent behavior, smoke/e2e/product-path validation is the acceptance bar. Unit tests, type checks, lint, fixtures, and narrow integration tests are supporting evidence, not full proof.
-- For each issue found ask the question "Are we solving symptoms, or are we solving ROOT problems in the architecture design/decision?". For each answer that is 'symptom', create a Task to find the proper root cause that needs solving instead. Run these Tasks in the background.
-- For non-trivial changes, consider whether there's a more elegant approach before presenting.
+- Record a lesson in `~/.agents/lessons/<repo-name>.md` after a user correction
+  only when it reveals a reusable failure pattern. Keep it specific enough to
+  prevent recurrence and general enough to apply again.
+- Never mark work complete without evidence that matches the claim. Diff behavior
+  when relevant, run the smallest useful oracle after each meaningful edit, and
+  use smoke/e2e/product-path proof for user-visible behavior, integrations,
+  workflows, deployments, and agent behavior.
+- Treat format, lint, type checks, unit tests, fixtures, and narrow integration
+  tests as supporting evidence, not automatic proof of a live product claim.
+- If work diverges from its assumptions or a check invalidates the current plan,
+  stop, update the plan, and pursue the root cause rather than accumulating fixes.
 
-### 6. Autonomous Bug Fixing
+## Autonomous Bug Fixing
 - When given a bug report: fix it autonomously. Find the logs, errors, failing tests — resolve them without asking for hand-holding.
 - Fix failing CI tests without being told how.
 

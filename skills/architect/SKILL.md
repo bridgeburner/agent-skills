@@ -13,8 +13,12 @@ Frame the outcome and test the proposed solution strategically before choosing a
 
 ## Step 1: Establish the Strategic Frame
 
-For every non-trivial task, write a compact strategic frame before treating the
-requested or existing implementation as the answer:
+For every non-trivial task, establish the strategic frame before treating the
+requested or existing implementation as the answer. Match its presentation to
+the decision. A bounded, reversible task with an obvious capability path may
+need only a few concise lines or an implicit check. Write the full frame below
+when ambiguity, blast radius, cross-system topology, durability, or proof
+difficulty makes the reasoning worth preserving:
 
 ```markdown
 ## Strategic frame
@@ -64,6 +68,17 @@ When `better-review` is also used, its frozen strategic review contract satisfie
 this step. Reuse and update that one frame; do not create a competing statement
 of the root issue or outcome.
 
+Treat planning, durable tracking, delegation, specialized review, and proof
+depth as independent decisions. Calibrate each against ambiguity, impact and
+blast radius, reversibility, coordination and restart risk, and the difficulty
+of obtaining evidence. Do not turn one strong signal into an automatic bundle
+of plans, trackers, agent lanes, review rounds, and end-to-end ceremony.
+
+Use a lightweight plan when sequencing, unresolved choices, coordination, or
+verification order would prevent rework. Skip a separate plan for a direct,
+reversible step with an obvious oracle. If evidence invalidates the chosen path,
+stop and revise the plan before continuing.
+
 ---
 
 ## Step 2: Identify Your Mode
@@ -111,15 +126,28 @@ Read the task carefully and ask: **what kind of work is this?**
 
 ## Skill Routing
 
-After identifying your mode, invoke only the relevant companion skills:
+Review is a route, not an execution mode. For an explicit review request, invoke
+`better-review` directly; its frozen strategic contract satisfies Step 1. Choose
+Building, Exploratory, or Debugging/Triage only for subsequent investigation or
+remediation work that the review actually creates.
+
+For execution work, after identifying your mode, invoke only the relevant
+companion skills:
 
 ### Building Mode
 1. Read the relevant router/docs/code with progressive disclosure; do not bulk-load the repo.
 2. Validate the strategic frame against the actual topology. Reject a proposed solution that cannot reach the desired outcome, and compare it with the simplest and most coherent viable alternatives.
 3. State the positive end-to-end outcome and any failure that must not move to a later boundary or widen in scope.
 4. If the change alters accepted states, adds or reinterprets a sentinel/fallback, retains source-authored data, shares durable state across versions, or makes a broad data-flow claim, read `references/semantic-change.md` and pass its design gate before coding.
-5. Establish the proof path: the smallest cheap oracle for each edit, plus a tracer that carries the exact production representation through every first-order consumer to the final observable outcome and measures failure radius on each relevant platform.
-6. Build the thinnest production-quality tracer bullet before widening implementation.
+5. Establish the proof path: the smallest cheap oracle for each edit. When the
+   change crosses an independently maintained or runtime boundary, alters
+   accepted states or retained data, or makes a user-visible integration claim,
+   add a tracer that carries the exact production representation through its
+   first-order consumers to the final observable outcome and measures failure
+   radius on each relevant platform.
+6. When the outcome spans components or a runtime boundary, build the thinnest
+   production-quality tracer bullet before widening implementation. Otherwise,
+   make the smallest direct change and use its focused oracle.
 7. Update specs/docs only when public contracts, data retention, invariants, rollout behavior, workflows, or operating procedures changed.
 8. Before handoff, rerun the strategic capability and failure map against the effective change, pass the semantic-change implementation gate when it applies, then carry the outcome, evidence, gaps, and issue identity into the repository's public-decision format without broadening claims.
 9. Read `references/testing.md` only for deep test-suite design, regression-test design, mock/fixture concerns, harness gaps, or "why did tests miss this bug?" Semantic changes crossing independently maintained producer/consumer boundaries automatically require its T8 and T12 guidance.
@@ -144,7 +172,13 @@ After identifying your mode, invoke only the relevant companion skills:
 
 Run the smallest useful oracle after each meaningful edit. Typical order is format, lint, typecheck/build, scoped tests, then broader integration or smoke checks. Do not accumulate a large diff and check everything at the end.
 
-For user-facing behavior, agent behavior, integrations, workflows, deployments, or configuration-sensitive work, smoke/e2e/product-path validation is the acceptance bar. Unit tests, type checks, lint, fixtures, and narrow integration tests are supporting evidence; they do not prove the user-visible behavior by themselves.
+For a claim that user-facing behavior, agent behavior, an integration, workflow,
+deployment, or configuration-sensitive path works, smoke/e2e/product-path
+validation is the acceptance bar. Unit tests, type checks, lint, fixtures, and
+narrow integration tests are supporting evidence; they do not prove the
+user-visible behavior by themselves. When the authorized deliverable is research
+or diagnosis, prove the knowledge claim and keep any unexecuted product change or
+live-validation gap explicit; do not silently expand the objective into delivery.
 
 When an ideal smoke/e2e path is unavailable, say what proof tier you reached, why the higher-fidelity path was unavailable, and what gap remains. Do not relabel lower-tier evidence as full proof.
 
@@ -181,7 +215,15 @@ When a spec/design is needed, keep it minimal and agent-consumable:
 
 ## Parallel Agent Guardrails
 
-Use subagents to increase independent signal, not to front-load implementation in separate layers. Good parallel tasks include repo reconnaissance, design alternatives, root-cause hypotheses, critique, spike comparison, and independent smoke/e2e validation.
+Apply the global top-level-orchestration and child-context policy. Architect's
+role is to decide where delegation adds value and whether recorded parent context
+is a material input, not to redefine harness fork semantics. Before dispatch,
+confirm the chosen context and model controls are jointly expressible.
+
+Use subagents for parallelism, specialized capability, independent signal, or
+context isolation, not to front-load implementation in separate layers. Good
+parallel tasks include repo reconnaissance, design alternatives, root-cause
+hypotheses, critique, spike comparison, and independent smoke/e2e validation.
 
 Do not split implementation into frontend/backend/data/model "lanes" before a tracer bullet exists and the smoke oracle is known. The parent agent owns synthesis, sequencing, and final proof.
 

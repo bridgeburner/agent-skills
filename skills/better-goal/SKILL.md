@@ -1,6 +1,6 @@
 ---
 name: better-goal
-description: Use this skill for durable agent work that should use `~/.sdd` tracking, including seeding or recovering restart-safe tasks for zero-context executors. Trigger when a task is likely to span 3+ meaningful steps, 30+ minutes, multiple turns, multiple files/modules, multiple agents, or a restart/resume boundary; when it involves design decisions, PR/CI refreshes, research spikes, UI/e2e evidence, live-provider validation, migrations, backfills, deployments, coordinated commits, completion audits, or false-completion risk; or when the user invokes/refers to `/goal`, resume, sitrep, audit, tracker, task seeding, handoff, or completion proof. Do not use for one-shot answers, tiny edits, or single-command checks.
+description: Use this skill for durable agent work that materially benefits from `~/.sdd` tracking, including seeding or recovering restart-safe tasks for zero-context executors. Trigger when interruption, coordination, drift-prone identities, durable evidence, or completion-audit risk would make lost context or false completion costly; or when the user invokes/refers to `/goal`, resume, sitrep, audit, tracker, task seeding, handoff, or completion proof. Multi-step, multi-file, research, PR/CI, migration, deployment, UI/e2e, and live-provider work are strong signals when they create those risks, not automatic thresholds. Do not use for one-shot answers, tiny edits, or single-command checks.
 ---
 
 # Better Goal
@@ -9,17 +9,20 @@ Run significant agent work through the home-level `~/.sdd` protocol. `/goal` is 
 
 ## Trigger Decision
 
-Use `~/.sdd` tracking when any threshold is met:
+Use `~/.sdd` tracking when losing context, coordinating executors, or overstating
+completion would materially harm the outcome. Signals include:
 
-- 3+ meaningful steps.
-- Likely 30+ minutes of work.
+- Several meaningful steps or likely extended execution.
 - Multiple turns, interruption risk, or resume needed.
 - Multiple files, modules, services, agents, or coordinated commits.
-- Design decisions, research spikes, PR/CI refreshes, migrations, data backfills, deployments, or live-system proof.
+- Consequential design decisions, research whose results feed later work, PR/CI
+  refreshes, migrations, data backfills, deployments, or live-system proof.
 - UI/e2e evidence, live-provider validation, screenshots, browser artifacts, or completion audit needed.
 - User mentions `/goal`, resume, sitrep, audit, tracker, completion proof, or false-completion concerns.
 
-Do not use this skill for one-shot answers, tiny edits, or single-command checks where the final response plus command output is sufficient evidence.
+These are indicators, not independent triggers. Do not use this skill for a
+bounded one-shot answer, tiny edit, or single-command check when the final
+response plus command output is a sufficient recovery and evidence surface.
 
 ## Setup
 
@@ -53,6 +56,13 @@ conversation history. From those inputs, first open `tasks.md`, locate exactly
 one matching task heading, and follow its `Required context` links in order. A
 missing or duplicate heading is a stop condition. A task is not ready merely
 because its intent is clear.
+
+Self-contained is a recovery property, not a ban on inherited context. Follow the
+global child-context policy at live dispatch and use
+`references/zero-context-task-contracts.md` when authoring or auditing the task.
+Regardless of context mode, the tracker must make the task safely executable
+after restart without access to the former parent's context.
+
 Every pending or in-progress task must make these fields discoverable without
 inference:
 
@@ -436,17 +446,17 @@ Repeat until the tracked work is genuinely complete:
 6. Commit actual repo-tracked work early and often when the repo policy and user direction allow it. `~/.sdd` artifacts are planning/evidence and stay outside the repo by default, but code, tests, specs, docs, migrations, generated API clients, and other tracked deliverables should be committed at coherent checkpoints after the relevant checks pass. Do not leave a large completed implementation uncommitted unless the user asked you not to commit, the repo policy forbids it, or the checkpoint is still knowingly unstable.
 7. Update `tasks.md`, append `events.jsonl`, and record open gaps before moving to the next task.
 
-## Design Review Gauntlet
+## Review Routing
 
-Use this for non-trivial architecture, contract, or subsystem decisions.
+Durable tracking does not automatically require independent review. When the
+user requests review, or a consequential architecture, contract, semantic, or
+failure-radius decision materially benefits from it, invoke `$better-review`
+and let that skill own lane selection, frozen scope, synthesis, and completion.
+Record its artifact and disposition in the tracker.
 
-1. Spawn or otherwise prepare a design pass that writes the proposed design into `designs/`.
-2. Run up to four design-review rounds. In each round, ask a reviewer: "Can we do better? Better means simpler, more elegant, or more powerful without over-engineering. What gaps or failure modes remain?"
-3. Have the reviewer update the design document directly or produce a patchable review artifact.
-4. Exit early when the reviewer says no material improvements remain.
-5. Treat unreviewed contract changes as gaps requiring human approval.
-
-When using subagents for design or review, request high-rigor/high-thinking execution where the agent surface supports it. Require review outputs to name concrete failure modes, not vague concerns.
+For other tracked work, use the ordinary proof path and do not add a generic
+critic loop merely because a tracker exists. When any reviewer is used, require
+concrete failure modes rather than broad opinions.
 
 ## Evidence Rules
 

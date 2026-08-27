@@ -11,6 +11,14 @@ An executor should be able to start safely when given only:
 1. the canonical tracker root; and
 2. one task ID.
 
+This is a recovery guarantee, not a requirement that every live dispatch use
+fresh context. Follow the global child-context policy: model or reasoning-effort
+assignment does not decide context mode, but the selected controls must be
+jointly supported by the active harness. Preserve a complete task contract even
+when the live dispatch truthfully inherits parent context. Never imply that
+context inheritance clones mutable REPL, interpreter, application, or tool state;
+pass critical conclusions, live values, and artifacts explicitly.
+
 Progressive disclosure keeps this compact. Store shared, slow-changing context
 once in `designs/executor-bootstrap.md`; require each task to link it and name
 only its task-specific predecessor artifacts and
