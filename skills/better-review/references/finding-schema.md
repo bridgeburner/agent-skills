@@ -48,15 +48,23 @@ Severity follows demonstrated impact. A pre-existing observation is not a
 diff-introduced regression; use `pre-existing-claim-contradiction` when it
 invalidates a public PR claim, and `unrelated` when it does not.
 
+For `evidence.kind: proof-gap`, severity reflects the consequence of relying on
+the unproven claim. Label it as a readiness blocker due to missing proof; do not
+present it as a demonstrated runtime incident or regression.
+
 The consolidated report should additionally include:
 
-- the larger goal and review boundary;
+- the root issue, desired outcome, and review boundary;
+- the proposed solution's end-to-end capability verdict;
+- comparison with the simplest and most elegant viable options;
+- the relevant platform topology and outcome failure map;
 - a one-paragraph architecture summary;
 - one merged finding table;
 - confirmed protections;
 - accepted limitations and unproven claims;
 - cross-lane interactions;
-- a semantic-delta and PR/template-claim coverage ledger, with every entry
-  marked `proven`, `contradicted`, or `unproven` and linked to evidence;
+- an outcome, capability, failure-map, semantic-delta, and PR/template-claim
+  coverage ledger, with every entry marked `proven`, `contradicted`, or
+  `unproven` and linked to evidence;
 - prioritized refinement recommendations;
 - `Design decisions autonomously taken`.

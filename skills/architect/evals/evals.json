@@ -14,6 +14,34 @@
         "The implementation/completion gate requires a first-consumer tracer that asserts both the changed item disposition and facility-level success, so the rejection cannot merely move or widen.",
         "The handoff states why, what, claim-to-oracle evidence and gaps, carries issue identity using repository conventions, and keeps public claims within the evidence."
       ]
+    },
+    {
+      "id": 2,
+      "prompt": "We need a one-command release that promotes an image built in cloud development into production. A proposed infrastructure change gives a development service account read access to the development registry and a different production service account write access to the production registry. Both Terraform roots validate and their isolated permission tests pass. Use architect before implementation and decide how to proceed.",
+      "expected_output": "The response states the root operational issue and observable release outcome independently of the IAM patch, traces one complete promotion operation across workflow identity, source registry, environment handoff, destination registry, and production consumer, and rejects or marks the proposal unproven because separate per-environment permissions do not establish that any actor can complete the copy. It compares the fewest-authority viable design and the clearest canonical release design, maps relevant local/CI/cloud-dev/production differences and failure points, and chooses an end-to-end tracer before implementation.",
+      "files": [],
+      "expectations": [
+        "The root issue is the inability to complete one image promotion, not a missing IAM role or Terraform resource.",
+        "The desired outcome names the final production-visible result and the actor or workflow that must produce it.",
+        "The capability trace follows the same logical operation through both environments and does not infer composition from two separately valid service accounts.",
+        "The proposal is stopped, redesigned, or explicitly marked unproven before implementation details are optimized.",
+        "Simplest and most elegant viable alternatives are compared separately in terms of concepts, authorities, handoffs, ownership, and canonical path.",
+        "The failure map includes every relevant deployment platform and justifies why local execution is or is not applicable.",
+        "Acceptance requires a tracer that proves the complete promotion outcome rather than isolated Terraform validation."
+      ]
+    },
+    {
+      "id": 3,
+      "prompt": "Add a required `timezone` field to an internal command object. The single caller and consumer are in the same package, both already use the same typed object, there is no persistence or deployment-platform difference, and a focused test covers the final calculation. Use architect to plan the change.",
+      "expected_output": "The response gives a compact strategic frame, recognizes that the direct field addition can meet the outcome, records that local and cloud topology do not differ for this internal calculation, and proceeds in Building mode with the focused test. It does not invent alternative services, wrappers, deployment tracers, multi-platform ceremony, or a separate strategic artifact when an existing review contract already supplies one.",
+      "files": [],
+      "expectations": [
+        "The root issue and desired outcome are stated independently of the field name but remain concise.",
+        "The direct proposed change is judged capable, simple, and coherent without manufacturing a different architecture.",
+        "Irrelevant deployment platforms are dismissed with a short reason rather than expanded into a failure matrix.",
+        "The plan stays in Building mode and uses the existing focused final-calculation test as the acceptance oracle.",
+        "No new wrapper, service, durable state, cross-platform tracer, or duplicate strategic frame is introduced."
+      ]
     }
   ]
 }

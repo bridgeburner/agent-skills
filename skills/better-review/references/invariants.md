@@ -3,6 +3,18 @@
 Use these as the cross-lane vocabulary. They are deliberately generalized away
 from any one product or implementation.
 
+## Outcome and system fit
+
+- The root issue and desired outcome are stated independently of the proposed
+  mechanism.
+- The proposed mechanism can complete the end-to-end operation through the
+  actual identities, authorities, stores, services, and final consumer.
+- The chosen design uses no more concepts, state, authority, or operational
+  handoffs than the outcome requires.
+- Relevant local and cloud platform differences are explicit, and each
+  outcome-threatening failure has an owner, signal, containment boundary, and
+  acceptance oracle.
+
 ## Authority and paths
 
 - One authoritative owner exists for each important fact, resource, and side
@@ -55,7 +67,8 @@ from any one product or implementation.
 - Failure, restart, concurrency, and compatibility cases are tested where they
   can change the invariant.
 - A lower proof tier is labeled as supporting evidence, not upgraded by prose.
-- Completion evidence comes from a fresh full review of one frozen final content
-  identity: the exact final head when committed, or an immutable snapshot/digest
-  that includes the actual refinements when uncommitted. Selective earlier lane
-  results support iteration but do not close the review.
+- Completion evidence comes from a fresh strategic contract and every selected
+  independent lane reviewing one frozen final content identity: the exact final
+  head when committed, or an immutable snapshot/digest that includes the actual
+  refinements when uncommitted. Selective earlier lane results support iteration
+  but do not close the review.

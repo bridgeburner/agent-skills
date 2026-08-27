@@ -4,10 +4,10 @@
     {
       "id": 1,
       "prompt": "Review this small PR that adds a second cache and a retry loop to an existing request pipeline. Use the aggressive-simplification review skill. Do not edit files. Return independent lane reports and a consolidated finding ledger.",
-      "expected_output": "The review separates architecture, resilience, boundaries, and evidence; identifies duplicate mechanism/authority risks; and returns source-backed findings with invariant, failure mode, remedy, and proof fields.",
+      "expected_output": "The review first establishes the root issue, desired outcome, end-to-end capability, simpler and more coherent alternatives, and relevant platform failure map. It then selects the applicable architecture, resilience, boundaries, and evidence lanes; identifies duplicate mechanism/authority risks; and returns source-backed findings with invariant, failure mode, remedy, and proof fields.",
       "files": [],
       "expectations": [
-        "Four distinct review lanes are represented.",
+        "The strategic viability pass precedes detailed lane findings, and lane selection is justified.",
         "The report uses shared invariants rather than only implementation-specific opinions.",
         "Findings include concrete evidence, impact, minimal remedy, and proof needed.",
         "Duplicate findings are merged during synthesis."
@@ -16,7 +16,7 @@
     {
       "id": 2,
       "prompt": "Audit a stacked PR whose branch may be based on an outdated parent. Use the aggressive-simplification review skill and remain read-only. Explain what must be established before reviewing the delta, then review the design for hidden authorities, invalid states, crash gaps, contract mismatches, and proof gaps.",
-      "expected_output": "The response treats stack ancestry as a review boundary, avoids auditing a stale diff as final truth, and reports findings through the four review lenses with explicit uncertainty where evidence is missing.",
+      "expected_output": "The response treats stack ancestry as a review boundary, avoids auditing a stale diff as final truth, establishes strategic viability, and reports findings through every applicable review lens with explicit uncertainty where evidence is missing.",
       "files": [],
       "expectations": [
         "The review boundary and parent ancestry are handled before substantive findings.",
@@ -38,7 +38,7 @@
     {
       "id": 4,
       "prompt": "Review the attached request-instrumentation change using better-review. The author says the implementation is scoped to the supported request executor, and existing tests pass. Remain read-only. Recommend refinements and state the proof required before calling the final revision complete.",
-      "expected_output": "The review discovers the hidden process-wide semantic effect despite correct feature authority; analyzes visibility, lifetime, ownership-aware cleanup, teardown order, concurrency, and foreign consumers; refuses to dismiss observable collateral semantics by narrowing the intended API contract; and requires a fresh four-lane synthesis on one frozen final content identity.",
+      "expected_output": "The review discovers the hidden process-wide semantic effect despite correct feature authority; analyzes visibility, lifetime, ownership-aware cleanup, teardown order, concurrency, and foreign consumers; refuses to dismiss observable collateral semantics by narrowing the intended API contract; and requires a fresh strategic contract plus every applicable lane on one frozen final content identity.",
       "files": [
         "evals/fixtures/ambient-singleton.md"
       ],
@@ -47,20 +47,20 @@
         "The review traces the mutation across its real visibility domain, including foreign consumers outside the intended call path.",
         "The review identifies stale restoration under out-of-order teardown, not only missing cleanup or locking.",
         "Contract narrowing does not close an observable process-wide side effect.",
-        "Completion requires all four lanes to rerun from scratch on one frozen final content identity before fresh synthesis."
+        "Completion requires the strategic contract and every applicable lane to rerun from scratch on one frozen final content identity before fresh synthesis."
       ]
     },
     {
       "id": 5,
       "prompt": "Review the attached request-local wrapper using better-review. Remain read-only and distinguish demonstrated risks from unsupported concerns.",
-      "expected_output": "The review recognizes that each request owns its wrapper and does not invent a process-wide mutation or foreign-consumer compatibility failure without evidence, while still applying the ordinary four review lanes.",
+      "expected_output": "The review recognizes that each request owns its wrapper and does not invent a process-wide mutation or foreign-consumer compatibility failure without evidence, while still applying the mandatory system-fit and evidence lanes and only the additional risk lanes justified by the fixture.",
       "files": [
         "evals/fixtures/request-local-control.md"
       ],
       "expectations": [
         "The review does not classify the request-owned wrapper as a process-wide mutation.",
         "The review does not invent foreign consumers or teardown races absent from the fixture.",
-        "Any findings remain source-backed and use the normal four-lane synthesis contract."
+        "Any findings remain source-backed and use the strategic synthesis contract plus the justified selected lanes."
       ]
     },
     {
@@ -94,6 +94,21 @@
         "No admitted-state matrix, rolling-version matrix, retained-field finding, or ticket/template finding is produced for the non-triggering fixture.",
         "The review reports no defect unless it demonstrates a concrete source-backed failure or proof gap; absence of findings is an acceptable result.",
         "The response remains read-only and does not add speculative architecture or process requirements."
+      ]
+    },
+    {
+      "id": 8,
+      "prompt": "Review an infrastructure PR intended to enable one-command promotion of a container image from cloud development to production. The PR grants a development service account read access to the development registry and a separate production service account write access to the production registry. Each Terraform environment validates and focused IAM tests pass. The production registry is shared with another service. Remain read-only and decide whether this PR is ready.",
+      "expected_output": "The review identifies the root issue as completing one promotion and the desired outcome as the production consumer running the promoted digest. It traces the actual workflow and identity handoff across source and destination, concludes that isolated per-environment grants do not prove any actor can perform the copy, and treats this as a primary-goal contradiction or unproven blocker. It compares a single explicit promotion authority or explicit two-step handoff with the proposal, examines the shared repository blast radius, maps local/CI/cloud-dev/production failure modes, and requires an end-to-end release tracer.",
+      "files": [],
+      "expectations": [
+        "The strategic contract states the root issue and desired outcome without defining either as adding IAM resources.",
+        "The capability path follows one logical operation through workflow OIDC identity, source read, cross-environment handoff, destination write, and production digest consumption.",
+        "Separate valid development and production grants are not treated as evidence that the promotion operation is possible.",
+        "The review compares the proposal with the simplest viable authority model and the most coherent canonical release path.",
+        "The shared production repository and its other service are included in the authority and failure-radius analysis.",
+        "The failure map distinguishes relevant CI, cloud-development, and production behavior and explains the role or irrelevance of local execution.",
+        "Focused Terraform tests remain supporting evidence; readiness requires a tracer of the final release outcome."
       ]
     }
   ]

@@ -25,9 +25,9 @@ npx skills add -g <owner/repo>     # install globally across all agents
 
 | Skill | What it does |
 |---|---|
-| `architect` | Routes you into the right engineering posture (Building / Exploratory / Debugging) at the start of a task |
+| `architect` | Frames the root issue, desired outcome, system fit, and proof before routing into Building, Exploratory, or Debugging posture |
 | `better-goal` | Runs durable agent work through `~/.sdd` trackers, evidence ledgers, and completion audits |
-| `better-review` | Coordinates parallel invariant-driven PR/codebase review through architecture, resilience, boundaries, and evidence lenses |
+| `better-review` | Tests strategic viability first, then coordinates only the invariant-driven architecture, resilience, boundary, and evidence lanes the change needs |
 | `pr-monitor` | Babysits open authored PRs on a cadence: tracker-grounded review disposition, fixes, merge gate, and post-merge cleanup — **Claude Code only** |
 
 ### Utilities

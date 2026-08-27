@@ -1,10 +1,13 @@
 # Evaluation intent
 
 `evals.json` contains qualitative review prompts, not a published benchmark.
-Cases 1-3 cover the skill's general four-lane and synthesis behavior. Case 4 is
-a targeted positive regression guard for a scoped feature whose implementation
-mutates a process singleton; case 5 is the genuinely request-local negative
-control.
+Cases 1-3 cover the skill's strategic contract, adaptive risk lanes, and
+synthesis behavior. Case 4 is a targeted positive regression guard for a scoped
+feature whose implementation mutates a process singleton; case 5 is the
+genuinely request-local negative control. Case 8 guards the end-to-end
+capability failure that motivated the strategic-review revision: separately
+valid environment permissions that cannot complete one cross-environment
+operation.
 
 Do not claim that case 4 discriminates the hardened skill from the prior skill
 without repeated matched runs. During the August 2026 hardening pass, one

@@ -5,13 +5,68 @@ description: "Engineering posture and execution discipline. Use at the start of 
 
 # Architect
 
-Engineering is not one activity. Applying the wrong principles to the wrong mode is one of the most common sources of wasted effort and poor decisions.
+Engineering is not one activity. Applying the wrong principles to the wrong mode is one of the most common sources of wasted effort and poor decisions. A well-executed solution to the wrong problem is still a failure.
 
-Identify your mode first. Then apply the principles for that mode, keep the feedback loop tight, and route to companion skills or references only when they add concrete value.
+Frame the outcome and test the proposed solution strategically before choosing a mode or implementation plan. Then apply the principles for that mode, keep the feedback loop tight, and route to companion skills or references only when they add concrete value.
 
 ---
 
-## Step 1: Identify Your Mode
+## Step 1: Establish the Strategic Frame
+
+For every non-trivial task, write a compact strategic frame before treating the
+requested or existing implementation as the answer:
+
+```markdown
+## Strategic frame
+- Root issue: <the underlying user or operational problem, not the requested mechanism>
+- Desired outcome: <the terminal observable end state and who observes it; distinguish availability, eligibility, deployment, and live activation when they differ>
+- Proposed solution: <the mechanism being considered, including its real owner>
+- Capability: <trigger principal -> authorizer -> execution/delegated identities -> resources/services -> final observer, showing whether it can produce the outcome at all>
+- Simpler option: <the fewest concepts and authorities that could produce the outcome; why it is or is not enough>
+- More elegant option: <the clearest ownership and canonical path; why it is or is not preferable>
+- System fit: <surrounding components, identities, data, control flow, and deployment platforms that participate>
+- Failure map: <how the outcome can fail on each relevant local or cloud platform, and where that failure is observed>
+- Acceptance evidence: <the smallest tracer that proves the final outcome on each relevant platform>
+```
+
+Do not define the root issue in terms of the proposed solution. “This role is
+missing” is not the root issue when the actual problem is “the release cannot
+move an image from its source to production.” Trace the real operation from
+trigger through every identity, authority, store, service, and final consumer.
+
+Capability is a threshold question. If the proposed mechanism cannot complete
+that path, stop and redesign it before optimizing its implementation. Passing
+tests for isolated components does not make an end-to-end-incapable design
+viable.
+
+Evaluate simplicity and elegance separately:
+
+- **Simplest** means the fewest new concepts, states, authorities, handoffs, and
+  operational responsibilities needed for the outcome, after accounting for
+  semantics already provided by the platform.
+- **Elegant** means ownership is obvious, the common path is canonical, local
+  reasoning is reliable, and exceptional paths do not redefine the operation.
+
+Map only platforms that actually participate. Local, CI, cloud development,
+staging, and production often have different identities, topology, data, and
+provider behavior; include each relevant platform and say why an omitted one is
+irrelevant. Do not assume that a per-environment success composes into a
+cross-environment operation.
+
+If the evidence changes the root issue, capability judgment, or topology,
+update the frame before continuing. Preserve an explicit user-chosen solution,
+but surface when it cannot meet the stated outcome or when a materially simpler
+or more coherent alternative exists. A mechanism mentioned in an implementation
+request is still a proposal unless the user explicitly makes it a constraint;
+the request does not turn an end-to-end-incapable mechanism into a requirement.
+
+When `better-review` is also used, its frozen strategic review contract satisfies
+this step. Reuse and update that one frame; do not create a competing statement
+of the root issue or outcome.
+
+---
+
+## Step 2: Identify Your Mode
 
 Read the task carefully and ask: **what kind of work is this?**
 
@@ -60,24 +115,28 @@ After identifying your mode, invoke only the relevant companion skills:
 
 ### Building Mode
 1. Read the relevant router/docs/code with progressive disclosure; do not bulk-load the repo.
-2. State the positive end-to-end outcome and any failure that must not move to a later boundary or widen in scope.
-3. If the change alters accepted states, adds or reinterprets a sentinel/fallback, retains source-authored data, shares durable state across versions, or makes a broad data-flow claim, read `references/semantic-change.md` and pass its design gate before coding.
-4. Establish the proof path: the smallest cheap oracle for each edit, plus a tracer that carries the exact production representation through every first-order consumer to the final observable outcome and measures failure radius.
-5. Build the thinnest production-quality tracer bullet before widening implementation.
-6. Update specs/docs only when public contracts, data retention, invariants, rollout behavior, workflows, or operating procedures changed.
-7. Before handoff, pass the semantic-change implementation gate when it applies, then carry the outcome, evidence, gaps, and issue identity into the repository's public-decision format without broadening claims.
-8. Read `references/testing.md` only for deep test-suite design, regression-test design, mock/fixture concerns, harness gaps, or "why did tests miss this bug?" Semantic changes crossing independently maintained producer/consumer boundaries automatically require its T8 and T12 guidance.
+2. Validate the strategic frame against the actual topology. Reject a proposed solution that cannot reach the desired outcome, and compare it with the simplest and most coherent viable alternatives.
+3. State the positive end-to-end outcome and any failure that must not move to a later boundary or widen in scope.
+4. If the change alters accepted states, adds or reinterprets a sentinel/fallback, retains source-authored data, shares durable state across versions, or makes a broad data-flow claim, read `references/semantic-change.md` and pass its design gate before coding.
+5. Establish the proof path: the smallest cheap oracle for each edit, plus a tracer that carries the exact production representation through every first-order consumer to the final observable outcome and measures failure radius on each relevant platform.
+6. Build the thinnest production-quality tracer bullet before widening implementation.
+7. Update specs/docs only when public contracts, data retention, invariants, rollout behavior, workflows, or operating procedures changed.
+8. Before handoff, rerun the strategic capability and failure map against the effective change, pass the semantic-change implementation gate when it applies, then carry the outcome, evidence, gaps, and issue identity into the repository's public-decision format without broadening claims.
+9. Read `references/testing.md` only for deep test-suite design, regression-test design, mock/fixture concerns, harness gaps, or "why did tests miss this bug?" Semantic changes crossing independently maintained producer/consumer boundaries automatically require its T8 and T12 guidance.
 
 ### Exploratory Mode
-1. Build a repo map cheaply: find the router, then read only docs/code needed for the question.
-2. If the problem is stateful, empirical, and under-specified, prefer an interactive probe surface (REPL/notebook/shell) over script-only exploration (see E7)
-3. Build the thinnest vertical slice (tracer bullet — see E5)
-4. Record what the probe proved and what smoke/e2e path would validate a real implementation.
+1. Build a repo map cheaply: find the router, then read only docs/code needed to validate the strategic frame.
+2. Turn unknown capability or topology claims into explicit spike questions.
+3. If the problem is stateful, empirical, and under-specified, prefer an interactive probe surface (REPL/notebook/shell) over script-only exploration (see E7).
+4. Build the thinnest vertical slice (tracer bullet — see E5).
+5. Record what the probe proved, whether the proposed solution can meet the outcome, and what smoke/e2e path would validate a real implementation on each relevant platform.
 
 ### Debugging Mode
 1. Find the smallest relevant docs/code path using the repo router, README, architecture docs, and agent instructions.
-2. Reproduce the symptom, shrink it, and run one targeted oracle per hypothesis.
-3. Read `references/testing.md` only if you need regression-test design, mock/fixture analysis, harness-gap handling, or test-suite review.
+2. Separate the observed symptom from the root issue and desired restored outcome in the strategic frame.
+3. Reproduce the symptom, shrink it, and run one targeted oracle per hypothesis across the relevant operating topology.
+4. Before choosing a fix, show that it removes the root failure along the end-to-end path instead of relocating or masking the symptom.
+5. Read `references/testing.md` only if you need regression-test design, mock/fixture analysis, harness-gap handling, or test-suite review.
 
 ---
 
@@ -161,7 +220,9 @@ When a change accepts a state that was previously rejected, carry the exact stor
 ### B3. Type Safety
 Prefer structured typed contracts (Pydantic, dataclasses, ADTs) over ad-hoc dicts whenever data crosses a boundary.
 
-**Agent rule:** If data passes between functions, classes, or modules as a raw dict or tuple, replace it with a typed struct.
+**Agent rule:** Use a typed struct when a durable, externally meaningful, or
+independently maintained boundary needs one shared interpretation. Do not add a
+wrapper for a small internal value merely to satisfy this preference.
 
 ***
 
@@ -201,9 +262,12 @@ Model data so the type system makes invalid combinations impossible to construct
 ***
 
 ### B9. Fail Noisily and Early
-When invalid state is detected, fail immediately and loudly. A loud early failure is always cheaper than a silent late one.
+When invalid state is detected, surface it at the earliest boundary that can
+contain it without widening the failure.
 
-**Agent rule:** Prefer exceptions over returning None or empty values for error cases. Validate at system entry points, not deep in call stacks.
+**Agent rule:** Validate at system entry points. Use a typed error, rejection,
+or exception that the owning boundary can contain; do not turn one bad record
+into an operation, tenant, or fleet failure merely to fail early.
 
 ***
 
@@ -215,9 +279,15 @@ Get the data structures right and the algorithms become obvious. Poor data model
 ***
 
 ### B11. Reversibility
-Avoid irreversible decisions; abstract what might change. Wrap third-party APIs in your own interface, keep core logic independent of infrastructure, and prefer standards over proprietary formats.
+Avoid irreversible decisions; isolate dependencies whose volatility or domain
+meaning would otherwise spread. Keep core logic independent of infrastructure
+when the product has core logic to protect, and prefer standards over
+proprietary formats.
 
-**Agent rule:** When integrating an external dependency, wrap it. When making an architectural decision, ask: "How hard would this be to reverse?"
+**Agent rule:** Before wrapping an external dependency, identify a concrete
+substitution, testing, or domain-isolation need. Otherwise use the existing
+direct interface. When making an architectural decision, ask: "How hard would
+this be to reverse?"
 
 ---
 
@@ -331,7 +401,7 @@ Resist patches that suppress the visible failure without addressing the defectiv
 | ETC | Easier to Change | Meta-principle: prefer designs easier to change later |
 | B1 | One Primitive, Many Roles | Same thing with different config, not different implementations |
 | B2 | Prove It Works, Then Ship It | No capability complete without a test; no gold-plating |
-| B3 | Type Safety | Typed contracts at every boundary, not raw dicts |
+| B3 | Type Safety | Typed contracts for durable, external, or independently maintained boundaries |
 | B4 | Don't Repeat Yourself | Duplicate knowledge is a violation; duplicate code may not be |
 | B5 | Orthogonality | Changes on one axis must not ripple along another |
 | B6 | Eliminate Accidental Complexity | Remove implementation-introduced complexity aggressively |
@@ -339,7 +409,7 @@ Resist patches that suppress the visible failure without addressing the defectiv
 | B8 | Make Illegal States Unrepresentable | Invalid combinations impossible to construct |
 | B9 | Fail Noisily and Early | Loud early failures beat silent late ones |
 | B10 | Data Structures Determine Architecture | Right data model → obvious algorithm |
-| B11 | Reversibility | Abstract what might change; wrap external dependencies |
+| B11 | Reversibility | Isolate dependencies only for a concrete substitution, testing, or domain need |
 | E1 | Immediate Connection to Creation | Eval constantly; no gap between action and feedback |
 | E2 | See the Whole Before Naming Parts | Tangible before abstract; premature naming forecloses discovery |
 | E3 | Start With Data, Not Abstractions | Real data first; generalize after the concrete case works |
