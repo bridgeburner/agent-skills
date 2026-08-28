@@ -64,6 +64,16 @@ required_review_phrases=(
     'two to four agents'
     'agent count, assignments, and reason'
     'Never add an agent merely to mirror a selected lane'
+    'source of truth'
+    'exact expected value'
+    'workflow/job invocation'
+    'required check'
+    'pass vacuously'
+    'principal-by-route allow/deny matrix'
+    'directly coupled inventories'
+    'parent is squash-merged'
+    'patch identity'
+    'retargeting is not proof'
 )
 
 forbidden_workflow_phrases=(

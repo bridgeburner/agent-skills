@@ -53,6 +53,13 @@ If the target is a stacked PR, establish the exact parent head and intended
 ancestry before reviewing the delta. A stale stack can make both bugs and fixes
 look real when they are artifacts of the wrong base.
 
+For a stacked PR, carry the boundary through the parent merge. If the parent is
+squash-merged, rebuild the child on the actual post-parent default branch;
+retargeting is not proof. Before approval, verify patch identity with
+`git range-diff` or a stable `patch-id`, the exact final file/resource scope,
+and fresh CI plus plan evidence where applicable. Flag handoffs that say only
+"retarget" and leave the rebuild and proof implicit.
+
 ## Freeze the strategic review contract
 
 Before delegation, freeze one compact contract from the user's outcome, actual
@@ -268,6 +275,13 @@ valid per-environment configurations. Distinguish who may request the operation,
 who authorizes it, who executes each mutation, and who may advance the result
 from available to eligible, deployed, or active.
 
+For machine-principal, binding, route, or protected-resource changes, build the
+smallest principal-by-route allow/deny matrix at the composition boundary.
+Component token/auth tests do not prove route-level confinement. Sweep directly
+coupled inventories, IAM docs, comments, outputs, and runbooks for stale
+`only`, `no binding`, or `sole invoker` claims; keep the sweep limited to
+artifacts that name the changed boundary.
+
 Look for:
 
 - disagreement between schema, runtime validation, clients, and storage;
@@ -361,6 +375,12 @@ Reconcile each PR claim and required template field with evidence. Treat missing
 ticket syntax as a process finding only after proving the PR is linked, the
 convention applies at this lifecycle stage, and merge should close the ticket;
 missing operands remain an open question.
+
+For each PR-named source/config contract, trace `source of truth -> exact expected
+value -> assertion -> workflow/job invocation -> required check`. A direct local
+pass is not CI enforcement. Presence-only assertions do not prove a value
+contract. For a negative or absence claim, verify that the inspected scope
+contains every path that could violate it; otherwise the test may pass vacuously.
 
 ## Shared invariants
 

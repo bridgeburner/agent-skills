@@ -13,6 +13,9 @@ validity. Case 10 guards the live-local-only validation bar and ensures failed
 or empty required checks cannot be treated as approval. Case 11 guards adaptive
 worker scaling: lane coverage stays complete while one manageable review may
 use one agent and a larger, conflict-prone review may justify two to four.
+Case 12 guards proof reachability for exact configuration values, route-level
+machine identity confinement, coupled identity documentation, and squash-safe
+stacked-PR handoff.
 
 Do not claim that case 4 discriminates the hardened skill from the prior skill
 without repeated matched runs. During the August 2026 hardening pass, one

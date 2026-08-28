@@ -158,6 +158,21 @@
         "The review does not require one worker per lane and does not manufacture extra workers merely to mirror lane count.",
         "The strategic contract, final synthesis, and complete lane coverage remain mandatory in both cases."
       ]
+    },
+    {
+      "id": 12,
+      "prompt": "Review the proof-boundaries fixture with better-review. Remain read-only, decide readiness, and recommend the smallest proof or refinement for each gap.",
+      "expected_output": "The review traces each claimed configuration contract from source through exact value, assertion, workflow invocation, and required check; rejects a presence-only or out-of-scope negative test as proof; builds a minimal machine-principal-by-route allow/deny matrix and searches coupled identity documentation for stale claims; and requires a squash-safe post-parent rebuild with patch identity, exact scope, fresh CI, and plan evidence.",
+      "files": [
+        "evals/fixtures/review-proof-boundaries.md"
+      ],
+      "expectations": [
+        "The review distinguishes a hand-run contract script from a required CI check and identifies the missing source-to-exact-value-to-assertion-to-workflow reachability.",
+        "The review explains why checking only one configuration file makes the negative assertion vacuous after the resource moved, and requires coverage of every path that could violate the claim.",
+        "The review gives the smallest principal-by-route allow/deny matrix, including the intended route and adjacent routes that must reject the machine identity.",
+        "The review searches directly coupled inventories, comments, outputs, and runbooks for stale identity or invoker claims without requiring a broad documentation rewrite.",
+        "The review rejects retarget-only stacking instructions and requires rebuilding on the actual post-parent branch, then proving patch identity, final scope, CI, and infrastructure-plan evidence."
+      ]
     }
   ]
 }
