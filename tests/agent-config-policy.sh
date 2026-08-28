@@ -43,6 +43,27 @@ required_workflow_phrases=(
     'context fork'
     'independent of context mode'
     'jointly expressible'
+    'Only a named live-local product-path assertion validates'
+    'every semantic consumer, and terminal result'
+    'never validate correctness or completeness'
+    'missing, failed, or empty live-local assertion'
+    'cloud or production evidence cannot substitute'
+)
+
+required_review_phrases=(
+    'Scope cannot erase it: re-find, source-disprove,'
+    'every loader/re-reader/duplicate resolver/ledger/API/UI'
+    'each later independent ruling is a second authority'
+    'An ordinal orders only its declared namespace'
+    'Provenance may describe a ruling; authorization is a typed/shared capability'
+    'Only a named assertion through the real local product entry point'
+    'Structural success never proves the affected fact survived'
+    'failed, empty, malformed, or non-terminal required result'
+    'Lane selection and worker count are separate decisions'
+    'one agent for all selected lanes'
+    'two to four agents'
+    'agent count, assignments, and reason'
+    'Never add an agent merely to mirror a selected lane'
 )
 
 forbidden_workflow_phrases=(
@@ -93,6 +114,9 @@ assert_workflow_policy() {
 assert_skill_routing() {
     local architect="$REPO_DIR/skills/architect/SKILL.md"
     local better_goal="$REPO_DIR/skills/better-goal/SKILL.md"
+    local better_review="$REPO_DIR/skills/better-review/SKILL.md"
+    local phrase
+    local normalized
 
     if ! grep -Fq 'independent decisions' "$architect"; then
         echo "Architect must treat workflow effort dimensions as independent decisions"
@@ -118,6 +142,14 @@ assert_skill_routing() {
         echo "better-goal must route warranted review to better-review"
         exit 1
     fi
+
+    normalized="$(tr '\n' ' ' < "$better_review" | sed -E 's/[[:space:]]+/ /g')"
+    for phrase in "${required_review_phrases[@]}"; do
+        if [[ "$normalized" != *"$phrase"* ]]; then
+            echo "Missing Better Review policy phrase: $phrase"
+            exit 1
+        fi
+    done
 }
 
 assert_policy_phrases "$POLICY"

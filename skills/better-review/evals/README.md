@@ -7,7 +7,12 @@ feature whose implementation mutates a process singleton; case 5 is the
 genuinely request-local negative control. Case 8 guards the end-to-end
 capability failure that motivated the strategic-review revision: separately
 valid environment permissions that cannot complete one cross-environment
-operation.
+operation. Case 9 guards prior-finding retention, duplicate semantic
+authorities, ordering namespaces, and semantic proof beyond structural artifact
+validity. Case 10 guards the live-local-only validation bar and ensures failed
+or empty required checks cannot be treated as approval. Case 11 guards adaptive
+worker scaling: lane coverage stays complete while one manageable review may
+use one agent and a larger, conflict-prone review may justify two to four.
 
 Do not claim that case 4 discriminates the hardened skill from the prior skill
 without repeated matched runs. During the August 2026 hardening pass, one

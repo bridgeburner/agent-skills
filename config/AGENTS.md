@@ -60,12 +60,20 @@ ceremony in all the others.
 - Record a lesson in `~/.agents/lessons/<repo-name>.md` after a user correction
   only when it reveals a reusable failure pattern. Keep it specific enough to
   prevent recurrence and general enough to apply again.
-- Never mark work complete without evidence that matches the claim. Diff behavior
-  when relevant, run the smallest useful oracle after each meaningful edit, and
-  use smoke/e2e/product-path proof for user-visible behavior, integrations,
-  workflows, deployments, and agent behavior.
-- Treat format, lint, type checks, unit tests, fixtures, and narrow integration
-  tests as supporting evidence, not automatic proof of a live product claim.
+- After each meaningful edit, diff behavior when relevant and run the smallest
+  useful development diagnostic.
+- Only a named live-local product-path assertion validates behavioral correctness
+  or completeness for a feature, bug fix, integration, workflow, deployment,
+  user-visible behavior, or agent behavior. Exercise the real local product
+  entry point, services, persisted input, every semantic consumer, and terminal
+  result. Assert both the expected positive behavior and each relevant negative
+  sink or absence, including drop, omission, quarantine, and wrong attribution.
+- Format, lint, type, unit, integration, CI, VM, replay, schema, artifact, and
+  deployment checks never validate correctness or completeness; they are
+  development diagnostics only. A missing, failed, or empty live-local assertion
+  blocks readiness, and cloud or production evidence cannot substitute. If the
+  user explicitly changes the acceptance bar, record the exception and do not
+  call the result live-local validated.
 - If work diverges from its assumptions or a check invalidates the current plan,
   stop, update the plan, and pursue the root cause rather than accumulating fixes.
 

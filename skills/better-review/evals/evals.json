@@ -32,7 +32,8 @@
       "expectations": [
         "Direct, proactive, integrated, false-positive, and accepted findings are distinguished.",
         "The synthesis identifies cross-lane interactions.",
-        "Refinement recommendations are framed as root-cause changes with proof requirements."
+        "Refinement recommendations are framed as root-cause changes with proof requirements.",
+        "Every prior finding is re-found, source-disproved, explicitly user-accepted, or retained as a blocker; no item disappears during consolidation."
       ]
     },
     {
@@ -79,7 +80,8 @@
         "The recursively retained source field is reported as a retention/documentation mismatch with its bound and access boundary preserved.",
         "The untouched legacy raw field is classified as a pre-existing claim contradiction, not a regression introduced by the PR.",
         "The combined Removed/avoided field and missing required closing syntax for final linked TASK-482 are process findings, while the negative durable-storage claim is narrowed or marked unproven.",
-        "Every finding includes the required lane, location, evidence kind/detail, confidence, claim, goal impact, failure radius, ownership, and proof-tier fields using only schema-defined enum values; documentation artifacts use proof tier source."
+        "Every finding includes the required lane, location, evidence kind/detail, confidence, claim, goal impact, failure radius, ownership, and proof-tier fields using only schema-defined enum values; documentation artifacts use proof tier source.",
+        "The changed-decision trace enumerates every loader, re-reader, duplicate resolver, negative sink, API/UI, and terminal consumer, and readiness requires the named live-local positive and negative assertions."
       ]
     },
     {
@@ -109,6 +111,52 @@
         "The shared production repository and its other service are included in the authority and failure-radius analysis.",
         "The failure map distinguishes relevant CI, cloud-development, and production behavior and explains the role or irrelevance of local execution.",
         "Focused Terraform tests remain supporting evidence; readiness requires a tracer of the final release outcome."
+      ]
+    },
+    {
+      "id": 9,
+      "prompt": "Review the multi-resolver retained-evidence fixture with better-review. Preserve every prior finding, trace each semantic authority and consumer, and decide readiness. Remain read-only.",
+      "expected_output": "The review retains the prior downstream-loader finding; enumerates the first resolver, persisted ruling, second resolver, structural validator, negative sinks, and terminal observer; rejects provenance text as authorization and batch-local ordinal comparison across batches; and blocks readiness until one canonical ruling passes the named live-local positive and negative assertions.",
+      "files": [
+        "evals/fixtures/multi-resolver-retained-evidence.md"
+      ],
+      "expectations": [
+        "Every prior finding is re-found, source-disproved, explicitly user-accepted, or left blocking.",
+        "The first resolver and downstream lookback-result resolver are reported as duplicate semantic authorities until they share or prove the same ruling.",
+        "Provenance remains descriptive and cannot authorize accept, reject, quarantine, or fail-open behavior.",
+        "The batch-local ordinal is not used for cross-batch chronology without a cross-scope key or proven single-batch invariant.",
+        "Schema or artifact success is not accepted as correctness or completeness proof.",
+        "The named live-local assertion covers the positive terminal record and drop, omission, quarantine, and wrong-attribution sinks."
+      ]
+    },
+    {
+      "id": 10,
+      "prompt": "Review the green-checks/live-failure fixture with better-review. The author says the PR is ready. Remain read-only and distinguish development diagnostics from validation.",
+      "expected_output": "The review treats unit, integration, CI, VM, schema, artifact, and deployment success as development diagnostics only; marks the failed live-local product assertion and empty required reviewer result as missing evidence; and blocks readiness without converting either failure into approval.",
+      "files": [
+        "evals/fixtures/green-checks-live-failure.md"
+      ],
+      "expectations": [
+        "No lower-tier or cloud evidence substitutes for the named live-local assertion.",
+        "A failed, empty, malformed, or non-terminal required check is missing evidence rather than no finding.",
+        "Readiness remains blocked until the live-local positive and negative terminal assertions pass.",
+        "The review remains read-only."
+      ]
+    },
+    {
+      "id": 11,
+      "prompt": "Use better-review on both cases in the adaptive-delegation-scale fixture. Preserve all selected risk lanes and the strategic questions, but choose the smallest worker arrangement that gives the review useful independent signal. Remain read-only.",
+      "expected_output": "The review separates lane selection from worker count. It chooses one agent with distinct lane sections for the small all-four-risk case, and justifies sharding the large conflict-prone case across two to four agents with explicit assignments and parent synthesis. It does not equate four lanes with four agents or reduce coverage to avoid delegation.",
+      "files": [
+        "evals/fixtures/adaptive-delegation-scale.md"
+      ],
+      "expectations": [
+        "All four risk lanes remain selected for both cases because the fixture triggers all four risk classes.",
+        "The small case uses one review agent or explicitly explains why the parent is the single reviewing agent, with distinct lane sections and synthesis.",
+        "The large case explains why two to four agents add useful context isolation, parallel exploration, conflict-risk reduction, or failure-cost reduction.",
+        "Lane-to-agent assignments and the worker-count rationale are recorded for the sharded case.",
+        "The review does not require one worker per lane and does not manufacture extra workers merely to mirror lane count.",
+        "The strategic contract, final synthesis, and complete lane coverage remain mandatory in both cases."
       ]
     }
   ]

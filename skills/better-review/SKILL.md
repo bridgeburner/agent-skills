@@ -55,13 +55,14 @@ look real when they are artifacts of the wrong base.
 
 ## Freeze the strategic review contract
 
-Before delegation, the parent writes one compact contract from the user's
-stated outcome, the actual topology, the PR, and repository-owned requirements.
-This is a review boundary, not a new design: if sources disagree or omit a
-consequential choice, mark it unproven rather than silently redefining success.
-When Architect has already produced a strategic frame, refine that artifact
-into this contract instead of creating a second authority for the root issue or
-outcome. This contract then satisfies Architect's strategic-framing step.
+Before delegation, freeze one compact contract from the user's outcome, actual
+topology, PR, and repository requirements. Also ledger every prior finding or
+proof gap from the task, tracker, corrections, earlier reports/comments, and
+retained reproductions, with affected consumer, disposition, and closing evidence
+or explicit user acceptance. Scope cannot erase it: re-find, source-disprove,
+user-accept, or keep it blocking. This is a review boundary, not a new design;
+source disagreement or omission stays unproven. Reuse Architect's frame, not
+another authority.
 
 ```markdown
 ## Review contract
@@ -76,8 +77,8 @@ outcome. This contract then satisfies Architect's strategic-framing step.
 - Platform topology: <relevant local/CI/cloud-dev/staging/prod differences; justify omissions>
 - Outcome failure map: <where the outcome can fail on each relevant platform and who observes it>
 - Semantic delta: <states moving between rejected, accepted, stored, exposed, or acted upon>
-- Changed representations: <wire -> parsed -> stored -> loaded -> domain -> UI/response>
-- Downstream consumers: <production readers of each changed representation>
+- Changed representations / downstream consumers: <wire/first resolver -> stored form -> every loader/re-reader/duplicate resolver/ledger/API/UI -> terminal observer>
+- Prior findings: <finding -> consumer/boundary -> re-found | disproved | user-accepted | blocking, with evidence>
 - PR claims: <positive, negative, scope, compatibility, retention, and operational claims>
 - Required repository artifacts: <applicable PR-template fields, ticket convention, generated docs/checks>
 ```
@@ -94,20 +95,23 @@ but the available evidence does not establish it. If unseen surrounding code
 might supply a missing stage, report both scopes explicitly: the proposal is
 incapable as described and the larger system is unproven.
 
-Any previously rejected, absent, or impossible state that becomes admissible is
-a semantic delta, even when the diff describes itself as local to one layer. A
-changed representation with an uninspected production consumer is an unproven
-blocker. Declared PR scope does not turn a contradiction of the desired outcome
-into an accepted limitation.
+A semantic delta includes any fact newly accepted, rejected, selected, resolved,
+normalized, attributed, or reclassified. Trace its first resolver, persisted
+form, and every loader, re-reader, duplicate resolver or attribution step,
+ledger, API, UI, and terminal consumer. The first resolver is not authoritative
+by position; each later independent ruling is a second authority until it reuses
+the canonical ruling or is proven equivalent. An ordinal orders only its declared
+namespace: never compare batch-, request-, file-, or run-local positions across
+namespaces without a cross-scope key or a proven single-namespace invariant.
+Any uninspected consumer or unresolved authority mismatch is an unproven blocker;
+declared scope cannot waive a contradiction of the desired outcome.
 
 ## Adaptive delegation
 
-Do not equate reviewer count with coverage. The parent owns the strategic
-contract and synthesis. Delegate an independent **system-fit lane** for every
-non-trivial review, then select only the additional risk lanes whose failure
-classes are present. Most small reviews need system fit plus evidence. Stateful,
-security-sensitive, cross-boundary, or operational changes may need all four
-lanes. Record why each lane is included or omitted.
+Lane selection and worker count are separate decisions. Parent owns the strategic contract, assignment, and synthesis; select risk lanes first,
+then choose one to four review agents based on review size, context isolation,
+conflict risk, and failure cost. Never add an agent merely to mirror a selected
+lane, and never reduce lane coverage because one agent handles several lanes.
 
 The available lanes are:
 
@@ -118,24 +122,28 @@ The available lanes are:
    resources, or independently maintained components cross a boundary;
 4. evidence and operational truth — always.
 
-Run selected workers independently and in parallel from the same frozen review
-boundary. Keep synthesis in the parent/orchestrator after every selected report
-arrives. Do not split implementation by layer during discovery.
+- A small or manageable review may use one agent for all selected lanes,
+  including all four, with distinct lane sections; do not call them independent
+  worker reports.
+- A larger or higher-risk review may shard across two to four agents when
+  parallel exploration, context isolation, conflict risk, or failure cost
+  justifies it. Related lanes may share an agent; a lane needing genuine
+  independence gets its own.
+- Record the lane set, agent count, assignments, and reason; the parent verifies
+  coverage and synthesizes every lane.
 
-Match ceremony to the review object. For a short immutable design statement,
-freeze the quoted statement, record lane inclusion or omission, and allow
-compact lane deltas. Use content digests, full PR artifacts, machine-mergeable
-schemas, and exhaustive coverage ledgers for mutable code/PR boundaries,
-multiple material findings, or high-risk reviews where they improve auditability.
-Never lighten the strategic questions themselves.
+Dispatch chosen workers from one frozen boundary. Parallelize only with multiple
+workers; with one agent, preserve distinct lane sections and have the parent
+synthesize and verify coverage. Do not split implementation by layer.
 
-In Codex, use `gpt-5.6-sol` with `medium` reasoning for every selected lane by
-default. The consistent profile makes reports comparable and gives each lane
-enough architectural judgment. The parent retains synthesis ownership; it may
-use a separate synthesis worker only as an independent critic. An override is
-allowed when failure cost, codebase scale, or a worker's evidence justifies it;
-record the reason rather than silently changing the route. In another harness,
-use its closest consistent medium-depth frontier profile.
+Match ceremony to the review object: use compact lane deltas for short immutable
+statements; use digests, full artifacts, mergeable schemas, and coverage ledgers
+for mutable or high-risk boundaries. Never lighten the strategic questions.
+
+In Codex, default delegated review agents to `gpt-5.6-sol` with `medium`
+reasoning; in another harness, use its closest consistent medium-depth frontier
+profile. The parent may use a separate synthesis critic. Override for failure
+cost, codebase scale, or worker evidence, and record the reason.
 
 Give every worker:
 
@@ -148,13 +156,12 @@ Give every worker:
 - the shared invariant reference;
 - for PR reviews, the current title/body, repository PR template, and available
   linked-ticket metadata and repository-specific link/close convention;
-- an isolated report path, such as `/tmp/aggressive-review-<run-id>/<lane>.md`;
+- an isolated report path, such as `/tmp/aggressive-review-<run-id>/<agent>.md`;
 - an explicit read-only boundary and stop conditions.
 
-Launch all selected workers from the same frozen review boundary in one
-delegation turn. Give each worker the same context and invariant reference,
-changing only the lane question and report path. Wait for all selected reports
-before synthesis; do not let the first finding become the implementation plan.
+Launch chosen workers in one delegation turn with the same context and
+invariants, adding only assigned questions and report paths. Wait for all reports
+before synthesis; the first finding never becomes the implementation plan.
 
 Treat rubric coverage and orchestration completeness as separate failure modes.
 A lane cannot find a class of effect its question excludes, while a complete
@@ -236,14 +243,13 @@ For every meaningful boundary, ask what happens if the process dies immediately
 before and immediately after it. Restart should be an ordinary convergence path,
 not a separate best-effort repair story.
 
-When the semantic delta admits a previously rejected, absent, or impossible
-value, trace its exact persisted representation through every production reader
-until it is consumed, deliberately dropped, or returned. Exercise it alone,
-combined with every behaviorally distinct valid class, and through relevant
-retry or duplicate forms. Record this table:
+For every semantic delta, exercise the exact persisted form alone, with each
+behaviorally distinct valid class, and through retries or duplicates. A mixed
+case for resolution or attribution must reach every resolver. Record one row per
+resolver or consumer, including its ordering namespace and negative sink:
 
-| State | Edge result | Stored form | Consumer result | Failure radius | Signal |
-|---|---|---|---|---|---|
+| State/input | Resolver + namespace | Ruling/authority | Stored/result form | Terminal positive result | Drop/omission/quarantine/wrong-attribution signal | Failure radius |
+|---|---|---|---|---|---|---|
 
 A thrown exception is not evidence of safe failure merely because it is called
 "fail closed." Prove whether its containment boundary is the record, operation,
@@ -265,10 +271,13 @@ from available to eligible, deployed, or active.
 Look for:
 
 - disagreement between schema, runtime validation, clients, and storage;
-- stringly typed values where a structured contract is needed;
+- provenance or source text used to authorize accept/reject/quarantine/fail-open.
+  Provenance may describe a ruling; authorization is a typed/shared capability
+  with one owner and aligned callers, defaults, and serialized forms;
+- ordinals compared outside their declared batch/request/file/run namespace
+  without a cross-scope key or proven single-namespace invariant;
 - error codes or phases that are open-ended in one layer and closed in another;
-- implicit defaults, falsy-value coercion, and compatibility behavior that changes
-  the contract;
+- implicit defaults, falsy coercion, or compatibility behavior that changes the contract;
 - route/catalog or identity mismatches that create two authorities;
 - private paths, metadata, or diagnostics leaking into public output;
 - untrusted transport text being treated as authoritative metadata;
@@ -307,28 +316,30 @@ actual visibility is wider.
 
 ### 4. Evidence and operational truth
 
-Ask whether the tests, documentation, and operating behavior actually prove the
-claims being made.
+Map each desired-outcome and failure-map claim to evidence where it matters.
+Local proof cannot establish a distinct cloud capability or failure claim.
 
-Map every desired-outcome and failure-map claim to evidence at the platform
-where it matters. When local and cloud paths differ, local proof cannot close a
-cloud capability or failure claim.
+Apply the global live-local validation bar. Only a named assertion through the
+real local product entry point, services, persisted input, all semantic
+consumers, and terminal result validates behavioral correctness or completeness.
+Assert the expected positive result and each relevant negative sink or absence,
+including drop, omission, quarantine, and wrong attribution. A missing, failed,
+or empty live result blocks readiness.
+
+Unit/integration tests, CI, VMs, schemas, replays, artifacts, and deployments are
+development diagnostics only. Structural success never proves the affected fact
+survived, retained its canonical ruling, or reached the terminal observer.
 
 Look for:
 
 - tests that exercise a nearby fixture instead of the real boundary;
 - missing failure injection at persistence, process, transport, cleanup, and
   restart boundaries;
-- tests that prove a result but not ownership, idempotence, or absence of leaks;
-- isolated tests that cannot reveal interference with concurrent or unrelated
-  consumers of shared ambient state;
-- migration and backward-compatibility gaps;
-- observability that cannot distinguish retry, recovery, and duplicate work;
-- platform-specific behavior claimed without platform-specific evidence;
-- docs, launchers, schemas, and error descriptions that overclaim runtime
-  behavior;
-- operational paths whose proof stops at unit tests when a product/integration
-  path is required.
+- proof of a result without ownership, idempotence, absence of leaks, or
+  interference with concurrent and foreign consumers;
+- migration, rolling-version, observability, or retry/recovery gaps;
+- platform claims without platform evidence; and
+- docs, launchers, schemas, or error descriptions that overclaim behavior.
 
 If the diff adds or retains a compatibility overload, fallback, optional field,
 or best-effort write, require a rolling-version table rather than the vague
@@ -343,18 +354,13 @@ state explicitly. Mark any cell whose winner, user-visible result, or
 convergence mechanism is not established by evidence as `unproven`; never fill
 the matrix by assuming conventional overwrite or retry semantics.
 
-Classify every material fact as introduced, changed, a pre-existing
-contradiction of a PR claim, or unrelated. Pre-existing behavior is not a
-regression, but it can invalidate a global claim such as "never," "only," or
-"no source data persists." For PR reviews, reconcile each body claim and
-applicable template field with evidence. Verify repository-specific ticket
-syntax when the repository requires it, and classify omissions as process
-findings rather than runtime defects. First establish that the PR is linked,
-that the convention applies to this PR lifecycle stage, and that merge is meant
-to close the ticket. Missing operands are an open question, not a defect.
-
-Lower-fidelity evidence can support a claim, but it must not be presented as
-proof of a higher-fidelity behavior.
+Classify every material fact as introduced, changed, a pre-existing claim
+contradiction, or unrelated. Pre-existing behavior is not a regression but can
+invalidate global claims such as "never," "only," or "no source data persists."
+Reconcile each PR claim and required template field with evidence. Treat missing
+ticket syntax as a process finding only after proving the PR is linked, the
+convention applies at this lifecycle stage, and merge should close the ticket;
+missing operands remain an open question.
 
 ## Shared invariants
 
@@ -423,9 +429,9 @@ consolidated ledger. It should:
 2. give a source-backed `capable`, `incapable`, or `unproven` verdict for the
    proposal's end-to-end capability path;
 3. compare the proposal with the simplest and most elegant viable options;
-4. merge duplicates by violated invariant and root cause;
-5. preserve the strongest evidence and the clearest reproduction;
-6. separate direct review issues from proactive findings and accepted limits;
+4. reconcile each prior finding as re-found, source-disproved, user-accepted, or blocking;
+5. merge duplicates by violated invariant and root cause;
+6. preserve the strongest evidence and distinguish direct, proactive, and accepted items;
 7. identify interactions where individually safe changes compose unsafely;
 8. trace effects that escape the intended call path to every consumer in their
    actual visibility domain; contract narrowing cannot dismiss those effects;
@@ -435,11 +441,12 @@ consolidated ledger. It should:
    subsystem;
 12. state what is already protected and what remains unproven.
 
-Before completing synthesis, build a coverage ledger for the desired outcome,
-capability path, platform failure map, every semantic delta, and every
-PR/template claim in the frozen contract. Mark each `proven`, `contradicted`,
-or `unproven`, with evidence. Completion is blocked when an entry is missing or
-merely assumed. In particular:
+Before completing synthesis, reconcile the prior-findings and semantic-authority
+traces, then build a coverage ledger for the desired outcome, capability path,
+failure map, every semantic delta, PR/template claim, required review/check, and
+the named live-local assertion. Mark each `proven`, `contradicted`, or
+`unproven`, with evidence. A failed, empty, malformed, or non-terminal required
+result is missing evidence, never approval; it blocks readiness. In particular:
 
 - `goal_impact: contradicts` cannot be accepted only because the PR declares
   the affected consumer out of scope;
@@ -467,30 +474,26 @@ unrelated side effects are absent.
 
 The review is complete when the consolidated report can answer all of these:
 
-- What is the root issue, stated without assuming this solution?
-- What is the observable desired outcome?
-- Can this proposal produce that outcome through the complete operating path?
-- Is it the simplest viable solution? If not, why not?
-- Is it the most elegant viable solution? If not, why not?
-- How can the outcome fail in the surrounding architecture on every relevant
-  local and cloud deployment platform?
-- What are the authoritative owners and canonical paths?
-- Which effects escape their intended call path, what is their true visibility
-  and lifetime, and are foreign consumers compatible with them?
-- What invalid, duplicate, orphaned, or unrecoverable outcomes are impossible?
-- What happens at each meaningful crash, retry, cleanup, and restart boundary?
-- Do all contracts and trust boundaries agree?
-- Does the evidence match the claims, including platform and product-path limits?
-- Is every semantic delta and repository-required PR artifact proven,
-  contradicted, or explicitly unproven?
+- What root issue and terminal outcome exist independently of this proposal?
+- Can the proposal produce it through the full path, and is it the simplest and
+  most elegant viable option?
+- How can it fail on each relevant platform, and who owns each canonical path?
+- Which effects escape that path, and what happens to invalid, duplicate,
+  orphaned, or unrecoverable work at crash, retry, cleanup, and restart?
+- Do all contracts and trust boundaries agree, including typed authorization,
+  descriptive provenance, and ordering namespaces?
+- Did every semantic decision reach every resolver, store, loader, re-reader,
+  ledger, API/UI, and terminal consumer under one canonical ruling?
+- Did the named live-local assertion prove the positive terminal result and the
+  relevant drop/omission/quarantine/wrong-attribution negatives?
+- Is every prior finding, semantic delta, PR artifact, and required check proven,
+  contradicted, user-accepted, or still blocking, with a real terminal result?
 - Which findings are fixed, accepted, false positives, or still blocked?
 
-The completion answers must come from the fresh strategic contract and all
-selected independent lanes reviewing one frozen final content identity, named
-and verified by every worker and synthesis. Use the exact final head whenever
-the reviewed state is committed. Narrowing the intended feature contract cannot
-close an unrelated effect on ambient state; only source-backed proof that the
-effect is contained or compatible can do so.
+The answers must come from the fresh contract and every selected lane reviewing
+one verified frozen final identity. Use the exact final head when committed.
+Contract narrowing cannot close an ambient effect; only source-backed proof of
+containment or compatibility can.
 
 Do not call a design complete merely because a focused test passes. Do not make
 external PR, tracker, commit, or deployment changes unless the user has
