@@ -83,7 +83,7 @@ ceremony in all the others.
 
 # World Model
 
-Vishwath maintains a personal LLM wiki that serves as cross-agent durable memory. Every session has access to this knowledge base — use it.
+Vishwath maintains a personal LLM wiki that serves as cross-agent durable memory. It is an explicitly requested reference, not ambient session context.
 
 ### Location
 - Vault root: `/Users/bridgeburner/ObsidianVaults/bridgeburner_obsidian_mobile/`
@@ -95,16 +95,12 @@ Vishwath maintains a personal LLM wiki that serves as cross-agent durable memory
 - `projects/` — Shared collaborative workspaces (design docs, agent configs, plans).
 - `wiki/index.md` — Content catalog (~100 lines). Always cheap to scan first.
 
-### Read Path — when to query the wiki
-- **Trigger**: The conversation touches durable personal knowledge — projects, people, goals, past decisions, life domains, systems, schedule, priorities. The signal is "does this draw on or produce knowledge that persists across sessions?"
-- **Concrete triggers**: References to known projects (Niobe, Altius, Morpheos, bridgeOS, etc.), people, life domains (work, self, family, home, finances), goals, workflows, or schedule
-- **Non-triggers**: Pure technical work ("fix this TypeScript error"), generic questions ("how does React context work"), ephemeral tasks
-- **Mechanism**: Use the `$wiki-query` / `wiki-query` skill when available. On a fresh session the first lookup bootstraps awareness — pages and wikilinks seen tell you what the wiki covers for follow-up queries.
-
-### Write Path — temporarily disconnected
-- Wiki write-back from these repo-level instructions and skills is currently disabled.
-- Do not invoke `$wiki-import` / `wiki-import` or `$wiki-maintain` / `wiki-maintain` to modify the wiki as part of normal agent work.
-- Do not write `wiki/` or `vish/` as an automatic or skill-driven side effect. A future hook integration will reconnect this path.
+### Access policy — explicit opt-in
+- **Default**: Do not inspect, search, index, or modify `wiki/`, `vish/`, `projects/`, or `wiki/index.md`. A topic being durable or personal is not permission to access the vault.
+- **Read**: Invoke `$wiki-query` / `wiki-query` only after the user explicitly asks to search or read the wiki or vault, such as `/wiki-query` or "search my wiki".
+- **Write**: Invoke `$wiki-import` / `wiki-import` or `$wiki-maintain` / `wiki-maintain` only after the user explicitly asks for an import or maintenance operation. `wiki-query` is read-only and must not file answers or edit pages.
+- **No side effects**: Never run a wiki read, `qmd` freshness or embedding command, conversation extraction, import, maintenance pass, or wiki edit as a consequence of an ordinary task or because a session is ending.
+- If wiki context would help but the user has not opted in, proceed without it. Ask the user to opt in when the missing context blocks the task.
 
 ### Relationship to Auto-Memory
 - Auto-memory (`MEMORY.md`) = L1 cache. Fast, lightweight, per-project. Session-to-session continuity within a project context.

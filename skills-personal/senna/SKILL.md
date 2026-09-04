@@ -22,7 +22,7 @@ description: >-
 
 Senna is vish's cloud dev machine for Apex work. This skill handles the connection plumbing (Teleport quirks, sudo escalation), path inference, and bidirectional union syncs for gitignored dev artifacts. The default mode is conservative and does not overwrite conflicts; an explicit "overwrite on conflict" request means "merge both trees, overwrite changed files on the destination, and never delete destination-only files."
 
-For broader context (what Senna is, why it exists), the durable knowledge layer is the wiki page `wiki/projects/Senna Dev VM.md` in the personal Obsidian vault. Use the `wiki-query` skill if you need more than the operational details below.
+For broader context (what Senna is, why it exists), the durable knowledge layer is the wiki page `wiki/projects/Senna Dev VM.md` in the personal Obsidian vault. Consult it only when the user explicitly requests wiki context; otherwise use the operational details below.
 
 ## Connection facts (single source of truth)
 
