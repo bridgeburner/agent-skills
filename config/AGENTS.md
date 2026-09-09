@@ -4,6 +4,11 @@
 - **Minimal Impact**: Changes should only touch what's necessary. Avoid introducing bugs.
 - **Check Early, Check Small**: After each meaningful edit, run the smallest relevant oracle. Order: format → lint → typecheck → unit tests → integration. Never batch up changes and check everything at the end.
 
+## Product naming
+- Use `Morpheos` in prose and `morpheos` in identifiers, paths, commands, and other machine-oriented names.
+- Never use `Morpheus` or `morpheus` when naming the Morpheos product. Check generated prose and identifiers for this spelling before handoff.
+- Preserve literal external identities, including third-party names, package names, model names, URLs, APIs, file paths, and historical evidence; do not blindly rename strings that use another spelling.
+
 # Workflow Routing
 
 Scale planning, durable tracking, delegation, specialized review, and proof
