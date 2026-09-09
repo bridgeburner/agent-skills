@@ -1,7 +1,7 @@
 #!/bin/bash
 
-# Git-synced skills manager for Claude Code
-# Wraps `npx skills` to sync skills across machines via git
+# Skills manager
+# Wraps `npx skills` to manage skills across machines
 
 set -e
 
@@ -707,7 +707,7 @@ cmd_add() {
     git push
 
     echo ""
-    echo -e "${GREEN}Done! Skill added and synced to git.${NC}"
+    echo -e "${GREEN}Done! Skill added.${NC}"
 }
 
 cmd_remove() {
@@ -780,7 +780,7 @@ cmd_remove() {
     git push
 
     echo ""
-    echo -e "${GREEN}Done! Skill '$name' removed and synced to git.${NC}"
+    echo -e "${GREEN}Done! Skill '$name' removed.${NC}"
 }
 
 cmd_sync() {
