@@ -9,7 +9,9 @@ codex exec -C /path/to/repo \
 ```
 
 Use a prompt file and the canonical schema only when a later consumer needs a
-durable or machine-readable handoff:
+machine-readable handoff. The example stages files in `/tmp`; for recovery,
+retain the prompt, schema, result, detail, and relevant logs in the assigned
+tracker evidence directory and update accepted output links before completion:
 
 ```markdown
 # Task: Review the current authentication diff
@@ -28,7 +30,8 @@ detail to `/tmp/codex-auth-review-a1b2c3-output.md`.
 - Read affected source files in full and treat recorded decisions as context.
 
 ## Constraints and authority
-- Read-only review. Do not edit, commit, push, comment, or merge.
+- Read-only source review; the assigned output file is the only permitted write.
+  Do not edit source, commit, push, comment, or merge.
 
 ## Output
 Use headings for findings and return metadata pointing to the output file.

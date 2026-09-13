@@ -17,11 +17,11 @@ This repo manages skills for Claude Code (and compatible agents like Codex). It 
 
 These live in `skills/` and are symlinked into `~/.claude/skills/` and `~/.codex/skills/` by `install-local`:
 
-**Engineering workflow:** `architect`, `better-goal`, `better-review`, `pr-monitor`
+**Engineering workflow:** `better-goal`, `better-review`, `pr-monitor`
 
-**Utilities:** `codex-cli`, `gwsctx`, `claude-spawn`
+**Utilities:** `codex-cli`, `gwsctx`, `claude-spawn`, `desloppify`
 
-`pr-monitor` is Claude Code only — it hard-depends on the `Workflow` tool, `TaskList`/`TaskGet`, per-agent model/effort overrides, and the built-in `loop` skill. Its frontmatter gates other harnesses. Do not make it portable; reimplement against its `references/` instead.
+`pr-monitor` is Claude Code only: it requires `Workflow`, `TaskList`, and the built-in `loop` skill. Its workflow sets effort internally; it does not require `TaskGet` or separate model/effort overrides. Do not make it portable; reimplement against its `references/` instead.
 
 ## External skills
 
@@ -34,7 +34,8 @@ Goal commands are for sustained, outcome-oriented work where the agent should pr
 - Keep the objective explicit and stable. If new information changes the objective, say so and reframe it before continuing.
 - Prefer architectural risk reduction before demo momentum when the goal is exploratory or strategic; prefer the thinnest working vertical slice when the goal is implementation.
 - Maintain an auditable trail of decisions, tests, blockers, and known gaps so the user can inspect progress without reconstructing the session.
-- Do not claim goal completion from partial evidence. Separate fixture tests, scripted tests, live-provider tests, UI tests, live UI plus provider tests, and manual verification. For agent behavior parity, build the parity matrix around live UI plus live provider scenarios first and drive as many checks as practical through that path. Weaker tests are supporting evidence, not proof of user-facing parity, unless the user explicitly scopes the live path out; keep any missing live UI/provider coverage visible in the tracker and completion audit.
+- Match evidence to the stated outcome: diagnostic tests, retained artifacts, provider state, product/UI behavior, and deployment environments establish different claims. Keep required missing acceptance visible rather than relabeling a partial check as completion.
+- Give every delegated task its strategic goal, relevant parent judgment, and authority boundaries. Preserve the full work history in the event ledger and linked evidence so previous PRs and worktrees can be reconstructed.
 - When a user correction exposes a bad assumption, update the relevant lesson or tracker before moving on.
 - Stop and re-plan when the current path starts solving symptoms, drifting from the requested design, or accumulating unreviewed contract changes.
 - Mark a goal complete only when the stated objective is genuinely achieved and the remaining gaps are either closed or explicitly accepted by the user.

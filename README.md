@@ -1,6 +1,6 @@
 # agent-skills
 
-Skills for Claude Code and Codex that make AI-assisted development faster, more structured, and more reliable.
+Skills for Claude Code and Codex: durable goals, focused review, writing guidance, and concrete tool workflows.
 
 ## Quick Start
 
@@ -25,9 +25,8 @@ npx skills add -g <owner/repo>     # install globally across all agents
 
 | Skill | What it does |
 |---|---|
-| `architect` | Frames the root issue, desired outcome, system fit, and proof before routing into Building, Exploratory, or Debugging posture |
-| `better-goal` | Runs durable agent work through `~/.sdd` trackers, evidence ledgers, and completion audits |
-| `better-review` | Tests strategic viability first, then coordinates only the invariant-driven architecture, resilience, boundary, and evidence lanes the change needs |
+| `better-goal` | Coordinates work in `~/.sdd` with strategic context, a compact frontier model ladder, and reconstructible event/evidence history |
+| `better-review` | Reviews the intended outcome and concrete risks, loading specialized checks only where relevant |
 | `pr-monitor` | Babysits open authored PRs on a cadence: tracker-grounded review disposition, fixes, merge gate, and post-merge cleanup — **Claude Code only** |
 
 ### Utilities
@@ -36,11 +35,12 @@ npx skills add -g <owner/repo>     # install globally across all agents
 |---|---|
 | `codex-cli` | Delegates tasks to a headless OpenAI Codex agent for parallel or cross-model work |
 | `gwsctx` | Manages multiple Google Workspace CLI account contexts with explicit aliases |
-| `claude-spawn` | Spawns persistent, human-reachable Claude/Codex/shell sessions on a dedicated tmux server |
+| `claude-spawn` | Spawns persistent, human-reachable Claude/Codex/shell sessions on the default tmux server |
+| `desloppify` | Improves written and visual deliverables with clear prose and restrained presentation |
 
 ### Harness compatibility
 
-Most skills here work in any compatible harness. `pr-monitor` is the exception: it hard-depends on Claude Code's `Workflow` tool, `TaskList`/`TaskGet`, per-agent model/effort overrides, and the built-in `loop` skill, so its frontmatter tells other harnesses not to invoke it. Its `references/` files are harness-agnostic procedure if you want to reimplement against them.
+Most skills here work in any compatible harness. `pr-monitor` requires Claude Code's `Workflow` and `TaskList` tools plus the built-in `loop` skill. Its workflow sets effort internally; it does not require `TaskGet` or separate model/effort overrides. Other harnesses must not invoke it, but its `references/` files provide procedures for a separate implementation.
 
 ## Installing Individual Skills
 

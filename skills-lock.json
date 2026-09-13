@@ -271,15 +271,6 @@
       "installedAt": "2026-07-28T17:23:17.859Z",
       "updatedAt": "2026-08-02T05:27:29.227Z"
     },
-    "test-driven-development": {
-      "source": "obra/superpowers",
-      "sourceType": "github",
-      "sourceUrl": "https://github.com/obra/superpowers.git",
-      "skillPath": "skills/test-driven-development/SKILL.md",
-      "skillFolderHash": "a82cf8b413600c6bd7c4b482272d7990e9588cf1",
-      "installedAt": "2026-07-28T17:23:21.505Z",
-      "updatedAt": "2026-07-28T17:23:21.505Z"
-    },
     "visual-explainer": {
       "source": "nicobailon/visual-explainer",
       "sourceType": "github",

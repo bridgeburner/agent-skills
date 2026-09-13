@@ -1,4 +1,4 @@
 interface:
   display_name: "Better Goal"
-  short_description: "Track restart-safe work in ~/.sdd"
-  default_prompt: "Use $better-goal to create and execute restart-safe ~/.sdd tasks with explicit handoffs, evidence, and a completion audit."
+  short_description: "Coordinate goals with durable context and history"
+  default_prompt: "Use $better-goal to track this objective, give workers its strategic context, and preserve the full work and evidence history."

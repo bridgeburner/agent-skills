@@ -60,7 +60,7 @@ codex exec -C /path/to/repo \
   "Strategic goal: <larger outcome and why this task matters>. Objective: <bounded result>. Context: <paths and prior judgment>. Constraints: <allowed and prohibited actions>."
 ```
 
-For a durable or machine-consumed result, use collision-resistant names such as
+For staging a file-backed result, use collision-resistant names such as
 `/tmp/codex-<task-slug>-<short-id>-{prompt,schema,result,output,stderr}.*` and
 run without interactive stdin:
 
@@ -74,6 +74,11 @@ codex exec \
   </dev/null \
   2>/tmp/codex-<slug>-<id>-stderr.txt &
 ```
+
+Temporary files are staging, not durable history. Before accepting a recoverable
+handoff, copy the prompt, schema, result, detailed output, and relevant error logs
+to the assigned tracker evidence directory and use those retained paths in the
+accepted result. Alternatively, write directly to assigned durable paths.
 
 Do not add `--yolo` by habit. Use it only when the caller has explicitly
 authorized full permissions and the task requires them; otherwise preserve the

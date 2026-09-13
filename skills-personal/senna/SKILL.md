@@ -1,21 +1,9 @@
 ---
 name: senna
 description: >-
-  Push, pull, and sync files between vish's local Mac and "Senna" — his Apex
-  cloud dev VM — over Teleport SSH + rsync. Handles the Teleport quirk that the
-  only allowed principal is `apexhq`, with the real dev user being `vish`
-  reached via `sudo -iu vish`, and supports explicit bidirectional union sync
-  semantics for gitignored dev artifacts. Safe default: never overwrite existing
-  destination files without an explicit user request; if the user asks for
-  "overwrite on conflict", dry-run first, then perform a union merge that
-  overwrites changed destination files and never deletes extras.
-
-  Trigger when the user mentions "Senna" (the cloud dev VM), or asks to
-  push/pull/sync/copy/send/grab/fetch files to or from senna, run a command on
-  senna, or ssh into senna. Also trigger on phrases like "move .env to senna",
-  "bring back .tv from senna", "sync .sdd to senna", or any operational task
-  involving the senna host. Do NOT trigger for generic SSH/rsync questions
-  unrelated to Senna, or for setting up Teleport itself.
+  Access Senna, vish's Apex cloud dev VM, run remote commands, and transfer or
+  union-sync files through Teleport SSH and rsync. Use for operations involving
+  the Senna host, not generic SSH questions or Teleport setup.
 ---
 
 # Senna — Apex cloud dev VM transfer & access helper

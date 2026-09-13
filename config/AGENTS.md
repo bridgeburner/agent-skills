@@ -1,140 +1,42 @@
-# Core Principles
-- **Simplicity First**: Make every change as simple as possible. Impact minimal code.
-- **No Laziness**: Find root causes. No temporary fixes. Senior developer standards.
-- **Minimal Impact**: Changes should only touch what's necessary. Avoid introducing bugs.
-- **Check Early, Check Small**: After each meaningful edit, run the smallest relevant oracle. Order: format → lint → typecheck → unit tests → integration. Never batch up changes and check everything at the end.
+# Working principles
+
+- Prefer the simplest change that achieves the user's outcome; reuse existing mechanisms and avoid unrelated work.
+- Use a tracer bullet when integration is uncertain: prove the thinnest complete path from real input to the final observable result before widening it.
+- Investigate the root cause and consider a simpler viable approach when the evidence challenges the proposed solution.
+- Check changes early with the smallest relevant diagnostic. Keep permanent tests focused on observable behavior and credible regressions; use test-first work when it clarifies an interface or reproduces a defect, without requiring a test per function or deleting code to enforce an order.
+- Complete authorized work. Make routine reversible decisions independently; ask only when missing information changes the outcome or new authority is needed.
+
+## Skills and delegation
+
+- Use better-goal for work that needs durable coordination or recovery, and better-review for requested reviews or consequential independent judgment.
+- Use skill-creator for skill changes. Load other skills when their specific knowledge or tools help the task.
+- Delegate useful independent work while retaining responsibility for the final outcome. Every worker receives the broader goal/sub-goal, relevant parent judgment and user decisions, and its authorized scope; a context-free task title is insufficient.
+- Prefer an inherited context when it materially improves judgment and the harness supports it; otherwise provide an explicit handoff. Pass required artifacts and live values explicitly, and never claim a context fork clones mutable runtime state or changes the selected model.
+
+## Evidence and continuity
+
+- Define acceptance at the boundary of the claim. For end-to-end product behavior, exercise the real entry point and relevant persisted inputs/consumers through the terminal result, including the failure that must remain absent.
+- Distinguish diagnostic tests, artifacts, live provider/product paths, and environment-specific evidence. Do not claim a broader outcome than was exercised; required missing or failed acceptance remains open unless the user accepts it.
+- Preserve user decisions and reconstructible work history in the active tracker and evidence. Update the plan when evidence invalidates it.
+- After a user correction that reveals a reusable failure pattern, record a specific lesson in `~/.agents/lessons/<repo-name>.md`.
+- `~/.sdd/<project-pillar>/<worktree-name>/` and `.tv/` are local planning artifacts; do not commit them or remove `.tv/` from `.gitignore`.
 
 ## Product naming
-- Use `Morpheos` in prose and `morpheos` in identifiers, paths, commands, and other machine-oriented names.
-- Never use `Morpheus` or `morpheus` when naming the Morpheos product. Check generated prose and identifiers for this spelling before handoff.
-- Preserve literal external identities, including third-party names, package names, model names, URLs, APIs, file paths, and historical evidence; do not blindly rename strings that use another spelling.
 
-# Workflow Routing
+Use **Morpheos** in prose and `morpheos` in identifiers. Preserve literal external names, paths, APIs, and historical evidence rather than blindly renaming them.
 
-Scale planning, durable tracking, delegation, specialized review, and proof
-independently. Complexity in one dimension does not automatically require
-ceremony in all the others.
+## Linear
 
-- Use `$architect` for non-trivial engineering work to choose Building,
-  Exploratory, or Debugging/Triage posture and the smallest proof that matches
-  the claim.
-- Use `$better-goal` when restart safety, coordination, durable evidence, or a
-  completion audit materially protects the outcome. Its protocol owns tracker
-  structure and delegation leases; a flat step count alone is not decisive.
-- Use `$better-review` when the user requests review or when a consequential
-  design or semantic risk warrants independent review. That skill owns review
-  lanes and synthesis; do not add a second generic critic loop around it.
-- Use `$skill-creator` for skill creation or changes. It owns skill-specific
-  evaluation and forward-testing guidance.
-- If an owning skill is unavailable, apply its core principle with the least
-  local machinery needed; do not reproduce the entire skill in this file.
+Before any Linear write, show the exact proposed content and obtain explicit confirmation. This includes comments, assignments, status/field changes, issues, and relations. Reads require no confirmation.
 
-## Top-level orchestration and delegation
+## Commits and PRs
 
-- For a meaningful multi-step goal, remain the top-level orchestrator: preserve
-  user intent and accumulated context, choose the decomposition, delegate useful
-  bounded work, integrate results, and own final proof and completion.
-- Actively delegate where parallelism, specialized capability, independent
-  signal, or context isolation improves the outcome. Do not manufacture lanes
-  whose coordination cost exceeds their value. The same rule applies recursively
-  when a non-leaf child becomes an orchestrator for its bounded subgoal.
-- Choose child context deliberately. Use fresh context for independent or leaf
-  work. Use a truthful context fork when accumulated parent context materially
-  improves nuanced judgment or autonomous discrimination and the runtime really
-  supports inheritance. Otherwise pass an explicit static handoff and do not call
-  it a fork.
-- A task with an assigned model or reasoning effort is intended to be
-  self-contained and independently executable, but that assignment is independent
-  of context mode. Use a context fork when parent judgment is a material input
-  even if the task has a model assignment.
-- Before dispatch, verify that the selected model/reasoning and context controls
-  are jointly expressible by the active harness. Never silently weaken or
-  mislabel either one. Preserve the requirement that matters to the task and
-  record the deviation; ask when both are user-required constraints.
-- Never imply that a context fork also clones mutable REPL, interpreter,
-  application, tool authority, or runtime state unless the runtime explicitly
-  guarantees it. A fork inherits only the context the runtime actually serializes,
-  not hidden reasoning; pass critical conclusions, live values, and artifacts as
-  explicit task inputs.
-- Follow the owning skill or repository instructions for audit artifacts. When a
-  temporary file is needed, use a collision-safe path such as
-  `/tmp/{task-slug}-{short-uid}.{ext}`.
+- Keep commits and PRs about the changes; omit references to agentic tools.
+- Read the intended base's PR template and applicable instructions. Preserve required sections and literal labels, answer each field, and explain why the change is needed, what changed, and the required outcome.
+- Check the task/tracker and available hosting-service ticket links or bot state. Use the repository's exact association/closing syntax; distinguish final work from partial work. If that distinction is unresolved, ask rather than guessing. Direct Linear writes still need confirmation.
+- Keep claims within the evidence. Distinguish existing behavior removed by the diff from new complexity avoided; do not claim one as the other.
+- After writing a PR, read its live body back and check it against the template and ticket requirement. Include a manual testing plan only when required.
 
-## Corrections and verification
+## Python
 
-- Record a lesson in `~/.agents/lessons/<repo-name>.md` after a user correction
-  only when it reveals a reusable failure pattern. Keep it specific enough to
-  prevent recurrence and general enough to apply again.
-- After each meaningful edit, diff behavior when relevant and run the smallest
-  useful development diagnostic.
-- Only a named live-local product-path assertion validates behavioral correctness
-  or completeness for a feature, bug fix, integration, workflow, deployment,
-  user-visible behavior, or agent behavior. Exercise the real local product
-  entry point, services, persisted input, every semantic consumer, and terminal
-  result. Assert both the expected positive behavior and each relevant negative
-  sink or absence, including drop, omission, quarantine, and wrong attribution.
-- Format, lint, type, unit, integration, CI, VM, replay, schema, artifact, and
-  deployment checks never validate correctness or completeness; they are
-  development diagnostics only. A missing, failed, or empty live-local assertion
-  blocks readiness, and cloud or production evidence cannot substitute. If the
-  user explicitly changes the acceptance bar, record the exception and do not
-  call the result live-local validated.
-- If work diverges from its assumptions or a check invalidates the current plan,
-  stop, update the plan, and pursue the root cause rather than accumulating fixes.
-
-## Autonomous Bug Fixing
-- When given a bug report: fix it autonomously. Find the logs, errors, failing tests — resolve them without asking for hand-holding.
-- Fix failing CI tests without being told how.
-
-## Spec-Based Development
-- `~/.sdd/<project-pillar>/<worktree-name>/` and `.tv/` directories are local planning artifacts.
-- Do not commit files from these dirs or remove `.tv/` from `.gitignore`; `.sdd` trackers live outside repos by default.
-
-# Linear
-- ALWAYS confirm with the user before ANY write to Linear — comments, assignments, status/field/description changes, new issues, relations. Show the exact content and get an explicit yes first. Reads need no confirmation. Writes are outward-facing and post under the user's own account/name.
-
-# Commits and PRs
-When creating or updating commits or pull requests:
-- Focus only on the changes being committed. Do not include references to
-  agentic tools such as Claude Code or Codex in commit messages or PR bodies.
-- Before drafting a PR body, read the repository's PR template and applicable
-  repository instructions from the intended current base. Preserve every
-  required section and exact literal label, and answer every required field.
-  Repository requirements override the generic preferences below.
-- Write in plain English. State **Why** the change is needed and the
-  user/operational harm being fixed, **What** behavior changed, and the
-  **Required outcome**, including the evidence that would establish it. Do not
-  hide the reason behind implementation terminology.
-- When a template asks what was removed or avoided, distinguish them
-  explicitly: **Removed** means existing code, state, dependency, or
-  operational responsibility deleted by this diff (`None` is valid); **Avoided**
-  means a new concept deliberately not introduced. Never claim an avoidance as
-  a removal.
-- Before drafting, check the task, durable tracker, user context, and available
-  hosting-service link or bot state for an associated ticket. If a ticket is
-  found, use the repository's exact association or closing syntax. Distinguish
-  final work (`Fixes ...`) from partial work (`Part of ...`) according to that
-  repository's rules. A bot link or comment proves association, not closing
-  semantics. Never claim there is no ticket without checking linked-app or bot
-  state. If final-versus-partial is not established by the task, tracker, or
-  user, ask before choosing it. Direct Linear writes still require the
-  confirmation rule above.
-- Keep retention, leakage, security, deployment, product-behavior, absence,
-  and other claims at their evidence boundary. Name the exact data classes,
-  sinks, environment, and proof tier checked. Do not turn "not observed",
-  "not added by this diff", or a lower-tier test into "never", "impossible",
-  or live-product proof.
-- After creating or editing a PR, read the live current body back from the
-  hosting service and compare it with the current base's template and ticket
-  requirement. Do not declare the body compliant from draft text, a previous
-  read, or memory.
-- Do not add a manual testing plan unless the repository template or
-  instructions require one. When they do, complete it exactly as requested.
-
-# Python
-- Put imports at the top of the file unless only used in a rarely accessed code path
-- Use ruff, ty and ensure all checks pass before committing
-- If accessing a private method (prefixed with `_`) from outside its class, this indicates a design issue:
-   - The method should be promoted to the public interface (add to base class/protocol)
-   - Or the functionality should be exposed through a different public method
-   - Consult the user when the best path forward is unclear
+Keep imports at the top except rarely used paths. Follow repository tooling; use ruff and ty where configured and complete required checks before committing. Prefer public interfaces over cross-class private-method calls.

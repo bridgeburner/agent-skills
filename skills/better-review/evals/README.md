@@ -1,32 +1,26 @@
 # Evaluation intent
 
 `evals.json` contains qualitative review prompts, not a published benchmark.
-Cases 1-3 cover the skill's strategic contract, adaptive risk lanes, and
-synthesis behavior. Case 4 is a targeted positive regression guard for a scoped
-feature whose implementation mutates a process singleton; case 5 is the
-genuinely request-local negative control. Case 8 guards the end-to-end
-capability failure that motivated the strategic-review revision: separately
-valid environment permissions that cannot complete one cross-environment
-operation. Case 9 guards prior-finding retention, duplicate semantic
-authorities, ordering namespaces, and semantic proof beyond structural artifact
-validity. Case 10 guards the live-local-only validation bar and ensures failed
-or empty required checks cannot be treated as approval. Case 11 guards adaptive
-worker scaling: lane coverage stays complete while one manageable review may
-use one agent and a larger, conflict-prone review may justify two to four.
-Case 12 guards proof reachability for exact configuration values, route-level
-machine identity confinement, coupled identity documentation, and squash-safe
-stacked-PR handoff.
+The cases check whether the skill preserves strategic context, chooses review
+depth proportionately, finds concrete source-backed failures, and matches
+evidence to the claim.
 
-Do not claim that case 4 discriminates the hardened skill from the prior skill
-without repeated matched runs. During the August 2026 hardening pass, one
-matched prior/current probe found that both versions detected the fixture's
-ambient visibility, foreign-consumer, teardown-order, and contract-narrowing
-risks. The hardened version added stronger final-boundary proof, but that single
-probe is not benchmark evidence for the central regression.
+Cases 4 and 5 are the ambient-effect positive and request-local control. Cases
+6 and 9 exercise semantic authorities, retained evidence, ordering namespaces,
+and prior-finding continuity. Case 8 checks an end-to-end release failure that
+separate environment permissions cannot solve. Case 10 checks that a failed or
+empty required product-path result remains missing evidence. Case 11 checks
+that independent reviewers are used when context or consequence warrants them,
+without equating concern count with worker count. Case 12 checks exact
+configuration values, route-level machine identity confinement, coupled
+identity documentation, and squash-safe stacked-PR handling.
 
-Retain case 4 as a durable coverage prompt: future runs should fail it if a
-review omits any of the listed ambient-effect expectations. Treat it as a
-discriminating benchmark only after repeated matched runs show that the prior
-configuration misses at least one core ambient expectation while the hardened
-configuration consistently finds it. Report variance and keep case 5 as the
-specificity control.
+The prompts should judge outcomes and evidence, not the presence of a named
+section, lane, matrix, tracker, or report ceremony. A triggered reference may
+still require detailed analysis; an ordinary refactor should not receive
+specialized findings merely because the reference exists.
+
+These cases are coverage guards, not proof that the revised wording improves
+model performance. Establish an improvement claim with repeated matched runs,
+using the same tasks and model settings, and report both quality and cost or
+latency variance.

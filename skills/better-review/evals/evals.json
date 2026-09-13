@@ -3,11 +3,11 @@
   "evals": [
     {
       "id": 1,
-      "prompt": "Review this small PR that adds a second cache and a retry loop to an existing request pipeline. Use the aggressive-simplification review skill. Do not edit files. Return independent lane reports and a consolidated finding ledger.",
-      "expected_output": "The review first establishes the root issue, desired outcome, end-to-end capability, simpler and more coherent alternatives, and relevant platform failure map. It then selects the applicable architecture, resilience, boundaries, and evidence lanes; identifies duplicate mechanism/authority risks; and returns source-backed findings with invariant, failure mode, remedy, and proof fields.",
+      "prompt": "Review this small PR that adds a second cache and a retry loop to an existing request pipeline. Use better-review. Do not edit files. Return an outcome-focused review and concise source-backed findings; use an independent reviewer only if it adds useful signal.",
+      "expected_output": "The review states the root issue, desired outcome, end-to-end capability, simpler viable option, and evidence limits. It chooses only the review questions triggered by the change, identifies duplicate mechanism/authority risks, and returns concrete findings with impact, remedy, and proof needed.",
       "files": [],
       "expectations": [
-        "The strategic viability pass precedes detailed lane findings, and lane selection is justified.",
+        "The review states the root issue and outcome before detailed findings and chooses a proportionate review focus.",
         "The report uses shared invariants rather than only implementation-specific opinions.",
         "Findings include concrete evidence, impact, minimal remedy, and proof needed.",
         "Duplicate findings are merged during synthesis."
@@ -15,8 +15,8 @@
     },
     {
       "id": 2,
-      "prompt": "Audit a stacked PR whose branch may be based on an outdated parent. Use the aggressive-simplification review skill and remain read-only. Explain what must be established before reviewing the delta, then review the design for hidden authorities, invalid states, crash gaps, contract mismatches, and proof gaps.",
-      "expected_output": "The response treats stack ancestry as a review boundary, avoids auditing a stale diff as final truth, establishes strategic viability, and reports findings through every applicable review lens with explicit uncertainty where evidence is missing.",
+      "prompt": "Audit a stacked PR whose branch may be based on an outdated parent. Use better-review and remain read-only. Explain what must be established before reviewing the delta, then review the design for hidden authorities, invalid states, crash gaps, contract mismatches, and proof gaps.",
+      "expected_output": "The response treats stack ancestry as a review boundary, avoids auditing a stale diff as final truth, states the required outcome and relevant constraints, and reports only applicable source-backed findings with explicit uncertainty where evidence is missing.",
       "files": [],
       "expectations": [
         "The review boundary and parent ancestry are handled before substantive findings.",
@@ -26,20 +26,20 @@
     },
     {
       "id": 3,
-      "prompt": "Refine a codebase after an initial review found several direct issues. Use the aggressive-simplification review skill. First consolidate direct and proactive findings, then recommend which fixes deserve red tests and which concerns are false positives or accepted limitations.",
+      "prompt": "Refine a codebase after an initial review found several direct issues. Use better-review. Consolidate the findings, then recommend the smallest root-cause fixes and proof; identify false positives or accepted limitations.",
       "expected_output": "The response deduplicates by root invariant, prioritizes fixes by impact and confidence, prefers deletion or reuse over new machinery, and preserves explicit accepted limitations.",
       "files": [],
       "expectations": [
         "Direct, proactive, integrated, false-positive, and accepted findings are distinguished.",
-        "The synthesis identifies cross-lane interactions.",
-        "Refinement recommendations are framed as root-cause changes with proof requirements.",
+        "The synthesis identifies cross-concern interactions.",
+        "Refinement recommendations are framed as root-cause changes with proportionate proof requirements.",
         "Every prior finding is re-found, source-disproved, explicitly user-accepted, or retained as a blocker; no item disappears during consolidation."
       ]
     },
     {
       "id": 4,
       "prompt": "Review the attached request-instrumentation change using better-review. The author says the implementation is scoped to the supported request executor, and existing tests pass. Remain read-only. Recommend refinements and state the proof required before calling the final revision complete.",
-      "expected_output": "The review discovers the hidden process-wide semantic effect despite correct feature authority; analyzes visibility, lifetime, ownership-aware cleanup, teardown order, concurrency, and foreign consumers; refuses to dismiss observable collateral semantics by narrowing the intended API contract; and requires a fresh strategic contract plus every applicable lane on one frozen final content identity.",
+      "expected_output": "The review discovers the hidden process-wide semantic effect despite correct feature authority; analyzes visibility, lifetime, ownership-aware cleanup, teardown order, concurrency, and foreign consumers; refuses to dismiss observable collateral semantics by narrowing the intended API contract; and recommends the smallest proof or refinement needed for the final claim.",
       "files": [
         "evals/fixtures/ambient-singleton.md"
       ],
@@ -48,31 +48,31 @@
         "The review traces the mutation across its real visibility domain, including foreign consumers outside the intended call path.",
         "The review identifies stale restoration under out-of-order teardown, not only missing cleanup or locking.",
         "Contract narrowing does not close an observable process-wide side effect.",
-        "Completion requires the strategic contract and every applicable lane to rerun from scratch on one frozen final content identity before fresh synthesis."
+        "The review asks for evidence tied to the changed ambient behavior and does not require a universal full rerun when it adds no signal."
       ]
     },
     {
       "id": 5,
       "prompt": "Review the attached request-local wrapper using better-review. Remain read-only and distinguish demonstrated risks from unsupported concerns.",
-      "expected_output": "The review recognizes that each request owns its wrapper and does not invent a process-wide mutation or foreign-consumer compatibility failure without evidence, while still applying the mandatory system-fit and evidence lanes and only the additional risk lanes justified by the fixture.",
+      "expected_output": "The review recognizes that each request owns its wrapper and does not invent a process-wide mutation or foreign-consumer compatibility failure without evidence, while applying only the review questions justified by the fixture.",
       "files": [
         "evals/fixtures/request-local-control.md"
       ],
       "expectations": [
         "The review does not classify the request-owned wrapper as a process-wide mutation.",
         "The review does not invent foreign consumers or teardown races absent from the fixture.",
-        "Any findings remain source-backed and use the strategic synthesis contract plus the justified selected lanes."
+        "Any findings remain source-backed and retain the goal context, boundary, and evidence limits needed to decide them."
       ]
     },
     {
       "id": 6,
-      "prompt": "Review the admitted-state fixture with the aggressive-simplification review skill. Freeze the product outcome and forbidden outcomes before delegating, then return independent lane reports and a consolidated ledger. Do not edit files and do not review the excluded multi-PR migration problem.",
+      "prompt": "Review the admitted-state fixture with better-review. Preserve the product outcome and relevant context while reviewing the changed semantic paths. Do not edit files and do not review the excluded multi-PR migration problem.",
       "expected_output": "The review traces the newly accepted stored sentinel through the first production consumer; enumerates unknown-only and known-plus-unknown states; reports the tenant-batch failure as a P1 contradiction rather than an accepted scope limit; audits mixed-version user-visible receipt behavior without inventing unsupported winners; recursively inventories retained fields; reconciles the PR body/template/ticket claims; and distinguishes diff-introduced behavior from a pre-existing claim contradiction.",
       "files": [
         "evals/fixtures/admitted-state-review.md"
       ],
       "expectations": [
-        "The review contract states the observable product outcome, the forbidden tenant-batch failure, the semantic delta, changed representations, downstream consumers, PR claims, and required repository artifacts.",
+        "The review states the observable product outcome, the forbidden tenant-batch failure, the semantic delta, changed representations, downstream consumers, PR claims, and required repository artifacts.",
         "A state matrix covers the sentinel alone and combined with a recognized state, including edge result, stored form, consumer result, failure radius, and signal.",
         "The downstream closed-enum failure is P1 with goal impact contradicts, tenant/facility failure radius, and integration-tracer proof needed; it is not accepted merely because the loader is downstream.",
         "The generic unknown count is distinguished from a collision-specific signal, but missing collision-specific reporting is an open question or note unless a concrete requirement or harm is proven.",
@@ -80,19 +80,19 @@
         "The recursively retained source field is reported as a retention/documentation mismatch with its bound and access boundary preserved.",
         "The untouched legacy raw field is classified as a pre-existing claim contradiction, not a regression introduced by the PR.",
         "The combined Removed/avoided field and missing required closing syntax for final linked TASK-482 are process findings, while the negative durable-storage claim is narrowed or marked unproven.",
-        "Every finding includes the required lane, location, evidence kind/detail, confidence, claim, goal impact, failure radius, ownership, and proof-tier fields using only schema-defined enum values; documentation artifacts use proof tier source.",
-        "The changed-decision trace enumerates every loader, re-reader, duplicate resolver, negative sink, API/UI, and terminal consumer, and readiness requires the named live-local positive and negative assertions."
+        "Material findings identify their location, evidence, impact, ownership, and the proof needed; reviewers may use prose or the optional record format.",
+        "The changed-decision trace enumerates every loader, re-reader, duplicate resolver, negative sink, API/UI, and terminal consumer, and states the smallest terminal positive and negative evidence needed."
       ]
     },
     {
       "id": 7,
-      "prompt": "Review the ordinary-refactor fixture with the aggressive-simplification review skill. Remain read-only and report only source-backed defects or proof gaps.",
-      "expected_output": "The review freezes a compact contract, recognizes that no admission, representation, compatibility, retention, or ticket trigger applies, and does not emit state, rollout, retention, or ticket machinery merely because those gates exist in the skill.",
+      "prompt": "Review the ordinary-refactor fixture with better-review. Remain read-only and report only source-backed defects or proof gaps.",
+      "expected_output": "The review states the relevant outcome and boundary as needed, recognizes that no admission, representation, compatibility, retention, or ticket trigger applies, and does not emit state, rollout, retention, or ticket machinery merely because those checks exist in the references.",
       "files": [
         "evals/fixtures/ordinary-refactor.md"
       ],
       "expectations": [
-        "The review contract records no semantic delta, changed representation, compatibility branch, retained opaque object, or required ticket artifact.",
+        "The review records no semantic delta, changed representation, compatibility branch, retained opaque object, or required ticket artifact.",
         "No admitted-state matrix, rolling-version matrix, retained-field finding, or ticket/template finding is produced for the non-triggering fixture.",
         "The review reports no defect unless it demonstrates a concrete source-backed failure or proof gap; absence of findings is an acceptable result.",
         "The response remains read-only and does not add speculative architecture or process requirements."
@@ -101,22 +101,22 @@
     {
       "id": 8,
       "prompt": "Review an infrastructure PR intended to enable one-command promotion of a container image from cloud development to production. The PR grants a development service account read access to the development registry and a separate production service account write access to the production registry. Each Terraform environment validates and focused IAM tests pass. The production registry is shared with another service. Remain read-only and decide whether this PR is ready.",
-      "expected_output": "The review identifies the root issue as completing one promotion and the desired outcome as the production consumer running the promoted digest. It traces the actual workflow and identity handoff across source and destination, concludes that isolated per-environment grants do not prove any actor can perform the copy, and treats this as a primary-goal contradiction or unproven blocker. It compares a single explicit promotion authority or explicit two-step handoff with the proposal, examines the shared repository blast radius, maps local/CI/cloud-dev/production failure modes, and requires an end-to-end release tracer.",
+      "expected_output": "The review identifies the root issue as completing one promotion and the desired outcome as the production consumer running the promoted digest. It traces the actual workflow and identity handoff across source and destination, concludes that isolated per-environment grants do not prove any actor can perform the copy, and treats this as a primary-goal contradiction or unproven blocker. It compares the smallest coherent authority path with the proposal, examines the shared repository blast radius, and names the evidence needed at the release boundary.",
       "files": [],
       "expectations": [
-        "The strategic contract states the root issue and desired outcome without defining either as adding IAM resources.",
+        "The review brief states the root issue and desired outcome without defining either as adding IAM resources.",
         "The capability path follows one logical operation through workflow OIDC identity, source read, cross-environment handoff, destination write, and production digest consumption.",
         "Separate valid development and production grants are not treated as evidence that the promotion operation is possible.",
         "The review compares the proposal with the simplest viable authority model and the most coherent canonical release path.",
         "The shared production repository and its other service are included in the authority and failure-radius analysis.",
-        "The failure map distinguishes relevant CI, cloud-development, and production behavior and explains the role or irrelevance of local execution.",
-        "Focused Terraform tests remain supporting evidence; readiness requires a tracer of the final release outcome."
+        "The evidence discussion distinguishes relevant CI, cloud-development, and production behavior and explains the role or irrelevance of local execution.",
+        "Focused Terraform tests remain supporting evidence; the final release claim needs evidence at the actual promotion and consumption boundary."
       ]
     },
     {
       "id": 9,
       "prompt": "Review the multi-resolver retained-evidence fixture with better-review. Preserve every prior finding, trace each semantic authority and consumer, and decide readiness. Remain read-only.",
-      "expected_output": "The review retains the prior downstream-loader finding; enumerates the first resolver, persisted ruling, second resolver, structural validator, negative sinks, and terminal observer; rejects provenance text as authorization and batch-local ordinal comparison across batches; and blocks readiness until one canonical ruling passes the named live-local positive and negative assertions.",
+      "expected_output": "The review retains the prior downstream-loader finding; enumerates the first resolver, persisted ruling, second resolver, structural validator, negative sinks, and terminal observer; rejects provenance text as authorization and batch-local ordinal comparison across batches; and identifies the missing terminal evidence for one canonical ruling and its positive and negative outcomes.",
       "files": [
         "evals/fixtures/multi-resolver-retained-evidence.md"
       ],
@@ -126,7 +126,7 @@
         "Provenance remains descriptive and cannot authorize accept, reject, quarantine, or fail-open behavior.",
         "The batch-local ordinal is not used for cross-batch chronology without a cross-scope key or proven single-batch invariant.",
         "Schema or artifact success is not accepted as correctness or completeness proof.",
-        "The named live-local assertion covers the positive terminal record and drop, omission, quarantine, and wrong-attribution sinks."
+        "The review names the terminal evidence needed for the positive record and drop, omission, quarantine, and wrong-attribution sinks."
       ]
     },
     {
@@ -145,18 +145,17 @@
     },
     {
       "id": 11,
-      "prompt": "Use better-review on both cases in the adaptive-delegation-scale fixture. Preserve all selected risk lanes and the strategic questions, but choose the smallest worker arrangement that gives the review useful independent signal. Remain read-only.",
-      "expected_output": "The review separates lane selection from worker count. It chooses one agent with distinct lane sections for the small all-four-risk case, and justifies sharding the large conflict-prone case across two to four agents with explicit assignments and parent synthesis. It does not equate four lanes with four agents or reduce coverage to avoid delegation.",
+      "prompt": "Use better-review on both cases in the adaptive-delegation-scale fixture. Choose the smallest review arrangement that covers the concerns triggered by each case and gives useful independent signal where needed. Remain read-only.",
+      "expected_output": "The review chooses one focused reviewer for the small case and justifies two to four independent reviewers for the large conflict-prone case when context isolation, parallel exploration, or failure cost warrants it. It covers the concerns triggered by each case without equating concern count with worker count, and preserves parent synthesis.",
       "files": [
         "evals/fixtures/adaptive-delegation-scale.md"
       ],
       "expectations": [
-        "All four risk lanes remain selected for both cases because the fixture triggers all four risk classes.",
-        "The small case uses one review agent or explicitly explains why the parent is the single reviewing agent, with distinct lane sections and synthesis.",
+        "The small case uses one review agent or explicitly explains why the parent is the single reviewing agent, with the triggered concerns covered and a concise synthesis.",
         "The large case explains why two to four agents add useful context isolation, parallel exploration, conflict-risk reduction, or failure-cost reduction.",
-        "Lane-to-agent assignments and the worker-count rationale are recorded for the sharded case.",
-        "The review does not require one worker per lane and does not manufacture extra workers merely to mirror lane count.",
-        "The strategic contract, final synthesis, and complete lane coverage remain mandatory in both cases."
+        "Focus-to-agent assignments and the worker-count rationale are recorded for the sharded case.",
+        "The review does not require one worker per concern and does not manufacture extra workers merely to mirror concern count.",
+        "The goal context, final synthesis, and evidence limits remain visible in both cases without a fixed lane or report ceremony."
       ]
     },
     {
