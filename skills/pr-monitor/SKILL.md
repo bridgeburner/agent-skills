@@ -1,440 +1,166 @@
 ---
 name: pr-monitor
-description: "Claude Code only — needs the `Workflow` tool, `TaskList`/`TaskGet`, per-agent model/effort overrides, and the built-in `loop` skill. Do not invoke from Codex or other harnesses; use their native PR review facility. In Claude Code, runs an autonomous tracker-grounded babysitting loop over open authored PRs the user has explicitly admitted to its registry — it never adopts the open-PR list on its own, and a PR with no known worktree mapping gets a mapping request first. Once admitted it polls review activity and CI on a cadence, disposes each reviewer finding as fix / pushback / insufficient-context grounded in `~/.sdd` trackers, implements and pushes accepted fixes, gates and executes merges, and runs post-merge worktree/branch/tracker cleanup. Trigger on /pr-monitor, 'monitor my PRs', 'babysit my open PRs', 'watch for new review comments', 'keep my PRs moving', or when paired with /loop. Do NOT trigger for a one-off review of a single PR (use /review or /code-review) or for generic gh CLI questions."
+description: "Claude Code only. Use with `/pr-monitor` or `/loop` when the user wants an autonomous cadence for their admitted open PRs: review activity, CI, fixes, merge gating, and post-merge cleanup. The registry is an explicit allowlist, and an unknown PR or worktree mapping needs the user's answer. Do not trigger for a one-off review or generic `gh` help."
 ---
 
-# pr-monitor — Autonomous Tracker-Grounded PR Babysitting
+# pr-monitor
 
-## Harness requirements
+This skill routes a Claude Code tick over PRs the user has admitted to a
+tracker-backed registry. It coordinates review disposition, merge gating, and
+cleanup. The detailed review rubric and destructive merge checklist are loaded
+only when their branches are reached:
 
-Claude Code only. Hard dependencies, none of which have portable equivalents:
+- [references/disposition.md](references/disposition.md) for review findings.
+- [references/merge-cleanup.md](references/merge-cleanup.md) for merge and cleanup.
 
-| Dependency | Used for |
-|---|---|
-| `Workflow` tool | Per-PR disposition fan-out (`workflows/pr-disposition.js`) |
-| `TaskList` / `TaskGet` | Confirming whether a PR already has a workflow in flight |
-| Per-agent `model` / `effort` overrides | Escalating reasoning only for contested pushback |
-| Built-in `loop` skill | The 15-minute cadence |
+## Harness and invocation
 
-If the active harness is not Claude Code, stop and say so. Do not emulate the loop with
-a shell `while` loop or nested agent invocations — the idempotency guarantee in this
-skill comes from `TaskList` being authoritative about in-flight work, and an emulation
-without it will double-post comments on other people's PRs.
+Claude Code is required. The driver depends on its `Workflow` and `TaskList`
+tools plus the built-in `loop` skill. The workflow script sets its own internal
+effort values; it does not require `TaskGet` or a separate per-agent model or
+effort override. If another harness is active, stop. Do not emulate this with a
+shell loop or nested agents; `TaskList` is the in-flight idempotency check.
 
-`references/disposition.md` and `references/merge-cleanup.md` are harness-agnostic
-procedure. Another harness may reimplement against them, but must not load this
-`SKILL.md` as its driver.
-
-## How to run it
-
-```
+```text
 /loop 15m /pr-monitor
 ```
 
-The loop is deliberately in-session and mortal — it dies when the session does. That is
-the right trade: the merge gate needs a human approval regardless (see *Approval
-dismissal* below), so an always-on cron monitor would buy nothing and would lose the
-cross-tick memory this design depends on.
+Run `/pr-monitor` once for a single tick. Optional arguments:
 
-One-shot `/pr-monitor` (no loop) runs a single tick. Use it to inspect state without
-committing to a cadence.
-
-### Arguments
-
-Passed through `/pr-monitor <args>`, all optional:
-
-- `--repo <owner/name>` — default: the repo of the current working directory.
-- `--pillar <name>` — `~/.sdd` pillar for trackers. Default: inferred by
-  `better-goal`'s `scripts/sdd_path.py`.
-- `--report-only` — observe and report only. No commit, push, comment, merge, auto-merge
-  arming, worktree removal, branch deletion, tracker archiving, or `TaskStop`. It covers the
-  cleanup path too, which is reachable without passing through the merge gate.
-- `--pr <n>[,<n>...]` — restrict the tick to specific PRs. This narrows what is monitored;
-  it does not admit anything. An unadmitted PR named here still gets a mapping request
-  rather than action.
-
-## The state model
-
-This is the part that makes the rest simple. Two tiers, and the split is deliberate:
-
-**In context (mine, cross-tick, mortal).** Last tick's head SHAs per PR, which findings
-I disposed of and how, what I pushed back on and why, which PRs I have already reported
-as quiet. This replaces a persisted `(pr, review_id, head_sha)` dedup index. Reasoning
-beats hashing here: a hash re-triages when a reviewer merely edits a comment, or when
-the head moves for an unrelated reason and every thread re-renders as new.
-
-**Durable (`~/.sdd`, survives everything).** Only two things:
-
-1. The **PR registry** in the parent tracker — the PR → worktree → child-tracker map.
-   This is an **allowlist, not a cache**: a PR absent from it is not monitored at all.
-2. An **append-only record of outward-facing actions already taken** — comments posted,
-   branches pushed, merges executed — in the child tracker's `events.jsonl`.
-
-Tier 2 exists precisely because context is mortal. Forgetting "I already posted this
-pushback" means posting it twice on someone else's PR. Everything else can be re-derived
-from the provider on the next tick, so do not persist it.
-
-## Trackers
-
-**Parent (`~/.sdd/<pillar>/pr-monitor/`).** Owns cross-PR state. Note this deliberately
-breaks `better-goal`'s `~/.sdd/<pillar>/<worktree-name>/` convention: the PR monitor has
-no worktree of its own. Do not "fix" this by relocating it.
-
-`tasks.md` carries the registry as its top table:
-
-| PR | Title | Head SHA | Branch | Worktree | Child tracker | Status | Incomplete | Armed SHA |
-|---|---|---|---|---|---|---|---|---|
-
-`Incomplete` is the count of consecutive incomplete cycles, and it must live **here** rather
-than in context — a counter that resets on compaction gives either silent infinite retry (a
-full agent fleet every 15 minutes) or a PR retired on strike one. Reset it to 0 on any complete
-cycle. `Armed SHA` records the head that auto-merge was armed against, so head drift can be
-detected later.
-
-`Status` is one of `active`, `drift` (an admitted PR whose worktree guard failed, whose mapping
-became ambiguous, or which exhausted its retry budget — observed but never edited),
-`awaiting-approval` (fixes pushed, auto-merge armed), `archived`. A PR that is not a row in
-this table is **unadmitted** and is not monitored — see §3.
-
-`drift` is a registry status; `--report-only` is a run flag that suppresses all writes for
-every PR. They are unrelated.
-
-### `drift` is transient, never terminal
-
-**Every tick, re-evaluate every `drift` row and return it to `active` the moment its cause no
-longer holds.** Re-running a guard is a *check*, not the mapping-repair-by-guessing that §3
-forbids — so re-run it:
-
-- worktree HEAD matches the branch again, or the tree is clean again → `active`, `Incomplete` 0
-- the ambiguous second worktree is gone → `active`
-- the user answered an open question or fixed the blocker → `active`, `Incomplete` 0
-
-And **report every standing `drift` row on a decay schedule** (first recurrence, then hourly),
-not only on the tick it transitions. Reporting only transitions means a PR goes silent one tick
-after it stops being monitored.
-
-This matters more than any single guard, because a lot of correct detection drains into this one
-status. Without a clearing rule and a standing report, the skill's honest default posture is
-*inaction that looks like health*: a quiet one-line status reads identically whether the loop is
-idle or structurally unable to act on anything.
-
-**Child (`~/.sdd/<pillar>/<worktree-name>/`).** One per PR-owning worktree — usually
-already exists from the work that created the PR. This is the grounding source: what was
-tried, what was decided, what was deliberately not done. It is what lets a pushback be
-evidence-based rather than a reflex.
-
-If an admitted PR has no child tracker — the worktree predates the monitor, or `better-goal`
-was never run there — **create it via `better-goal` before dispatching any workflow**, seeded
-from the PR body and commit history. Two consequences follow from its absence, and both are
-worse than the cost of creating it: the workflow has nowhere to record that it posted a
-comment (so a later tick can duplicate it), and a tracker with no recorded decisions disables
-pushback entirely for that PR, since there is no evidence for one to cite. An empty tracker is
-honest and fixes the first problem; it correctly leaves the second in place until real
-decisions accumulate.
-
-On first run, if the parent tracker is absent, create it via `better-goal` with an **empty**
-registry. Do not seed it from the first provider read — that would auto-admit every open
-PR, which is precisely what §3 forbids. The first tick's job is to discover open PRs and
-ask which ones to admit.
-
-## The tick
-
-Most ticks are no-ops. Keep this path cheap — **do not load either reference file unless
-its branch is actually reached.**
-
-### 1. Check what is already in flight
-
-`TaskList` for running `pr-disposition` workflows. Any PR with one in flight is skipped
-entirely this tick. This is the whole idempotency mechanism: one in-flight workflow per
-PR, keyed by PR number. There is nothing to deduplicate because a second cycle is never
-started.
-
-Never reason about whether a workflow is probably done. Ask.
-
-### 2. One batched provider read (discovery only)
-
-```bash
-gh pr list --author @me --state open --repo <repo> \
-  --json number,title,headRefName,headRefOid,isDraft,mergeable,mergeStateStatus,reviewDecision,statusCheckRollup,url,updatedAt
+```text
+--repo <owner/name>       repository (default: current repository)
+--pillar <name>           .sdd pillar (default: better-goal inference)
+--pr <n>[,<n>...]         admitted PRs to narrow the tick
+--report-only             observe; suppress every write and destructive action
 ```
 
-#### Reconcile the registry against this read — every tick
+`--pr` narrows the read; it does not admit a PR. `--report-only` also covers
+the cleanup path: no edits, commits, pushes, comments, merges, auto-merge
+arming, worktree or branch removal, tracker archive/reset, or `TaskStop`.
 
-Reconcile only rows whose status is **not `archived`**. Archived rows are permanent history and
-never appear in `--state open`, so reconciling them re-queries every PR you have ever merged,
-every tick, forever — 200 merged PRs is 800 extra calls an hour against a 5,000/hour limit, and
-at scale the loop starves its own provider read and stops monitoring everything. The cost is
-invisible precisely because it accrues to successful history.
+## Authority and durable state
 
-Among the rest, a row that does **not** appear in the open list is not "quiet", it is closed.
-Query each one directly:
+The parent tracker is `~/.sdd/<pillar>/pr-monitor/`. Its `tasks.md` registry is
+an allowlist, not a cache:
 
-```bash
-gh pr view <n> --repo <repo> --json state,mergedAt,mergeCommit
+```text
+PR | title | head SHA | branch | worktree | child tracker | status | incomplete | armed SHA
 ```
 
-- `MERGED` → run cleanup now (`references/merge-cleanup.md`, from Phase 4).
-- `CLOSED` unmerged → report it and set the row to `archived` with no destructive cleanup.
+Only a row with a user-provided or user-confirmed mapping may be monitored.
+Never adopt the open PR list, infer admission from a matching branch, or run
+`git worktree add` without the user asking for it. A missing or ambiguous
+mapping is reported for the user to resolve.
 
-**This reconciliation is what makes cleanup work at all.** Cleanup cannot depend on
-remembering the PR was open last tick, because the primary merge path is `--auto`: fixes are
-pushed, auto-merge is armed, the session ends, and GitHub lands the merge hours later on
-human approval. A new session's registry is intact but its memory is empty, and the merged PR
-is absent from `--state open`. Without this step every `--auto` merge leaks its worktree,
-local branch, unextracted evidence, and a permanent `awaiting-approval` row — silently, and
-once per merged PR.
+The child tracker at `~/.sdd/<pillar>/<worktree-name>/` records the PR's scope,
+decisions, evidence, and outward actions. If an admitted PR has no child
+tracker, create it through `better-goal` from the PR body and history before
+dispatching a workflow. An empty tracker permits grounding but gives no basis
+for pushback.
 
-Rows in `awaiting-approval` are the ones most likely to have landed while you were away.
-Check them first.
+Keep these distinctions:
 
-**Also verify each `awaiting-approval` row's head still matches its `Armed SHA`.** If it moved,
-someone pushed after auto-merge was armed. Do not assume the arm protects you: pinning with
-`--match-head-commit` is an *arming-time* precondition, and GitHub only disables auto-merge when
-someone **without** write access pushes — a teammate with write access leaves it armed, and
-GitHub will land whatever the head is once requirements are met. On drift, disarm
-(`gh pr merge <n> --disable-auto`), set the row back to `active`, and re-run the gate from
-scratch on the new head.
+- In-session context remembers the last head, review disposition, and quiet
+  status. It is allowed to disappear across sessions.
+- Durable state stores the registry and append-only outward actions in
+  `events.jsonl` so comments, pushes, merges, and cleanup can be reconstructed
+  and deduplicated after interruption.
+- `drift` is a recoverable registry status. Re-evaluate its cause each tick;
+  return to `active` with an incomplete count of zero when the mapping or
+  working tree is healthy again. Report standing drift on a decay schedule.
 
-### 3. Admission — the registry is an allowlist
+For each outward action, append an `*.attempting` event before calling the
+provider or deleting anything, then append `*.completed` with the result. A
+returned workflow verdict, commit, push, comment, merge, or cleanup result that
+is not recorded cannot reliably survive compaction.
 
-**Never adopt the open-PR list as the monitored set.** `gh pr list` is *discovery*. The
-registry is *admission*. Only PRs that are rows in the registry, with a mapping the user
-provided or confirmed, are monitored.
+## Tick
 
-For every discovered open PR that is not already a registry row:
+Most ticks should be cheap. Keep this order.
 
-1. It is **unadmitted**. Take no action on it — no disposition, no workflow, no edit, no
-   comment, no merge, not even a read of its review threads.
-2. **Requesting the mapping is the first step.** Surface the PR to the user and ask which
-   worktree owns it. Do not proceed on that PR until they answer.
-3. To make the request concrete, you may derive a *candidate* worktree by matching
-   `headRefName` against `git worktree list --porcelain` (the primary checkout counts — a
-   branch checked out in the main working directory is a legitimate owner). Present it as
-   a proposal to confirm. **A derived candidate is never an admission.** Deriving a
-   plausible mapping and proceeding on it is exactly the failure this rule exists to stop.
-4. **Validate the answer before writing it.** Confirm the named path is a worktree of this repo
-   and that its HEAD is the PR's head branch:
+1. **Check in-flight work.** Query `TaskList` for `pr-disposition` workflows.
+   Skip a PR with a workflow already running. Do not infer completion.
+
+2. **Discover and reconcile.** Read authored open PRs once:
 
    ```bash
-   git -C <answer> rev-parse --abbrev-ref HEAD   # must equal headRefName
-   git -C <answer> rev-parse --git-common-dir     # must resolve into this repo
+   gh pr list --author @me --state open --repo <repo> \
+     --json number,title,headRefName,headRefOid,isDraft,mergeable,mergeStateStatus,reviewDecision,statusCheckRollup,url,updatedAt
    ```
 
-   If it does not match, reject the answer and ask again with what you found. Do not write a
-   mapping you could not verify: §4's guard would catch it next tick and set `drift`, so a single
-   mistyped path would otherwise cost the PR its monitoring until someone noticed.
+   Reconcile every non-archived registry row. Query a row missing from the open
+   list with `gh pr view <n> --json state,mergedAt,mergeCommit`; send merged PRs
+   through the merge-cleanup reference and archive closed-unmerged PRs without
+   destructive cleanup. Check `awaiting-approval` rows for landing and compare
+   their current head with `armed SHA`; head drift disables auto-merge and
+   returns the row to `active` for a fresh gate.
 
-5. Write the row into the registry with `Incomplete` 0 and monitor it from the next tick.
+3. **Admit new PRs.** For each discovered PR absent from the registry, take no
+   review or provider-thread action. Ask which worktree owns it, optionally
+   showing a branch-matched candidate. After the user answers, verify:
 
-This is why the rule matters: an authored open PR is not necessarily work you want an
-autonomous loop touching. Drafts, spikes, experiments, long-parked branches, and PRs owned
-by a different machine all show up in `gh pr list`. Admission is the user's decision, made
-once per PR, and it is cheap.
+   ```bash
+   git -C <worktree> rev-parse --abbrev-ref HEAD   # equals headRefName
+   git -C <worktree> rev-parse --git-common-dir    # belongs to this repo
+   ```
 
-Never run `git worktree add` on your own initiative. Creating a worktree requires the user
-asking for it in that tick; once created, record the mapping and proceed normally.
+   Add the verified row with `incomplete` zero. A mismatch remains unadmitted.
 
-For PRs **already admitted**, a mapping that no longer resolves — or resolves ambiguously
-to two or more worktrees — is drift, not a re-admission opportunity. Set status `drift`,
-surface it, and do not repair the mapping by guessing.
+4. **Guard admitted mappings.** Before every edit, verify the worktree exists,
+   its branch equals `headRefName`, and `git status --porcelain` is empty. On a
+   mismatch or unexpected dirt, set `drift`, make no edit, and report it. Never
+   repair a mapping by checking out a branch or guessing a path.
 
-### 4. Guard every mapping before any edit
+5. **Compare and route.** For admitted PRs, compare the current head, review
+   state, checks, and human review set with the last tick. Filter out the PR
+   author's comments and bot comments. Read review threads only for admitted
+   PRs. A prior incomplete workflow is retried even when provider state did not
+   change; increment `incomplete`, stop after three consecutive incomplete
+   cycles, and escalate as `drift`. A complete workflow with
+   `awaitingAuthor` waits for an answer and does not count as a failure.
 
-```bash
-git -C <worktree> rev-parse --abbrev-ref HEAD   # must equal headRefName
-git -C <worktree> status --porcelain            # unexpected dirt → status drift
-```
+   - New review activity → load `references/disposition.md` and dispatch one
+     workflow.
+   - Mergeable state → load `references/merge-cleanup.md` and run its fresh gate.
+   - Merged PR → load the same reference and run verified cleanup.
+   - No change and a complete prior cycle → report a compact status line.
 
-A registry entry can rot: the worktree may have been removed or repurposed to another
-branch. Without this guard a fix for PR A lands on branch B. On mismatch, demote to
-status `drift` and report it — do not repair the mapping by guessing.
+6. **Dispatch only guarded work.** Use the installed absolute script path and
+   pass all load-bearing identity fields:
 
-### 5. Diff against last tick, then branch
+   ```js
+   Workflow({
+     scriptPath: "/Users/<you>/.claude/skills/pr-monitor/workflows/pr-disposition.js",
+     args: {
+       pr, repo, branch, worktree, childTracker, parentTracker,
+       headSha, findings, reportOnly,
+     },
+   })
+   ```
 
-Compare each PR's head SHA, `reviewDecision`, check rollup, and review/comment set
-against what you remember.
+   `branch`, `worktree`, `childTracker`, and `headSha` are required. Render
+   findings as `{author, path, line, body}` or a plain string; do not pass raw
+   provider nodes into a public comment. One PR owns one worktree, so never fan
+   out its editing phase. The workflow grounds findings in the trackers,
+   classifies them, verifies pushback, applies accepted fixes, tests, commits,
+   pushes, responds once, and records its outward actions. It does not merge.
 
-Only admitted PRs reach this step.
+7. **Report.** Begin every report with:
 
-**First, check for an incomplete previous cycle.** If this PR's last workflow returned
-`cycleComplete: false` (or died outright), re-dispatch it regardless of whether anything
-changed provider-side, and carry its `blockers` into the new dispatch.
+   ```text
+   N admitted · N unadmitted (awaiting your mapping) · N drift · N awaiting your answer · N awaiting approval
+   ```
 
-This ordering is not optional. A failed cycle changes *nothing* the diff below looks at — the
-head, review decision, check rollup, and comment set are all untouched, because the failure
-happened before any of them were written. So a purely diff-driven tick classifies a livelocked
-PR as "quiet" forever: the reviewer never gets an answer, the finding is never fixed, and the
-loop reports the PR as healthy. Track completion per PR and drive retries off that.
+   Then list mapping requests, open questions, admitted PR status and actions,
+   and drift with its cause. Surface an unanswered mapping once rather than
+   repeating it on every tick.
 
-Increment the registry's `Incomplete` column on each one; reset it to 0 on any complete cycle.
-At 3, stop retrying, set `drift`, and escalate with the accumulated blockers. Keep the count in
-the registry, not in context — see the note under the registry table.
+## Ownership and merge boundary
 
-**`awaitingAuthor` is not an incomplete cycle.** A workflow that returns `cycleComplete: true`
-with `awaitingAuthor: true` did everything it could; a human now owes an answer. Do **not**
-re-dispatch it and do **not** increment `Incomplete` — re-running the workflow cannot resolve
-an open question, and treating it as a fault marches a perfectly healthy PR to `drift` in three
-ticks while burning a full agent fleet each time. Surface the question in the report and wait.
-Re-dispatch only when the user answers or new review activity arrives.
-
-- **Nothing changed, nothing mergeable, last cycle complete** → emit one compact status
-  line and end the tick. This is the common case. Stop here.
-- **New review activity** → read `references/disposition.md`, then dispatch the
-  workflow (§6).
-- **Mergeable** → read `references/merge-cleanup.md` and run the gate.
-- **Merged since last tick** → read `references/merge-cleanup.md` and run cleanup.
-
-For per-PR review detail:
-
-```bash
-gh pr view <n> --repo <repo> --json reviews,comments,latestReviews
-```
-
-**Exclude your own comments and bot comments from the finding set.** The monitor posts a
-top-level comment every cycle, so without this filter its own output becomes both a diff
-trigger and a candidate "finding" — the loop reads its own reply as new review activity and
-disposition it. Filter on author login: drop anything authored by the PR author (you) or by a
-bot, and keep only comments and review bodies from human reviewers.
-
-Unresolved *thread* state needs GraphQL:
-
-```bash
-gh api graphql -f owner=<owner> -f repo=<name> -F pr=<n> -f query='
-query($owner:String!,$repo:String!,$pr:Int!){
-  repository(owner:$owner,name:$repo){
-    pullRequest(number:$pr){
-      reviewThreads(first:100){
-        nodes{ isResolved isOutdated path line
-          comments(first:20){ nodes{ author{login} body createdAt } } } } } } }'
-```
-
-### 6. Dispatch the disposition workflow
-
-One workflow per PR with new activity, launched with the absolute script path:
-
-```
-Workflow({
-  scriptPath: "/Users/<you>/.claude/skills/pr-monitor/workflows/pr-disposition.js",
-  args: {
-    pr, repo,
-    branch,          // headRefName — REQUIRED
-    worktree,        // REQUIRED
-    childTracker,    // REQUIRED
-    headSha, findings, parentTracker, reportOnly,
-  }
-})
-```
-
-Expand `~` to the real home path — `scriptPath` is not shell-expanded.
-
-Pass each finding as `{author, path, line, body}` — or a plain string. Do **not** pass raw
-`gh`/GraphQL nodes: findings are rendered into a comment a reviewer reads, and an unexpected
-shape risks dumping internal JSON onto their thread. The workflow summarises anything it does
-not recognise rather than stringifying it, but that is a backstop, not a licence.
-
-`branch`, `worktree`, and `childTracker` are load-bearing, and the workflow refuses to run
-without them rather than degrading:
-
-- `branch` is the right-hand side of the worktree guard. Omit it and the guard becomes a
-  command whose output has nothing to compare against, so it always passes — and a fix lands
-  on whatever branch the worktree happens to be on.
-- `childTracker` is the only durable dedup store. Omit it and "did I already post this?" has
-  nowhere to look, so comments duplicate on a reviewer's thread.
-
-The workflow triages each finding, adversarially verifies any `pushback` verdict at
-higher effort, implements accepted fixes, runs tests, commits, and pushes. It returns a
-structured verdict. **It does not merge.** Record its returned verdict and actions in the
-child tracker when it completes.
-
-### 7. Report
-
-**Every report opens with this line, unconditionally, even when nothing happened:**
-
-```
-N admitted · N unadmitted (awaiting your mapping) · N drift · N awaiting your answer · N awaiting approval
-```
-
-It is one line and it is the difference between a quiet loop and a stalled one. Without it, a
-tick where every PR is blocked renders exactly like a tick where every PR is healthy.
-
-Then, in this order:
-
-1. **Awaiting admission** — every discovered open PR that is not in the registry, with its
-   candidate worktree if one was derived, phrased as a direct question: which worktree owns
-   this, or should it stay unmonitored? Put this first. It is the only part of the report
-   that needs the user to act, and an unanswered mapping request means real work is sitting
-   untouched.
-2. **Open questions** — every `insufficient_context` verdict from any workflow, as the
-   specific question, with its PR. These need you as much as an admission request does. The
-   workflow returns them in `openQuestions`; also append them to the child tracker so they
-   survive a compaction, because a question that exists only as a PR comment is a question
-   you are not watching — you watch these reports.
-3. **Admitted PRs** — number, title, short head SHA, worktree, CI, review state,
-   mergeability, and what you did or why you did nothing.
-4. **Drift** — any admitted PR newly moved to `drift`, and why. Include PRs that hit their
-   third consecutive incomplete cycle, with the accumulated blockers.
-
-If a mapping request has gone unanswered for several ticks, say so once rather than
-repeating the full request every tick.
-
-## Reason vs. check
-
-The rule that keeps this safe. Getting it backwards is the failure mode.
-
-| Question | Mode |
-|---|---|
-| Is this reviewer finding actually new? | **Reason** |
-| Is the reviewer correct? | **Reason**, grounded in the child tracker |
-| Is this objection already answered by prior recorded work? | **Reason** |
-| Is this PR admitted to the registry? | **Check** — never infer admission from a derivable worktree |
-| Is a workflow in flight for this PR? | **Check** (`TaskList`) |
-| Is this the current head SHA? | **Check**, immediately before acting |
-| Are required checks green? | **Check** |
-| Does the worktree HEAD match the PR branch? | **Check**, before every edit |
-| Did the merge actually land on protected main? | **Check**, before any cleanup |
-
-Judgment about content → reason. Preconditions on irreversible acts → verify, every
-time, no matter how confident you feel.
-
-## Approval dismissal — the one structural constraint
-
-On these repos a push dismisses existing approvals, and the merge gate requires an
-approval. So `fix → push → merge` **cannot** complete in a single cycle: the push
-invalidates the approval the merge needs.
-
-Two paths, both autonomous:
-
-- **Nothing needed fixing** (approved, green, current head, no open findings) → merge
-  now. No push, no dismissal.
-- **Findings needed fixing** → push, request re-review, then arm auto-merge:
-
-  ```bash
-  gh pr merge <n> --repo <repo> --auto --squash --delete-branch
-  ```
-
-  GitHub lands it the moment a human approves — even after this session is gone. Set the
-  registry status to `awaiting-approval`. This is strictly more autonomous than holding
-  the loop open waiting for a re-review.
-
-Never resolve this by trying to preserve or re-apply a dismissed approval.
-
-## Ownership boundary
-
-- **Workflow** owns: triage, pushback verification, fixes, tests, commit, push. Ends at
-  "verdict returned."
-- **This skill (agent)** owns: cadence, cross-PR state, the merge gate, the merge, and
-  cleanup.
-
-Merge and cleanup are the agent's because the gate needs a fresh readback *at the moment
-of merge* — workflow-start state is minutes stale — and because cleanup is a sequential
-safety checklist with no fan-out, where spawning a workflow would add risk and no speed.
-
-## References
-
-Load only when the tick reaches the relevant branch:
-
-- `references/disposition.md` — the fix / pushback / insufficient_context rubric, the
-  grounding requirement, and how to write a pushback that will survive a reviewer's
-  reply.
-- `references/merge-cleanup.md` — the merge gate readback and the post-merge cleanup
-  checklist, including the destructive-step preconditions.
+The disposition workflow owns grounding, triage, pushback verification, fixes,
+tests, commits, pushes, and its one response. This driver owns cadence,
+cross-PR registry state, the fresh merge gate, merge, and cleanup. A push can
+dismiss the approval needed by the gate, so after a fix the workflow requests
+review and arms auto-merge; it does not pretend that the old approval remains.
+The merge and cleanup reference is authoritative for every provider read and
+destructive precondition.
