@@ -38,6 +38,19 @@ npx skills add -g <owner/repo>     # install globally across all agents
 | `claude-spawn` | Spawns persistent, human-reachable Claude/Codex/shell sessions on the default tmux server |
 | `desloppify` | Improves written and visual deliverables with clear prose and restrained presentation |
 
+### External Skills
+
+The selected external packages are tracked in [skills-lock.json](skills-lock.json).
+Removing a skill removes its instructions and bundled resources, not the underlying tool.
+
+| Area | Retained skills |
+|---|---|
+| Browser and structural search | `agent-browser`, `ast-grep` |
+| Frontend guidance | `frontend-design`, `vercel-react-best-practices`, `web-design-guidelines` |
+| Authoring and retrieval | `skill-creator`, `qmd`, `visual-explainer` |
+| Database guidance | `supabase-postgres-best-practices` |
+| Google Workspace | `gws-shared`, `gws-drive`, `gws-calendar`, `gws-gmail`, `gws-docs`, `gws-sheets`, `gws-slides`, `gws-gmail-watch` |
+
 ### Harness compatibility
 
 Most skills here work in any compatible harness. `pr-monitor` requires Claude Code's `Workflow` and `TaskList` tools plus the built-in `loop` skill. Its workflow sets effort internally; it does not require `TaskGet` or separate model/effort overrides. Other harnesses must not invoke it, but its `references/` files provide procedures for a separate implementation.
