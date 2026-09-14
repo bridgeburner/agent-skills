@@ -7,6 +7,7 @@ set -e
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 LOCK_FILE="$SCRIPT_DIR/skills-lock.json"
+REMOVED_FILE="$SCRIPT_DIR/skills-removed.json"
 SYSTEM_LOCK_FILE="$HOME/.agents/.skill-lock.json"
 LOCAL_SKILLS_DIR="$SCRIPT_DIR/skills"
 PERSONAL_SKILLS_DIR="$SCRIPT_DIR/skills-personal"
@@ -32,12 +33,12 @@ Usage: ./agent-skills <command> [options]
 
 Commands:
   add <repo> [--skill <name>]   Install skill, update lock file, commit and push
-  sync                          Pull repo, install missing skills, and link local skills
+  sync [--yes]                  Pull, apply recorded removals, install missing skills, and link
   list                          Show local and external skills
   install-local                 Link local skills and CLAUDE/AGENTS files
-  update [--prune] [--yes]      Update external skills, export lock file, and link local skills
+  update [--prune] [--yes]      Apply recorded removals, update external skills, export, and link
   prune [--dry-run] [--yes]     Remove skills that no longer exist in their upstream repos
-  remove <name>                 Remove skill from manifest and disk, commit and push
+  remove <name>                 Record removal across machines, remove locally, commit and push
   export                        Copy current system lock file to repo
   add-source <path> [--name <label>]  Register an external skill source directory
   remove-source <name>          Unregister an external skill source directory
@@ -65,52 +66,135 @@ check_jq() {
     fi
 }
 
-merge_lock_with_system() {
-    local output_file="$1"
-
-    if [[ ! -f "$SYSTEM_LOCK_FILE" ]]; then
-        if [[ -f "$LOCK_FILE" ]]; then
-            cp "$LOCK_FILE" "$output_file"
-        fi
-        return 0
+load_removals() {
+    if [[ ! -f "$REMOVED_FILE" ]]; then
+        echo '{}'
+        return
     fi
+    # Names become path components. Reject malformed policy before any mutation.
+    jq -e '
+        if .version == 1 and (.skills | type == "object") and
+            (.skills | to_entries | all(
+                (.key | test("^[A-Za-z0-9][A-Za-z0-9._-]*$")) and
+                (.value.source | type == "string" and length > 0) and
+                (.value.sourceType | type == "string" and length > 0)))
+        then .skills else error("Invalid skills-removed.json") end
+    ' "$REMOVED_FILE"
+}
 
-    if [[ ! -f "$LOCK_FILE" ]]; then
-        cp "$SYSTEM_LOCK_FILE" "$output_file"
-        return 0
-    fi
-
-    jq -s '
+merge_locks() {
+    local output_file="$1" preference="$2" removals
+    local repo_input="$LOCK_FILE" system_input="$SYSTEM_LOCK_FILE"
+    removals="$(load_removals)" || return 1
+    [[ -f "$repo_input" ]] || repo_input=/dev/null
+    [[ -f "$system_input" ]] || system_input=/dev/null
+    # Filter each input first so an obsolete entry cannot hide a valid same-name
+    # replacement from another source, regardless of merge precedence.
+    jq -n --argjson removed "$removals" --arg preference "$preference" \
+        --slurpfile repo "$repo_input" --slurpfile system "$system_input" '
+        def retained: with_entries(. as $entry |
+            select($removed[$entry.key] == null or
+                $removed[$entry.key].source != $entry.value.source or
+                $removed[$entry.key].sourceType != $entry.value.sourceType));
+        (($repo[0].skills // {}) | retained) as $r |
+        (($system[0].skills // {}) | retained) as $s |
         {
-            version: ((.[0].version // 3)),
-            skills: ((.[0].skills // {}) + (.[1].skills // {}))
+            version: ($repo[0].version // $system[0].version // 3),
+            skills: (if $preference == "repo" then $s + $r else $r + $s end)
         }
-    ' "$LOCK_FILE" "$SYSTEM_LOCK_FILE" > "$output_file"
+    ' > "$output_file"
+}
+
+merge_lock_with_system() {
+    merge_locks "$1" system
 }
 
 merge_missing_system_skills() {
-    local output_file="$1"
+    merge_locks "$1" repo
+}
 
-    if [[ ! -f "$SYSTEM_LOCK_FILE" ]]; then
-        if [[ -f "$LOCK_FILE" ]]; then
-            cp "$LOCK_FILE" "$output_file"
+apply_recorded_removals() {
+    local assume_yes="$1" only_name="${2:-}" removals candidates name skill_dir link target
+    local backup_dir="" updated_lock reply=""
+    removals="$(load_removals)" || return 1
+    if [[ -n "$only_name" ]]; then
+        removals="$(jq --arg name "$only_name" 'with_entries(select(.key == $name))' <<< "$removals")" || return 1
+    fi
+    while IFS= read -r name; do
+        [[ -n "$name" ]] || continue
+        if [[ -e "$AGENTS_SKILLS_DIR/$name" || -L "$AGENTS_SKILLS_DIR/$name" ]]; then
+            if [[ ! -f "$SYSTEM_LOCK_FILE" ]] || ! jq -e --arg name "$name" '.skills[$name] != null' "$SYSTEM_LOCK_FILE" >/dev/null; then
+                echo "Cannot establish installed source for $name; refusing automatic removal or sync." >&2
+                return 1
+            fi
         fi
-        return 0
+    done < <(jq -r 'keys[]' <<< "$removals")
+    [[ -f "$SYSTEM_LOCK_FILE" ]] || return 0
+    candidates="$(jq -r --argjson removed "$removals" '
+        (.skills // {}) | to_entries[] | . as $entry |
+        select($removed[$entry.key] != null and
+            $removed[$entry.key].source == $entry.value.source and
+            $removed[$entry.key].sourceType == $entry.value.sourceType) | .key
+    ' "$SYSTEM_LOCK_FILE")" || return 1
+    [[ -n "$candidates" ]] || return 0
+
+    # Refuse redirected ownership roots, even with --yes. Consumer directories
+    # and replacement links are not owned by this removal policy.
+    for skill_dir in "$AGENTS_DIR" "$AGENTS_SKILLS_DIR" "$CLAUDE_DIR" \
+        "$CLAUDE_SKILLS_DIR" "$CODEX_DIR" "$CODEX_SKILLS_DIR"; do
+        if [[ -L "$skill_dir" ]]; then
+            echo "Refusing recorded removals through symlinked directory: $skill_dir" >&2
+            return 1
+        fi
+    done
+    while IFS= read -r name; do
+        skill_dir="$AGENTS_SKILLS_DIR/$name"
+        if [[ -L "$skill_dir" || ( -e "$skill_dir" && ! -d "$skill_dir" ) ]]; then
+            echo "Refusing removal of non-directory or symlink: $skill_dir" >&2
+            return 1
+        fi
+    done <<< "$candidates"
+
+    echo "Recorded removals matching this machine's installed sources:"
+    echo "$candidates"
+    if [[ "$assume_yes" -ne 1 ]]; then
+        read -r -p "Remove these skills locally (with recovery copies)? [y/N] " reply || true
+        case "$reply" in
+            y|Y|yes|YES) ;;
+            *) echo "Stopped without applying removals. Use --yes to confirm non-interactively."; return 1 ;;
+        esac
     fi
 
-    if [[ ! -f "$LOCK_FILE" ]]; then
-        cp "$SYSTEM_LOCK_FILE" "$output_file"
-        return 0
-    fi
-
-    jq -s '
-        (.[0].skills // {}) as $repo_skills |
-        (.[1].skills // {}) as $system_skills |
-        {
-            version: ((.[0].version // 3)),
-            skills: ($repo_skills + ($system_skills | with_entries(select(.key as $key | $repo_skills | has($key) | not))))
-        }
-    ' "$LOCK_FILE" "$SYSTEM_LOCK_FILE" > "$output_file"
+    while IFS= read -r name; do
+        skill_dir="$AGENTS_SKILLS_DIR/$name"
+        if [[ -d "$skill_dir" ]]; then
+            if [[ -z "$backup_dir" ]]; then
+                backup_dir="$(mktemp -d "$AGENTS_DIR/removed-skills.XXXXXXXX")" || return 1
+                echo "Recovery copies: $backup_dir"
+            fi
+            mv -- "$skill_dir" "$backup_dir/$name" || return 1
+        fi
+        for link in "$CLAUDE_SKILLS_DIR/$name" "$CODEX_SKILLS_DIR/$name"; do
+            if [[ -L "$link" ]]; then
+                target="$(node -e 'const fs=require("fs"),p=require("path"); console.log(p.resolve(p.dirname(process.argv[1]),fs.readlinkSync(process.argv[1])));' "$link")" || return 1
+                if [[ "$target" == "$skill_dir" ]]; then
+                    rm -- "$link" || return 1
+                else
+                    echo "Preserved replacement link: $link"
+                fi
+            elif [[ -e "$link" ]]; then
+                echo "Preserved unmanaged path: $link"
+            fi
+        done
+        # Keep ownership evidence until filesystem cleanup succeeds, allowing a
+        # retry after a failed move or link removal to finish safely.
+        updated_lock="$(mktemp "$SYSTEM_LOCK_FILE.XXXXXXXX")" || return 1
+        if ! jq --arg name "$name" 'del(.skills[$name])' "$SYSTEM_LOCK_FILE" > "$updated_lock"; then
+            rm -- "$updated_lock"
+            return 1
+        fi
+        mv -- "$updated_lock" "$SYSTEM_LOCK_FILE" || return 1
+    done <<< "$candidates"
 }
 
 # Extract skill name from skillPath (e.g., "skills/react-best-practices/SKILL.md" -> "react-best-practices")
@@ -625,14 +709,10 @@ cmd_export() {
         exit 1
     fi
 
-    if [[ -f "$LOCK_FILE" ]]; then
-        local merged_lock
-        merged_lock="$(mktemp)"
-        merge_lock_with_system "$merged_lock"
-        mv "$merged_lock" "$LOCK_FILE"
-    else
-        cp "$SYSTEM_LOCK_FILE" "$LOCK_FILE"
-    fi
+    local merged_lock
+    merged_lock="$(mktemp)"
+    merge_lock_with_system "$merged_lock"
+    mv "$merged_lock" "$LOCK_FILE"
     echo -e "${GREEN}Exported lock file to skills-lock.json${NC}"
 
     # Show what was exported
@@ -671,6 +751,16 @@ cmd_add() {
         exit 1
     fi
 
+    local removals normalized_repo
+    removals="$(load_removals)" || return 1
+    normalized_repo="${repo#https://github.com/}"
+    normalized_repo="${normalized_repo%.git}"
+    if { [[ -n "$skill" ]] && jq -e --arg name "$skill" --arg source "$normalized_repo" '.[$name].source == $source' <<< "$removals" >/dev/null; } ||
+        { [[ -z "$skill" ]] && jq -e --arg source "$normalized_repo" 'any(.[]; .source == $source)' <<< "$removals" >/dev/null; }; then
+        echo "This selection includes a recorded removal. Remove its entry from skills-removed.json to deliberately restore it, or select a retained --skill." >&2
+        return 1
+    fi
+
     # Build npx skills command
     local cmd="npx skills add $repo -g -y"
     if [[ -n "$skill" ]]; then
@@ -681,23 +771,24 @@ cmd_add() {
     echo "> $cmd"
     eval "$cmd"
 
+    # An upstream bundle may install more than requested; never publish a
+    # recorded removal as active merely because the package manager returned it.
+    apply_recorded_removals 1
+
     # Export the updated lock file
     echo ""
     echo -e "${BLUE}Updating lock file...${NC}"
-    if [[ -f "$LOCK_FILE" ]]; then
-        local merged_lock
-        merged_lock="$(mktemp)"
-        merge_lock_with_system "$merged_lock"
-        mv "$merged_lock" "$LOCK_FILE"
-    else
-        cp "$SYSTEM_LOCK_FILE" "$LOCK_FILE"
-    fi
+    local merged_lock
+    merged_lock="$(mktemp)"
+    merge_lock_with_system "$merged_lock"
+    mv "$merged_lock" "$LOCK_FILE"
 
     # Commit and push
     echo ""
     echo -e "${BLUE}Committing changes...${NC}"
     cd "$SCRIPT_DIR"
     git add skills-lock.json
+    [[ ! -f "$REMOVED_FILE" ]] || git add skills-removed.json
 
     local commit_msg="Add skill: ${skill:-$repo}"
     git commit -m "$commit_msg"
@@ -713,66 +804,46 @@ cmd_add() {
 cmd_remove() {
     check_jq
 
-    local name="$1"
-    local merged_lock
-    local local_lock
+    local name="${1:-}" entry="" removals existing updated merged_lock
 
-    if [[ -z "$name" ]]; then
-        echo -e "${RED}Error: Skill name required${NC}"
-        usage
-        exit 1
+    if [[ ! "$name" =~ ^[A-Za-z0-9][A-Za-z0-9._-]*$ ]]; then
+        echo "Error: a single safe skill name is required." >&2
+        return 1
     fi
-
-    if [[ ! -f "$LOCK_FILE" ]]; then
-        echo -e "${RED}Error: No skills-lock.json found${NC}"
-        exit 1
-    fi
-
-    if [[ -f "$LOCK_FILE" ]]; then
-        merged_lock="$(mktemp)"
-        merge_lock_with_system "$merged_lock"
-        local_lock="$merged_lock"
-    else
-        local_lock="$LOCK_FILE"
-    fi
-
-    # Check if skill exists in lock file
-    if ! jq -e ".skills[\"$name\"]" "$local_lock" > /dev/null 2>&1; then
-        echo -e "${RED}Error: Skill '$name' not found in lock file${NC}"
-        echo "Available skills:"
-        jq -r '.skills | keys[]' "$local_lock" | sed 's/^/  /'
-        if [[ -n "${merged_lock-}" ]]; then
-            rm -f "$merged_lock"
-        fi
-        exit 1
-    fi
-
-    # Remove from lock file
-    echo -e "${BLUE}Removing '$name' from lock file...${NC}"
-    jq "del(.skills[\"$name\"])" "$local_lock" > "$LOCK_FILE.tmp"
-    mv "$LOCK_FILE.tmp" "$LOCK_FILE"
-    if [[ -n "${merged_lock-}" ]]; then
-        rm -f "$merged_lock"
-    fi
-
-    # Remove from disk
-    local skill_dir="$HOME/.agents/skills/$name"
-    if [[ -d "$skill_dir" ]]; then
-        echo -e "${BLUE}Removing skill directory...${NC}"
-        rm -rf "$skill_dir"
-    fi
-
-    # Update system lock file too
+    removals="$(load_removals)" || return 1
     if [[ -f "$SYSTEM_LOCK_FILE" ]]; then
-        jq "del(.skills[\"$name\"])" "$SYSTEM_LOCK_FILE" > "$SYSTEM_LOCK_FILE.tmp"
-        mv "$SYSTEM_LOCK_FILE.tmp" "$SYSTEM_LOCK_FILE"
+        entry="$(jq --arg name "$name" '.skills[$name] // empty' "$SYSTEM_LOCK_FILE")" || return 1
     fi
+    if [[ -z "$entry" && -f "$LOCK_FILE" ]]; then
+        entry="$(jq --arg name "$name" '.skills[$name] // empty' "$LOCK_FILE")" || return 1
+    fi
+    if [[ -z "$entry" ]]; then
+        entry="$(jq --arg name "$name" '.[$name] // empty' <<< "$removals")" || return 1
+    fi
+    if [[ -z "$entry" ]] || ! jq -e '(.source | type == "string" and length > 0) and (.sourceType | type == "string" and length > 0)' <<< "$entry" >/dev/null; then
+        echo "Cannot record removal without a known source and sourceType: $name" >&2
+        return 1
+    fi
+    entry="$(jq '{source, sourceType}' <<< "$entry")" || return 1
+    existing="$(jq --arg name "$name" '.[$name] // empty' <<< "$removals")" || return 1
+    if [[ -n "$existing" ]] && ! jq -e --argjson identity "$entry" '. == $identity' <<< "$existing" >/dev/null; then
+        echo "A different source is already recorded for $name; resolve skills-removed.json explicitly before replacing it." >&2
+        return 1
+    fi
+    updated="$(mktemp "$REMOVED_FILE.XXXXXXXX")" || return 1
+    jq --arg name "$name" --argjson identity "$entry" '{version: 1, skills: (. + {($name): $identity})}' <<< "$removals" > "$updated"
+    mv -- "$updated" "$REMOVED_FILE"
+
+    apply_recorded_removals 1 "$name"
+    merged_lock="$(mktemp)"
+    merge_lock_with_system "$merged_lock"
+    mv -- "$merged_lock" "$LOCK_FILE"
 
     # Commit and push
     echo ""
     echo -e "${BLUE}Committing changes...${NC}"
     cd "$SCRIPT_DIR"
-    git add skills-lock.json
+    git add skills-lock.json skills-removed.json
     git commit -m "Remove skill: $name"
 
     echo ""
@@ -784,9 +855,19 @@ cmd_remove() {
 }
 
 cmd_sync() {
+    local assume_yes=0
+    while [[ $# -gt 0 ]]; do
+        case "$1" in
+            -y|--yes) assume_yes=1; shift ;;
+            *) echo "Unknown sync option: $1" >&2; return 1 ;;
+        esac
+    done
     echo -e "${BLUE}Pulling latest changes...${NC}"
     cd "$SCRIPT_DIR"
     git pull
+
+    check_jq
+    apply_recorded_removals "$assume_yes"
 
     if [[ ! -f "$LOCK_FILE" ]]; then
         echo -e "${YELLOW}No skills-lock.json found in repo.${NC}"
@@ -795,8 +876,6 @@ cmd_sync() {
         exit 0
     fi
 
-    check_jq
-
     echo ""
     echo -e "${BLUE}Checking for missing skills...${NC}"
 
@@ -804,7 +883,7 @@ cmd_sync() {
     merged_lock="$(mktemp)"
     merge_missing_system_skills "$merged_lock"
     if [[ -f "$LOCK_FILE" ]] && ! cmp -s "$LOCK_FILE" "$merged_lock"; then
-        echo -e "${YELLOW}Local system lock has skills not present in repo lock; using merged lock for sync.${NC}"
+        echo -e "${YELLOW}Reconciling local skills and recorded removals into the repo lock.${NC}"
         mv "$merged_lock" "$LOCK_FILE"
         merged_lock="$LOCK_FILE"
     else
@@ -840,6 +919,7 @@ cmd_sync() {
             npx skills add "$source" --skill "$skill_name" -g -y
         fi
     done
+    apply_recorded_removals "$assume_yes"
 
     if [[ $missing -eq 0 ]]; then
         echo -e "${GREEN}All skills are already installed.${NC}"
@@ -884,9 +964,13 @@ cmd_update() {
     cd "$SCRIPT_DIR"
     git pull
 
+    check_jq
+    apply_recorded_removals "$assume_yes"
+
     echo ""
     echo -e "${BLUE}Updating external skills...${NC}"
     npx skills update -g -y
+    apply_recorded_removals "$assume_yes"
 
     if [[ ! -f "$SYSTEM_LOCK_FILE" ]]; then
         echo -e "${RED}Error: System lock file not found at $SYSTEM_LOCK_FILE${NC}"
@@ -896,11 +980,7 @@ cmd_update() {
 
     local merged_lock
     merged_lock="$(mktemp)"
-    if [[ -f "$LOCK_FILE" ]]; then
-        merge_lock_with_system "$merged_lock"
-    else
-        cp "$SYSTEM_LOCK_FILE" "$merged_lock"
-    fi
+    merge_lock_with_system "$merged_lock"
 
     local changed=1
     if [[ -f "$LOCK_FILE" ]] && cmp -s "$LOCK_FILE" "$merged_lock"; then
@@ -1080,7 +1160,8 @@ case "${1:-}" in
         cmd_add "$@"
         ;;
     sync)
-        cmd_sync
+        shift
+        cmd_sync "$@"
         ;;
     list)
         cmd_list

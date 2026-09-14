@@ -8,6 +8,7 @@ This repo manages skills for Claude Code (and compatible agents like Codex). It 
 |---|---|
 | `skills/` | Locally-authored skills. Each subdirectory is one skill with a `SKILL.md` inside. |
 | `skills-lock.json` | Lock file tracking externally-installed skills (sources, hashes). Managed by the `agent-skills` CLI. |
+| `skills-removed.json` | Intentional cross-machine removals, matched by canonical name, source, and source type. |
 | `config/AGENTS.md` | Global agent instructions symlinked to `~/.claude/CLAUDE.md`, `~/.codex/AGENTS.md`, and `~/.agents/AGENTS.md`. Edit this to change system-wide agent behavior. |
 | `agent-skills` | CLI for managing skills: add, remove, sync, update, prune, export, install-local. |
 | `skills-personal/` | Gitignored personal skills. Symlinked by `install-local` but not committed. |
@@ -26,6 +27,14 @@ These live in `skills/` and are symlinked into `~/.claude/skills/` and `~/.codex
 ## External skills
 
 Installed via `npx skills`, stored under `~/.agents/skills`, and tracked in `skills-lock.json`. `install-local` mirrors them into both `~/.claude/skills` and `~/.codex/skills`. Run `./agent-skills list` to see what's currently installed.
+
+`sync [--yes]` and `update [--yes]` apply `skills-removed.json` before installing
+or updating; `remove <name>` records new removals. Preserve unrelated local
+packages and different-source identities: absence from the active lock is not
+deletion authority. Matching package directories are moved to recovery storage
+under `~/.agents/removed-skills.XXXXXXXX/`, and only their canonical-target
+Claude/Codex links are removed. For first adoption, run `git pull --ff-only`
+before invoking the updated CLI. See README for confirmation and restore steps.
 
 ## Operating philosophy for goal commands
 

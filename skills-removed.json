@@ -1,0 +1,61 @@
+{
+  "version": 1,
+  "skills": {
+    "ai-elements": {
+      "source": "vercel/ai-elements",
+      "sourceType": "github"
+    },
+    "find-skills": {
+      "source": "vercel-labs/skills",
+      "sourceType": "github"
+    },
+    "gws-calendar-agenda": {
+      "source": "googleworkspace/cli",
+      "sourceType": "github"
+    },
+    "gws-calendar-insert": {
+      "source": "googleworkspace/cli",
+      "sourceType": "github"
+    },
+    "gws-docs-write": {
+      "source": "googleworkspace/cli",
+      "sourceType": "github"
+    },
+    "gws-drive-upload": {
+      "source": "googleworkspace/cli",
+      "sourceType": "github"
+    },
+    "gws-gmail-send": {
+      "source": "googleworkspace/cli",
+      "sourceType": "github"
+    },
+    "gws-gmail-triage": {
+      "source": "googleworkspace/cli",
+      "sourceType": "github"
+    },
+    "gws-sheets-append": {
+      "source": "googleworkspace/cli",
+      "sourceType": "github"
+    },
+    "gws-sheets-read": {
+      "source": "googleworkspace/cli",
+      "sourceType": "github"
+    },
+    "modern-python": {
+      "source": "trailofbits/skills",
+      "sourceType": "github"
+    },
+    "opentui": {
+      "source": "msmps/opentui-skill",
+      "sourceType": "github"
+    },
+    "portless": {
+      "source": "vercel-labs/portless",
+      "sourceType": "github"
+    },
+    "postgres": {
+      "source": "planetscale/database-skills",
+      "sourceType": "github"
+    }
+  }
+}

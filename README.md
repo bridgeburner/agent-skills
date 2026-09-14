@@ -12,6 +12,18 @@ cd agent-skills
 
 Requires `jq` (`brew install jq`) and Node.js / `npx`.
 
+On another machine with an existing installation, pull the new CLI before
+running it, then apply the shared selection and recorded removals:
+
+```bash
+git pull --ff-only
+./agent-skills sync --yes
+```
+
+Omit `--yes` to review and confirm matching removals interactively. Removed
+package contents are moved to a printed recovery directory under
+`~/.agents/removed-skills.XXXXXXXX/`; application tools are not uninstalled.
+
 External skills are installed via the [`skills`](https://github.com/vercel-labs/skills) CLI ([skills.sh](https://skills.sh)):
 
 ```bash
@@ -70,7 +82,7 @@ The `./agent-skills` CLI manages both local and external skills:
 ```bash
 ./agent-skills install-local                          # Link local/global skills + config files
 ./agent-skills add <repo> [--skill <name>]            # Install an external skill and update the lock file
-./agent-skills sync                                   # Pull + install missing external skills + link local
+./agent-skills sync [--yes]                           # Pull + apply recorded removals + install missing + link
 ./agent-skills list                                   # Show all installed skills
 ./agent-skills update [--prune] [--yes]               # Update external skills (optionally prune deleted ones)
 ./agent-skills prune [--dry-run] [--yes]              # Remove skills deleted from their upstream repos
@@ -78,6 +90,34 @@ The `./agent-skills` CLI manages both local and external skills:
 ```
 
 External skills are tracked in `skills-lock.json` and installed under `~/.agents/skills`; `install-local` mirrors them into both Claude and Codex skill views.
+
+### Propagating removals across machines
+
+`skills-removed.json` records intentional removals by skill name, source, and
+source type. It includes the 14 retired packages from the external-skill cleanup.
+`remove <name>` records future removals there and commits the policy with the
+active lock file. Absence from `skills-lock.json` alone is not a deletion request.
+
+`sync` and `update` apply source-matching removals before installing or updating.
+Without `--yes`, matching removals require confirmation; declining stops the
+command. Unrelated machine-local packages and same-name packages from other
+sources are preserved. Consumer links into local/personal/source skills and real
+unmanaged directories are also preserved. Unknown ownership or symlinked
+installation roots stop removal rather than broadening its scope.
+
+Lock merges and `export` exclude recorded removed identities, so a stale machine
+cannot reintroduce them through the updated CLI. `export` only changes the
+manifest; use `sync --yes` to apply filesystem cleanup. The existing `--prune`
+option remains separate: it detects packages deleted by their upstream authors.
+
+To deliberately restore a retired skill, remove its matching entry from
+`skills-removed.json`, then run `./agent-skills add <source> --skill <name>`.
+The add command commits both files. For a source with recorded removals, select
+the retained skill explicitly instead of adding the entire source.
+
+Run one modifying command at a time per installation. Old CLI versions do not
+understand the removal policy, including an old process that pulls new code
+mid-command; this is why the first-use instructions run `git pull` separately.
 
 Global agent instructions live in `config/AGENTS.md`; `install-local` links that file to `~/.claude/CLAUDE.md`, `~/.codex/AGENTS.md`, and `~/.agents/AGENTS.md`.
 
