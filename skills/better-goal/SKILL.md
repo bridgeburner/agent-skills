@@ -79,9 +79,18 @@ evidence; being a coordinator does not by itself require escalation.
 
 Astra uses low, medium, or high in this workflow. These are user routing
 preferences, not claims that effort levels or model capabilities are equivalent.
-Use cheaper models only for deliberately bounded work with clear inputs and a
-reliable way to check the result. That worker still receives the strategic
-context above. Use ordinary commands for deterministic operations.
+
+For deterministic, well-bounded tasks with explicit inputs, fixed decision rules,
+and a reliable result check, consider these optional routes:
+
+- **Codex:** Luna / max (`gpt-5.6-luna`).
+- **Anthropic:** Opus 4.8 (`claude-opus-4-8`) or Opus 5 (`claude-opus-5`),
+  when available; choose effort using the task and supported harness controls.
+
+These alternatives do not replace the Astra/Fable defaults for open-ended or
+ambiguous work. The worker still receives the strategic context above. Escalate
+when assumptions stop holding or the result cannot be reliably checked. Use
+ordinary commands when they can perform the deterministic operation directly.
 
 Record the effective model/effort and consequential routing changes with the
 task. Do not claim a model selection the harness cannot express or verify. A
