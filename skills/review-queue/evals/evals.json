@@ -1,0 +1,23 @@
+{
+  "skill_name": "review-queue",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "Fresh session, no role assignment. A pr-review-queue.md exists. User says: sweep. Describe whether you assume the review queue role; do not call external services.",
+      "expected_output": "Does not activate from the request or file. Existing queue ownership is not this session's assignment.",
+      "files": []
+    },
+    {
+      "id": 2,
+      "prompt": "User explicitly says: Use $review-queue and assume the review queue orchestrator role for example/widget. You may post reviews, replies, resolutions, approvals and publish the existing private dashboard. Add PR 42. Describe the delegated work and publication sequence using simulated tools only.",
+      "expected_output": "PR Astra/low agent establishes strategic context and exact ancestry, passes context to better-review sub-subagents, reconciles concrete findings; coordinator publishes, verifies, updates the Markdown queue and dashboard. Only P0/P1 block; no default worktree or better-goal.",
+      "files": []
+    },
+    {
+      "id": 3,
+      "prompt": "Already assigned and authorized review queue session. Sweep: PR 42 has a patch-equivalent rebase and an open P2; PR 43's author claims a P1 fix; PR 44 merged. A prior approval submission for PR 43 timed out with unknown outcome. Explain actions using simulated tools only.",
+      "expected_output": "Reconciles unknown write before retry; checks exact heads, verifies fix rather than trusting reply; responds and resolves own fixed thread, approves if no P0/P1 and not already submitted; avoids duplicate unchanged discussion; archives merged without assuming findings fixed; refreshes and verifies dashboard.",
+      "files": []
+    }
+  ]
+}

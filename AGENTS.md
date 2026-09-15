@@ -18,7 +18,7 @@ This repo manages skills for Claude Code (and compatible agents like Codex). It 
 
 These live in `skills/` and are symlinked into `~/.claude/skills/` and `~/.codex/skills/` by `install-local`:
 
-**Engineering workflow:** `better-goal`, `better-review`, `pr-monitor`
+**Engineering workflow:** `better-goal`, `better-review`, `review-queue`, `pr-monitor`
 
 **Utilities:** `codex-cli`, `gwsctx`, `claude-spawn`, `desloppify`
 
