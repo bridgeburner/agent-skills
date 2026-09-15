@@ -45,6 +45,10 @@ selects another model. That PR agent:
 1. Reads the PR, relevant specs/tickets, source, and existing discussion. Explains
    the root problem, larger feature, required outcome, and important constraints.
    Establishes the exact head, actual base, and stacked dependencies.
+   Carry the session coordinator's relevant user decisions and strategic judgment
+   into this brief; assess whether the proposed approach serves the outcome.
+   Save the brief and accepted/rejected finding rationale with the PR's evidence
+   so later reviewers can reuse the reasoning instead of rediscovering it.
 2. Delegates the review to subagents using `better-review`, carrying that context,
    exact source identities, prior findings, and read-only authority into each
    assignment. Split useful independent concerns; one reviewer suffices for a
@@ -70,6 +74,9 @@ instead of silently claiming the requested review process ran.
 
 Fetch its current state, commits, reviews, checks, and discussion since the
 recorded review. Keep our approval separate from others' decisions and CI.
+Reuse the saved brief and prior dispositions, updating them when new evidence
+changes the context. Do not reopen a rejected or downstream-fixed concern
+without new evidence that makes it relevant.
 
 - No meaningful change: refresh status without posting again.
 - New commits or relevant base changes: have the PR agent assess the delta and
@@ -86,7 +93,9 @@ recorded review. Keep our approval separate from others' decisions and CI.
 
 ## Publish any review or follow-up
 
-Before publishing, confirm the PR is still open at the reviewed head. Record
+Before submitting an approval or new review, confirm the PR is still open at
+the reviewed head. A substantive reply on a merged PR may still be acknowledged
+and recorded, without submitting another approval. Record
 the intended action and target; read back the result and save its ID. A timeout
 means unknown outcome: check for success before retrying. Do not duplicate an
 unchanged review or reply. Failed reads leave the prior state visibly stale.

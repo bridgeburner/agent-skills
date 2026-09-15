@@ -14,6 +14,7 @@
 ### #NUMBER — [Title](PR_URL)
 
 - Purpose and larger feature:
+- Strategic brief and prior decision rationale (inline or evidence link):
 - Current head / base / last reviewed commit:
 - Review progress: pending / reviewing / complete / stale
 - Our review: not submitted / approved / changes requested; review URL and ID
