@@ -3,8 +3,12 @@
 - Repository:
 - Reviewer identity:
 - Strategic project context:
-- Coordinator session and explicit assignment:
-- Authorized actions and user instruction:
+- Goal and authority: [goal.md](goal.md)
+- Coordinator assignment and active work: [tasks.md](tasks.md)
+- Action history and publication receipts: [events.jsonl](events.jsonl)
+- Discovery filters: ready/non-draft; direct reviewer/team requests, if required
+- Last admission timestamp and PRs: last_admission_at / last_admission_prs
+- Additional user approval conditions:
 - Reviewer model/effort: gpt-6-astra / low
 - Dashboard URL, audience, source location, and refresh instructions:
 - Last successful sweep:
@@ -20,7 +24,7 @@
 - Our review: not submitted / approved / changes requested; review URL and ID
 - Other reviewers and checks: observed decisions, links, and retrieval limits
 - Last checked:
-- Evidence / assigned worker, if any:
+- Evidence / task link (ownership is recorded in tasks.md):
 
 | Finding | Severity | Disposition | Evidence and rationale | Thread / comment ID |
 |---|---|---|---|---|
@@ -28,10 +32,11 @@
 Dispositions: open, fixed, accepted tradeoff, withdrawn. Keep proposed fixes open
 until verified. An unreviewed PR is not issue-free.
 
-## Pending actions and verified history
+## Action evidence
 
-Record target PR/commit/thread and intended action before external writes;
-record returned IDs and verified outcome afterward. Link long evidence.
+Link pending and verified publication events and longer evidence. Record target
+PR/commit/thread, intended action, returned IDs and readback in events.jsonl;
+do not maintain a second action ledger here.
 
 ## Merged
 

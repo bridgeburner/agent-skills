@@ -2,7 +2,10 @@
 
 Run `evals.json` as isolated, simulated conversations without live GitHub or
 dashboard writes. They check the role gate, strategic delegation, and incremental
-sweep/recovery. Include negative prompts such as "review PR 42", "edit this
+sweep/recovery, discovery approval history, and tracker ownership boundaries.
+Cases 4–5 cover discovery without admission, approvals on older commits,
+conditional approval versus merge holds, and recovery without duplicate writes.
+Include negative prompts such as "review PR 42", "edit this
 skill", and an old queue file in a fresh session. Inspect decisions, not wording.
 
 The Codex gate is `policy.allow_implicit_invocation: false`; Claude Code uses

@@ -39,7 +39,7 @@ npx skills add -g <owner/repo>     # install globally across all agents
 |---|---|
 | `better-goal` | Coordinates work in `~/.sdd` with strategic context, a compact frontier model ladder, and reconstructible event/evidence history |
 | `better-review` | Reviews the intended outcome and concrete risks, loading specialized checks only where relevant |
-| `review-queue` | Explicitly assigned per-project review orchestrator: strategic delegated reviews, follow-up sweeps, approvals, and a dashboard backed by `pr-review-queue.md` |
+| `review-queue` | Explicitly assigned review orchestrator: candidate discovery, independent reviews, sweeps, and approvals; better-goal coordination with a Markdown queue and generated dashboard data |
 | `pr-monitor` | Babysits open authored PRs on a cadence: tracker-grounded review disposition, fixes, merge gate, and post-merge cleanup — **Claude Code only** |
 
 ### Utilities

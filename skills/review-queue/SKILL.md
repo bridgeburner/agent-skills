@@ -24,18 +24,70 @@ role assignment alone does not grant those writes. Ask only for missing choices
 that affect the outcome or authority. Complete work already authorized.
 User instructions take precedence over this skill's defaults.
 
-## Maintain pr-review-queue.md
+## Durable coordination and queue state
+
+Use `better-goal` for this recurring workflow. Load its skill and recovery
+guidance, reuse the project's tracker, and give each file one job:
+
+- `goal.md`: strategic intent, user decisions, scope, and authorized actions.
+- `tasks.md`: assignments, executor/claim, dependencies, and result links.
+  Track a sweep or discovery as one task; add per-PR tasks when dispatching work.
+  A completed review task does not mean its PR merged or left the queue.
+- `events.jsonl`: append-only decisions, assignments, attempts, publication
+  intents and verified receipts, including failures and unknown outcomes.
+- `pr-review-queue.md`: admitted PRs, review identities, findings/dispositions,
+  admission cutoff, discovery filters, approval conditions, and dashboard setup.
+
+Link these records rather than repeating mutable status or ownership. Task
+ownership lives in `tasks.md`; PR status lives in the queue. Workers write assigned
+evidence; the coordinator serializes shared files and external actions. Preserve
+the context and action history needed to resume without the previous conversation.
 
 Keep `pr-review-queue.md` in the project's local tracker, outside implementation
-worktrees. Reuse the existing location; otherwise use
-`~/.sdd/<project>/review-queue/pr-review-queue.md`. Start from
+worktrees. Reuse the existing location; otherwise use the canonical tracker
+resolved by `better-goal`. Start from
 [the queue template](templates/pr-review-queue.md).
 
-This file owns the tracked PRs, review status, findings, and action history.
-Link longer evidence instead of copying it into multiple trackers. The session
-coordinator alone updates the queue and publishes external actions. Before taking
-over an existing queue, reconcile any pending actions and active workers; do not
-run two publishing coordinators against the same queue.
+Markdown is the authoritative queue. Structured JSON blocks inside it are fine
+when an existing dashboard parser consumes them; preserve that format. Standalone
+JSON snapshots are generated outputs, never a second editable queue.
+
+On takeover, read goal, tasks, queue, and relevant events/evidence. Reconcile
+pending writes and active workers before transferring ownership; elapsed time
+or an old task status does not prove a publisher stopped. Preserve historical
+records when migrating a playbook, and replace its operational instructions with
+a pointer here. Keep project values and user overrides in the tracker, not a
+second workflow document.
+
+## Discover candidates
+
+When the assigned user says `discover`, scan only the bound repository for PRs
+created since `last_admission_at`: the most recent actual user-selected admission,
+not the last sweep or discovery. Recover a missing cutoff from admission evidence;
+if unavailable, ask for the initial window rather than guessing one.
+
+Select open, ready/non-draft PRs not already in the queue or history and without
+a current approval from anyone. Apply the queue's configured direct-user or team
+review-request filters; distinguish direct and team requests. Comments and
+changes-requested reviews do not disqualify a candidate. Read all review pages:
+a later comment does not revoke approval, and approval of an older commit still
+counts for discovery unless dismissed or superseded by that reviewer's changes
+request. Do not substitute aggregate review decisions, CI, or review requests
+for actual approval history.
+
+Read title/body and enough context to explain each candidate. Return one line
+per PR in PR-number order:
+`[#123 — Title](URL) — one-sentence description of the change and its purpose.`
+Mention relevant changes requests briefly on the same line. State the searched
+window and incomplete reads; unknown approval state is not no approval. If none
+qualify, say so.
+
+Wait for the user's selection before admission or review. Discovery does not
+authorize GitHub writes or dashboard publication and does not advance the cutoff.
+After actual user-selected admission, record `last_admission_at` and
+`last_admission_prs` with evidence. Duplicates and skipped merged/closed PRs do
+not advance it. Retain presented but unselected candidates in discovery evidence
+so a later explicit selection remains recoverable, including older PRs.
 
 ## Review a new PR
 
@@ -58,15 +110,24 @@ selects another model. That PR agent:
    Removes duplicates and unsupported concerns. Returns issues with severity,
    changed-line location, evidence, minimal remedy, and verification limits.
 
+Record the PR-agent assignment before dispatch. Its independent reviewers receive
+the same strategic brief and write only assigned evidence; reviewers do not
+publish. The PR agent returns their reconciled result to the session coordinator.
+
 The session coordinator checks the conclusions, then publishes a top-level
 summary and inline comments for new issues. Reuse an existing thread for the
-same issue. Only P0/P1 block approval; otherwise approve the reviewed commit
-and retain P2/P3 findings. Do not approve your own PR.
+same issue. Among our findings, only P0/P1 block approval; otherwise approve the reviewed commit
+and retain P2/P3 findings. Apply additional user-defined approval conditions in
+the queue, including valid unresolved requests from a named reviewer. Withhold
+approval for an unmet condition unless the user allows conditional approval;
+state the condition explicitly if using it. Assess feedback on its merits, not
+as an automatic veto. Keep an author's operational merge hold separate from
+source approval. Do not approve your own PR.
 
 Use Git objects for inspection by default. Create an isolated checkout only
 when a useful execution check needs it. Run checks proportional to changed
 behavior; distinguish source inspection, synthetic probes, tests, CI, and live
-product evidence. No `better-goal` dependency or default per-PR worktree.
+product evidence. Do not create a per-PR worktree by default.
 If required delegation or a selected model is unavailable, report that limit
 instead of silently claiming the requested review process ran.
 
@@ -88,15 +149,17 @@ without new evidence that makes it relevant.
 - Resolved concern: mark it fixed, accepted tradeoff, or withdrawn with a reason;
   reply and resolve our thread. An outdated/resolved thread alone proves no fix.
   Leave other reviewers' threads alone.
-- No remaining P0/P1: approve the current reviewed commit, replacing our earlier
-  changes-requested decision. Unverified fixes remain open.
+- No remaining P0/P1: approve the current reviewed commit when user approval
+  conditions are satisfied or the user explicitly allows conditional approval.
+  State any condition, and replace our earlier changes-requested decision when
+  appropriate. Unverified fixes remain open.
 
 ## Publish any review or follow-up
 
 Before submitting an approval or new review, confirm the PR is still open at
 the reviewed head. A substantive reply on a merged PR may still be acknowledged
-and recorded, without submitting another approval. Record
-the intended action and target; read back the result and save its ID. A timeout
+and recorded, without submitting another approval. Record the intended action
+and target in the event ledger; read back and save its ID. A timeout
 means unknown outcome: check for success before retrying. Do not duplicate an
 unchanged review or reply. Failed reads leave the prior state visibly stale.
 

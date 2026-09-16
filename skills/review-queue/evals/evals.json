@@ -10,13 +10,25 @@
     {
       "id": 2,
       "prompt": "User explicitly says: Use $review-queue and assume the review queue orchestrator role for example/widget. You may post reviews, replies, resolutions, approvals and publish the existing private dashboard. Add PR 42. Describe the delegated work and publication sequence using simulated tools only.",
-      "expected_output": "PR Astra/low agent establishes strategic context and exact ancestry, passes context to better-review sub-subagents, reconciles concrete findings; coordinator publishes, verifies, updates the Markdown queue and dashboard. Only P0/P1 block; no default worktree or better-goal.",
+      "expected_output": "PR Astra/low agent establishes strategic context and exact ancestry, passes context to better-review sub-subagents, reconciles concrete findings; coordinator publishes, verifies, updates the Markdown queue and dashboard. Only P0/P1 block; no default worktree. Uses better-goal for assignments and events, Markdown for PR state, and generated JSON for the dashboard.",
       "files": []
     },
     {
       "id": 3,
       "prompt": "Already assigned and authorized review queue session. Sweep: PR 42 has a patch-equivalent rebase and an open P2; PR 43's author claims a P1 fix; PR 44 merged. A prior approval submission for PR 43 timed out with unknown outcome. Explain actions using simulated tools only.",
       "expected_output": "Reconciles unknown write before retry; checks exact heads, verifies fix rather than trusting reply; responds and resolves own fixed thread, approves if no P0/P1 and not already submitted; avoids duplicate unchanged discussion; archives merged without assuming findings fixed; refreshes and verifies dashboard.",
+      "files": []
+    },
+    {
+      "id": 4,
+      "prompt": "Assigned authorized session. User says discover. Last admission 12:00, last sweep 14:00. Filter: ready PRs requesting me or team. All candidates created 13:00: #50 has only COMMENTED; #51 approved on an older head then COMMENTED; #52 has a dismissed approval and only CHANGES_REQUESTED now; #53 draft; #54 already in queue. Simulate only; no tools or writes. Return candidate lines and explain cutoff/next action.",
+      "expected_output": "Only #50 and #52 qualify. Cutoff remains12:00. Do not admit, review, publish, or advance cutoff until user selects and admission occurs.",
+      "files": []
+    },
+    {
+      "id": 5,
+      "prompt": "Assigned session recovering. tasks.md owns an unfinished review assignment; Markdown queue records findings; generated queue.json is stale. Prior publication timed out but GitHub readback now shows success. User condition allows withholding approval or conditional approval for valid unresolved reviewer requests. PR70 has no P0/P1 but such a request; PR71 has an author merge hold only. Describe recovery and records, using simulation only.",
+      "expected_output": "Reconcile worker ownership before reassignment; record successful write without retry; regenerate JSON from Markdown. Apply user condition to70; separate71 merge hold from approval. Task completion does not retire PR. Goal authority/tasks ownership/events history/queue PR state stay distinct.",
       "files": []
     }
   ]
