@@ -100,7 +100,11 @@ PR size:
 Settle rebase equivalence yourself before delegating it. Fetch both three-dot
 diffs, strip the file and hunk headers, keep only the added and removed lines
 with their indentation normalised, and compare a hash of the result. That
-answers the question in seconds and its evidence is reproducible. Delegating it
+answers the question in seconds and its evidence is reproducible. Check the
+response size before trusting the result: a failed or timed-out fetch returns an
+empty diff, which hashes exactly like a change that deleted everything, so a
+transient network error can otherwise read as a wholesale reversion. Retry the
+read rather than acting on the empty one. Delegating it
 to a reasoning model costs minutes and returns a verdict that still needs
 interpreting, because a strict reading calls any changed context a change even
 when the payload is untouched. Check `reviewDecision` too: when the provider
