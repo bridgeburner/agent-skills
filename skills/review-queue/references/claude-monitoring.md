@@ -94,8 +94,19 @@ report rather than paper over. A tiered policy routes by the kind of work, not b
 PR size:
 
 - **Deterministic and verifiable** work, where the answer can be checked against
-  the source: patch-equivalence of a rebase, whether a finding's lines moved,
-  merge and close classification.
+  the source: whether a finding still applies at a new head, merge and close
+  classification.
+
+Settle rebase equivalence yourself before delegating it. Fetch both three-dot
+diffs, strip the file and hunk headers, keep only the added and removed lines
+with their indentation normalised, and compare a hash of the result. That
+answers the question in seconds and its evidence is reproducible. Delegating it
+to a reasoning model costs minutes and returns a verdict that still needs
+interpreting, because a strict reading calls any changed context a change even
+when the payload is untouched. Check `reviewDecision` too: when the provider
+still counts the existing approval at the new head, re-publishing adds noise to
+the PR without changing anything. Reserve the deterministic tier for what a hash
+cannot answer.
 - **Review and judgment** work: assessing author pushback, reassessing findings
   against changed behavior, deciding whether a concern survives.
 
