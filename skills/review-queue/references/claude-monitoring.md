@@ -48,6 +48,15 @@ Also watch for PRs newly matching the queue's configured discovery filters.
 Surface them to the user. A surfaced candidate is not an admission and does not
 advance `last_admission_at`.
 
+Track a candidate by an eligibility fingerprint, not a one-shot ledger. A PR
+opened minutes ago often carries no review request yet, so a filter that checks
+once and records the number as seen will suppress it permanently, including at
+the moment it becomes admissible. Record the inputs the filters actually read,
+such as the configured review requests and the review count, and emit again when
+those change. An unchanged ineligible PR then stays quiet without going blind to
+the change that would qualify it. Keep the watch's own admission cutoff in step
+with the queue metadata, or discovery silently re-proposes PRs already decided.
+
 ## Dispatch one worker at a time per PR
 
 An event names the PR to look at. It does not define the job: the worker assesses
