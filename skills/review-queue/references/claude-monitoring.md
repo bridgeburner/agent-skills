@@ -83,8 +83,17 @@ PR size:
 - **Review and judgment** work: assessing author pushback, reassessing findings
   against changed behavior, deciding whether a concern survives.
 
-Give the worker a read-only sandbox. It inspects Git objects and the PR; it does
-not need write authority, and withholding it removes a whole class of accident.
+Sandbox policy is the user's call, and on some machines an unsandboxed run is the
+only one that works, because a read-only Codex sandbox also cuts the network the
+worker needs to read the PR. When the user has authorized running without a
+sandbox, the boundary stops being enforced by the runtime and has to be carried
+in the handoff instead. Say plainly in the prompt that the worker assesses only:
+no repository edits, commits, pushes, comments, reviews, approvals, or thread
+resolutions, whatever credentials it happens to inherit. A worker running without
+a sandbox holds the same provider credentials as the coordinator, so the rule
+that the coordinator owns every external write is now a prompt-level instruction
+rather than a wall. Check the returned result against that boundary instead of
+assuming it held.
 
 Every handoff carries the queue contract, that PR's saved brief and prior
 dispositions, the exact old and new commit identities, and the open findings with
