@@ -104,7 +104,14 @@ the queue already paid for, and may reopen a concern the user already settled.
 
 The worker assesses and writes its assigned evidence. The session coordinator
 posts the reply, resolves our own thread, renews or withholds approval, reads the
-result back, and appends the event. This is the same serialization rule the main
+result back, and appends the event.
+
+Then refresh the watch baseline for that PR. Our own review, comment or
+resolution changes the same counts the watch compares, so without this the next
+cycle reports our publication back to us as if the author had acted. Re-seed the
+PR's entry from live state after every write, and treat an event that exactly
+matches something just published as an echo to verify rather than a change to
+act on. This is the same serialization rule the main
 skill states, and a watch makes it matter more: concurrent events on one PR would
 otherwise race on the same thread.
 
