@@ -104,7 +104,14 @@ answers the question in seconds and its evidence is reproducible. Check the
 response size before trusting the result: a failed or timed-out fetch returns an
 empty diff, which hashes exactly like a change that deleted everything, so a
 transient network error can otherwise read as a wholesale reversion. Retry the
-read rather than acting on the empty one. Delegating it
+read rather than acting on the empty one.
+
+Two diffs are only comparable when each head sits on top of its base. Read
+`behind_by` first: when a stacked parent advances without the child being
+rebased, the merge base falls back and the three-dot delta swells to include the
+parent's own commits, so the hashes differ for a reason that has nothing to do
+with the PR. That state is stale-and-awaiting-rebase, not changed, and reporting
+it as new work would send a reviewer hunting for edits the author never made. Delegating it
 to a reasoning model costs minutes and returns a verdict that still needs
 interpreting, because a strict reading calls any changed context a change even
 when the payload is untouched. Check `reviewDecision` too: when the provider
