@@ -39,7 +39,7 @@ npx skills add -g <owner/repo>     # install globally across all agents
 |---|---|
 | `better-goal` | Coordinates work in `~/.sdd` with strategic context, a compact frontier model ladder, and reconstructible event/evidence history |
 | `better-review` | Reviews the intended outcome and concrete risks, loading specialized checks only where relevant |
-| `review-queue` | Explicitly assigned review orchestrator: candidate discovery, independent reviews, sweeps, and approvals; better-goal coordination with a Markdown queue and generated dashboard data |
+| `review-queue` | Explicitly assigned review orchestrator: candidate discovery, independent reviews, sweeps, and approvals; better-goal coordination with a Markdown queue and generated dashboard data. On Claude Code it can instead hold a continuous watch and publish the dashboard as an artifact |
 | `pr-monitor` | Babysits open authored PRs on a cadence: tracker-grounded review disposition, fixes, merge gate, and post-merge cleanup — **Claude Code only** |
 
 ### Utilities
@@ -67,6 +67,8 @@ Removing a skill removes its instructions and bundled resources, not the underly
 ### Harness compatibility
 
 Most skills here work in any compatible harness. `pr-monitor` requires Claude Code's `Workflow` and `TaskList` tools plus the built-in `loop` skill. Its workflow sets effort internally; it does not require `TaskGet` or separate model/effort overrides. Other harnesses must not invoke it, but its `references/` files provide procedures for a separate implementation.
+
+`review-queue` works in any compatible harness through its static `sweep` verb. Where the harness offers a background watch and its own private pages, currently Claude Code, [`skills/review-queue/references/claude-monitoring.md`](skills/review-queue/references/claude-monitoring.md) adds a continuous watch, per-event worker dispatch, and an artifact dashboard. The queue, discovery rules, review process, and approval conditions stay shared, so only the harness-variable part is duplicated.
 
 ## Installing Individual Skills
 

@@ -24,6 +24,25 @@ role assignment alone does not grant those writes. Ask only for missing choices
 that affect the outcome or authority. Complete work already authorized.
 User instructions take precedence over this skill's defaults.
 
+## Match the workflow to the harness
+
+The queue, discovery rules, review process, approval conditions, and publication
+duties below are harness-neutral. How the role *notices* a change, and where the
+dashboard lives, depend on what the running harness can do.
+
+- **A harness without a background watch** uses the static `sweep` verb: the user
+  asks, and the session walks every active PR at once.
+- **A harness with a background watch and its own hosted pages**, currently
+  Claude Code, may instead hold a continuous watch and dispatch one worker per
+  detected change. Read
+  [references/claude-monitoring.md](references/claude-monitoring.md) for that
+  path, including its event taxonomy, worker tiers, and artifact dashboard.
+
+Both paths share one queue and one set of records. A session may run the static
+sweep even where a watch is available; a watch never replaces the user's ability
+to ask for a sweep. Continuous monitoring is an authority, not a capability:
+arm it only after the user grants it and the goal contract records it.
+
 ## Durable coordination and queue state
 
 Use `better-goal` for this recurring workflow. Load its skill and recovery
@@ -92,7 +111,9 @@ so a later explicit selection remains recoverable, including older PRs.
 ## Review a new PR
 
 Delegate one Astra/low (`gpt-6-astra`, low effort) agent per PR unless the user
-selects another model. That PR agent:
+selects another model. A user may instead set a tiered policy that routes by task
+kind rather than one model for every job; record the policy in the queue and
+apply it per dispatch. That PR agent:
 
 1. Reads the PR, relevant specs/tickets, source, and existing discussion. Explains
    the root problem, larger feature, required outcome, and important constraints.
@@ -170,6 +191,12 @@ using the process above. Run independent checks concurrently. Finish authorized
 replies, resolutions, approvals, queue updates, and dashboard refresh. Report
 meaningful changes, remaining blockers, and anything that could not complete.
 
+Where a continuous watch is authorized and running, the same per-PR process
+applies to one PR at a time as its change arrives, rather than to the whole queue
+on request. A sweep remains available as the reconciling full pass, and is the
+right response after a watch gap, an unknown outcome, or any doubt that every
+change was seen.
+
 ## Add or retire PRs
 
 Add PRs explicitly selected by the user, avoiding duplicates. Verify any admission
@@ -177,19 +204,28 @@ filters, including direct versus team review requests and approvals by anyone.
 Keep approved PRs active until merged or closed. Move merged/closed PRs to the
 appropriate history section with findings and final disposition intact; merging
 does not prove an issue was fixed. Retire other PRs only at the user's request.
-Do not merge, implement fixes, or start scheduled monitoring under this role.
+Do not merge or implement fixes under this role. Start a continuous watch or a
+timed cadence only when the user authorizes it; record that authority in the goal
+contract before arming it.
 
 ## Create and refresh the dashboard
 
 During setup, create a running dashboard once its location and publication are
 authorized. Prefer the user's existing hosting mechanism; record its address and
-refresh instructions. Read-only assignments do not authorize creating or
-publishing a dashboard. Derive data from `pr-review-queue.md`, never a second
-editable queue. A generated JSON snapshot is fine.
+refresh instructions. When the harness publishes its own private pages, that is
+usually the simpler host than an external site, because it removes a separate
+checkout, build, and deploy step from every refresh. Moving an existing dashboard
+to a new host is a user decision: keep the audience as narrow as it was, and
+retire the old address deliberately rather than leaving two live copies.
+Read-only assignments do not authorize creating or publishing a dashboard.
+Derive data from `pr-review-queue.md`, never a second editable queue. A
+generated JSON snapshot is fine.
 
 Show active PRs, review progress, our approval, outstanding findings, and snapshot
 time; show merged history below. Keep CI and other reviewers' decisions separate.
 Refresh after queue changes and sweeps. Reuse the existing site and preserve its
 audience. Verify deployment and live data before claiming publication; a reserved
 URL is not a running dashboard. Keep credentials and raw evidence out of published
-assets. The dashboard displays the last sweep, not continuous GitHub monitoring.
+assets. State the dashboard's freshness basis rather than implying more: the
+last sweep, or the last observed event when a continuous watch is authorized and
+running. Neither is a live view of GitHub.

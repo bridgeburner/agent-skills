@@ -22,6 +22,8 @@ These live in `skills/` and are symlinked into `~/.claude/skills/` and `~/.codex
 
 **Utilities:** `codex-cli`, `gwsctx`, `claude-spawn`, `desloppify`
 
+`review-queue` is portable. Its harness-variable behavior lives in `skills/review-queue/references/claude-monitoring.md`, loaded only by a harness that can hold a background watch and publish its own private pages. Keep the shared core in `SKILL.md`; do not fork the skill per harness.
+
 `pr-monitor` is Claude Code only: it requires `Workflow`, `TaskList`, and the built-in `loop` skill. Its workflow sets effort internally; it does not require `TaskGet` or separate model/effort overrides. Do not make it portable; reimplement against its `references/` instead.
 
 ## External skills
