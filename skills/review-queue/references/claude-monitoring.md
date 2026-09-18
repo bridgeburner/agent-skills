@@ -54,7 +54,14 @@ once and records the number as seen will suppress it permanently, including at
 the moment it becomes admissible. Record the inputs the filters actually read,
 such as the configured review requests and the review count, and emit again when
 those change. An unchanged ineligible PR then stays quiet without going blind to
-the change that would qualify it. Keep the watch's own admission cutoff in step
+the change that would qualify it.
+
+Separate terminal exclusions from recoverable ones. A PR that has picked up an
+approval can no longer qualify under a no-current-approval filter, so drop it
+from tracking rather than re-emitting each time its review count moves. A missing
+review request is recoverable, because one can be added at any time, so keep
+watching that. Filtering the terminal cases in the poll and leaving the
+judgement calls to the coordinator keeps the event stream worth reading. Keep the watch's own admission cutoff in step
 with the queue metadata, or discovery silently re-proposes PRs already decided.
 
 ## Dispatch one worker at a time per PR
