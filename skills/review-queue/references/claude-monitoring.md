@@ -128,7 +128,15 @@ assuming it held.
 
 Every handoff carries the queue contract, that PR's saved brief and prior
 dispositions, the exact old and new commit identities, and the open findings with
-their thread IDs. A worker told only "PR #123 changed" will rediscover reasoning
+their thread IDs.
+
+Name the outcome to assess, not the verdict. A brief that declares what counts as
+blocking will get that verdict back: a reviewer told "a gate that reports but does
+not block reproduces the problem" will rank an unenforced check as a blocker even
+when the PR cannot fix it, the author disclosed it, and someone already raised it.
+Describe what the change claims and where a defect would hurt, then let severity
+follow from what is found. When a returned finding cites the brief as its reason,
+treat that as the brief marking its own homework and re-decide it on the merits. A worker told only "PR #123 changed" will rediscover reasoning
 the queue already paid for, and may reopen a concern the user already settled.
 
 ## The coordinator still publishes
