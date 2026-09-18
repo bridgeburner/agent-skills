@@ -48,11 +48,34 @@ Also watch for PRs newly matching the queue's configured discovery filters.
 Surface them to the user. A surfaced candidate is not an admission and does not
 advance `last_admission_at`.
 
-## Dispatch one worker per event
+## Dispatch one worker at a time per PR
 
-One event, one bounded worker, one PR. Never let an event trigger a whole-queue
-pass. Delegate through the `codex-cli` skill under the queue's recorded model
-policy. A tiered policy routes by the kind of work, not by PR size:
+An event names the PR to look at. It does not define the job: the worker assesses
+that PR's current state, so several events arriving close together are one piece
+of work rather than several. Never let an event trigger a whole-queue pass.
+
+Hold at most one worker in flight per PR, and enforce it with a lock rather than
+with attention. A push and a reply landing in consecutive cycles otherwise put
+two workers on one PR, and two workers can reach different conclusions about the
+same finding, which the coordinator would then publish onto the same thread.
+
+- Before dispatching, check for that PR's lock in the watch state directory. If
+  one exists, append the event to the PR's pending list and dispatch nothing.
+- Write the lock with the worker's identifier and start time, so a later session
+  can tell a running worker from an abandoned one.
+- When the worker returns and its result is published, clear the lock. If events
+  accumulated meanwhile, dispatch once against the PR's current state, not once
+  per queued event.
+- Treat a lock whose worker is no longer running as releasable, and say so in the
+  event ledger when releasing one. A dead worker must not wedge a PR forever.
+
+Delegate through the `codex-cli` skill under the queue's recorded model policy.
+Verify an unfamiliar model identifier against the harness's own model listing or
+current vendor documentation before the first dispatch of a session. A slug
+recalled from memory can be confidently wrong, and a rejected model surfaces as a
+failed run rather than as a fallback, which the main skill already requires you to
+report rather than paper over. A tiered policy routes by the kind of work, not by
+PR size:
 
 - **Deterministic and verifiable** work, where the answer can be checked against
   the source: patch-equivalence of a rebase, whether a finding's lines moved,
