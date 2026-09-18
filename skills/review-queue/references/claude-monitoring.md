@@ -61,8 +61,16 @@ approval can no longer qualify under a no-current-approval filter, so drop it
 from tracking rather than re-emitting each time its review count moves. A missing
 review request is recoverable, because one can be added at any time, so keep
 watching that. Filtering the terminal cases in the poll and leaving the
-judgement calls to the coordinator keeps the event stream worth reading. Keep the watch's own admission cutoff in step
-with the queue metadata, or discovery silently re-proposes PRs already decided.
+judgement calls to the coordinator keeps the event stream worth reading. Keep the
+watch's own admission cutoff in step with the queue metadata, or discovery
+silently re-proposes PRs already decided.
+
+That cutoff gates new proposals only. A candidate already surfaced stays watched
+whatever the cutoff later becomes, because every admission advances it past PRs
+whose eligibility you are still waiting on, and dropping them there would end the
+watch at exactly the moment a review request might arrive. Keep a tracked
+candidate until it is terminally excluded, closed or admitted, not until it falls
+out of the window.
 
 ## Dispatch one worker at a time per PR
 
