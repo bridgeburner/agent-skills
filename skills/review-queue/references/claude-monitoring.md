@@ -72,6 +72,12 @@ watch at exactly the moment a review request might arrive. Keep a tracked
 candidate until it is terminally excluded, closed or admitted, not until it falls
 out of the window.
 
+Say when a tracked candidate leaves. One that merges or closes simply vanishes
+from the open listing, so a PR you surfaced to the user can disappear without a
+word and they are left believing it is still pending. Compare the tracked set
+against the listing each cycle and report the departure once, naming whether it
+merged or closed, before dropping it.
+
 ## Dispatch one worker at a time per PR
 
 An event names the PR to look at. It does not define the job: the worker assesses
