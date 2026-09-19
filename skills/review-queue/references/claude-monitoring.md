@@ -72,11 +72,13 @@ watch at exactly the moment a review request might arrive. Keep a tracked
 candidate until it is terminally excluded, closed or admitted, not until it falls
 out of the window.
 
-Say when a tracked candidate leaves. One that merges or closes simply vanishes
-from the open listing, so a PR you surfaced to the user can disappear without a
-word and they are left believing it is still pending. Compare the tracked set
-against the listing each cycle and report the departure once, naming whether it
-merged or closed, before dropping it.
+Announce every exit from tracking, whatever causes it. A candidate you surfaced
+to the user disappears through more paths than merging: it can close, pick up an
+approval that makes it permanently ineligible, or go back to draft. Each of those
+leaves them believing it is still pending. Rather than patching the paths one at
+a time as you find them, record a reason whenever a tracked candidate is about to
+be dropped and report all of them together at the end of the cycle. The rule is
+that nothing leaves the tracked set silently.
 
 ## Dispatch one worker at a time per PR
 
