@@ -80,6 +80,13 @@ a time as you find them, record a reason whenever a tracked candidate is about t
 be dropped and report all of them together at the end of the cycle. The rule is
 that nothing leaves the tracked set silently.
 
+Reconcile after a busy batch. Several events can arrive together, and acting on
+the prominent ones while quietly dropping a quieter one is a coordinator failure
+the watch cannot catch: detection worked, the follow-through did not. After any
+batch carrying more than two or three events, re-read the tracked candidates and
+confirm none has become eligible without being admitted. It costs one pass and
+it is the only check that catches an event you read and then forgot.
+
 ## Dispatch one worker at a time per PR
 
 An event names the PR to look at. It does not define the job: the worker assesses
