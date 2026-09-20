@@ -152,7 +152,15 @@ branch. Neither the swelling nor the shrinking is evidence about the change.
 When you do delegate a rebase reassessment, tell the worker what you already
 established and hand it only the files that genuinely moved. State plainly in the
 brief that finding nothing is a valid and expected outcome, or you invite a
-reviewer to justify its run by manufacturing a finding. Delegating it
+reviewer to justify its run by manufacturing a finding.
+
+Hand over the files, and never the commit titles as evidence of what changed. A
+rebase rewrites every commit, so the log shows work from days ago carrying times
+from minutes ago, and a title describing something already present in the head you
+approved reads exactly like a title describing something new. Point a brief at a
+commit title that way and you send the worker hunting through a file the author
+did not touch, while the change that did land goes unexamined. Blob hashes name the
+files that moved; read those files to learn what the change is. Delegating it
 to a reasoning model costs minutes and returns a verdict that still needs
 interpreting, because a strict reading calls any changed context a change even
 when the payload is untouched. Check `reviewDecision` too: when the provider
