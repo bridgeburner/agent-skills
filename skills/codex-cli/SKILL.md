@@ -5,12 +5,18 @@ description: "Use from a non-Codex harness, such as Claude Code, to deliberately
 
 # Codex CLI
 
-This bridge invokes `codex exec`. Use a direct invocation when the parent only
-needs the answer in the current turn. Use a file-backed prompt and structured
-result when another process needs to consume the output or a later session must
-recover it. Use it when the user explicitly asks for Codex or when an
-independent Codex pass is useful. A Codex harness should use its native agent
-facility.
+This bridge invokes `codex exec`. Use it when the user explicitly asks for Codex
+or when an independent Codex pass is useful. A Codex harness should use its
+native agent facility.
+
+Default to a file-backed handoff written into the active goal's tracker: the
+prompt, the schema, the structured result, the detailed output, and the error
+log all live in the tracker's evidence directory. A dispatch that exists only in
+a shell argument disappears with the session, so a later reader cannot tell what
+was asked, what authority was granted, or whether the result was accepted.
+
+Drop to a direct inline invocation only for a throwaway question whose answer is
+needed in the current turn and leaves nothing worth keeping.
 
 ## Prepare the handoff
 
@@ -33,9 +39,8 @@ task, whether those sections are inline or in a prompt file:
 <Allowed paths and actions, prohibited changes, safety boundaries, and any
 approval the parent already has.>
 
-## Output (when needed)
-<Required format. Name a durable output path only when a later consumer needs
-one.>
+## Output
+<Required format and the durable output path.>
 ```
 
 Do not dispatch a context-free leaf task. The parent should expand the task
@@ -43,55 +48,76 @@ with the current branch or worktree, dependencies, and the reason it serves the
 strategic goal. Keep the prompt focused; reference files by path instead of
 copying their contents.
 
-When a machine consumer or restart-safe handoff needs structured metadata, use
-the canonical schema in
-[references/standard-schema.json](references/standard-schema.json) unless the
-consumer needs a deliberately different shape. Every object in a custom
-OpenAI structured-output schema needs `additionalProperties: false`, and every
-property must be required; represent an absent value with an empty string or
-array.
+For the structured result, use the canonical schema in
+[references/standard-schema.json](references/standard-schema.json) unless a
+consumer needs a deliberately different shape. Every object in a custom OpenAI
+structured-output schema needs `additionalProperties: false`, and every property
+must be required; represent an absent value with an empty string or array.
 
 ## Invoke and retrieve
 
-For a direct result, keep the invocation small:
+Resolve the tracker before dispatching, per `better-goal`
+(`scripts/sdd_path.py --cwd <dir>`), and stage every file under the assigned
+task's evidence directory:
+
+```
+<tracker>/evidence/<task-id>/codex-<slug>-{prompt.md,schema.json,result.json,output.md,stderr.txt}
+```
+
+Write the prompt file first, then run without interactive stdin:
+
+```bash
+EV=~/.sdd/<pillar>/<worktree>/evidence/<task-id>
+codex exec \
+  --output-schema "$EV/codex-<slug>-schema.json" \
+  -o "$EV/codex-<slug>-result.json" \
+  -C /path/to/repo \
+  "Read $EV/codex-<slug>-prompt.md and follow it exactly. Write the detailed result to the path in the prompt. Return structured JSON metadata per the schema." \
+  </dev/null \
+  2>"$EV/codex-<slug>-stderr.txt" &
+```
+
+Omit `--ephemeral` so the session stays resumable with `codex exec resume`; add
+it only when the session itself must not be persisted, and then the evidence
+files are the only record. Record the dispatch and the accepted result in
+`tasks.md` and `events.jsonl`, linking the retained paths.
+
+When no tracker exists and the work does not warrant one, stage under the
+harness scratchpad directory and treat those files as disposable; nothing then
+survives for a later session.
+
+For a direct invocation, carry the same context in the argument:
 
 ```bash
 codex exec -C /path/to/repo \
   "Strategic goal: <larger outcome and why this task matters>. Objective: <bounded result>. Context: <paths and prior judgment>. Constraints: <allowed and prohibited actions>."
 ```
 
-For staging a file-backed result, use collision-resistant names such as
-`/tmp/codex-<task-slug>-<short-id>-{prompt,schema,result,output,stderr}.*` and
-run without interactive stdin:
-
-```bash
-codex exec \
-  --ephemeral \
-  --output-schema /tmp/codex-<slug>-<id>-schema.json \
-  -o /tmp/codex-<slug>-<id>-result.json \
-  -C /path/to/repo \
-  "Read /tmp/codex-<slug>-<id>-prompt.md and follow it exactly. Write the detailed result to the path in the prompt. Return structured JSON metadata per the schema." \
-  </dev/null \
-  2>/tmp/codex-<slug>-<id>-stderr.txt &
-```
-
-Temporary files are staging, not durable history. Before accepting a recoverable
-handoff, copy the prompt, schema, result, detailed output, and relevant error logs
-to the assigned tracker evidence directory and use those retained paths in the
-accepted result. Alternatively, write directly to assigned durable paths.
-
-Do not add `--yolo` by habit. Use it only when the caller has explicitly
-authorized full permissions and the task requires them; otherwise preserve the
-CLI's normal approval and sandbox boundary. Do not hard-code a model or effort
-in this bridge. Choose those at dispatch under the active goal's model policy.
-
-For a structured run, read the result and detailed output when the process
-finishes. Use `tail` on stderr for progress or errors; the full file is noisy.
-Check schema errors, authentication failures, missing output, and hangs before
-retrying. A failed run is not evidence that the task was completed.
+Read the result and detailed output when the process finishes. Use `tail` on
+stderr for progress or errors; the full file is noisy. Check schema errors,
+authentication failures, missing output, and hangs before retrying. A failed run
+is not evidence that the task was completed.
 
 When structured output is requested, report `status`, `summary`, `output_files`,
 `issues`, `insights`, and `questions`; put detail in the named output file.
+
+## Permissions and model
+
+Keep the CLI's default approval and sandbox boundary. Because `codex exec` runs
+non-interactively, raise permissions deliberately and narrowly: `--add-dir` for
+an additional writable path, `-s workspace-write` for edits inside the
+workspace, `--approve-for-me` to route approval requests through automatic
+review.
+
+`--dangerously-bypass-approvals-and-sandbox`, `--dangerously-bypass-hook-trust`,
+and `-s danger-full-access` remove the boundary rather than widen it. Use them
+only when the user has explicitly authorized full permissions for this task and
+the task cannot be completed within the sandbox. Current builds have no `--yolo`
+flag; do not reach for one.
+
+Do not hard-code a model or reasoning effort in this bridge. Choose them at
+dispatch under the active goal's model policy, with `-m <model>` and
+`-c model_reasoning_effort=<effort>`.
 
 ## Boundaries
 
