@@ -231,3 +231,25 @@ A watch lives in the session that armed it. It stops when that session ends, and
 it is not a scheduled job. Tell the user this rather than leaving them believing
 the queue is covered while nothing is running. On takeover, a previous session's
 recorded watch does not mean a watch is live now; confirm or re-arm.
+
+## Ask for aggregates when a branch is far ahead of its base
+
+A head move on a long-lived branch is usually a merge from the base, not new work. Asking
+`compare/<old head>...<new head>` for `.files[]` then returns every file the base moved through —
+on a branch 144 commits ahead that is hundreds of entries and a large read for no information.
+
+Ask the comparison for counts first:
+
+```sh
+gh api "repos/OWNER/REPO/compare/main...<head>" \
+  --jq '{files:(.files|length),add:([.files[].additions]|add),del:([.files[].deletions]|add),own_commits:(.commits|length)}'
+```
+
+Against the **base branch name**, not the old head, this gives the PR's own diff through its merge
+base. Compare those aggregates with the same numbers from the previous head: near-identical totals
+with the same file count mean the branch absorbed its base and its own content did not change, so a
+review at the earlier head still applies. Only when the aggregates move do you need the file list,
+and then you want it for the PR's own diff rather than the head-to-head walk.
+
+Blob SHAs remain the way to prove a specific file is untouched. Use them for the two or three files
+a finding actually cites, not for every file in the change.
