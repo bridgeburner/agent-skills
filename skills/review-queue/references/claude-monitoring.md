@@ -290,3 +290,49 @@ HEAD..origin/main` before you write that finding down.
 
 If a review already went out on a local read, re-verify it against the remote rather than hoping.
 Two findings published that way survived the check — that was luck, not method.
+
+## A dispatched worker that never starts looks exactly like one still working
+
+Four `codex exec` dispatches sat for up to 111 minutes with **zero CPU time**, stdin an open
+socket, blocked in `sigsuspend` on "Reading additional input from stdin". They had not started
+and never would. The coordinator reported them as "still running" three times, because the only
+signal it had was the absence of the `.done` sentinel — and absent-because-wedged is
+indistinguishable from absent-because-busy.
+
+The cause was the dispatch shape, not the command. This wedges:
+
+```sh
+# ONE backgrounded call containing both the heredoc and the dispatch
+cd .../reviews/queue && cat > pr-N/prompt.md <<'PROMPT'
+...
+PROMPT
+cd ... && codex exec --ephemeral --yolo -m MODEL "$(cat reviews/queue/pr-N/prompt.md)" > worker.log 2>&1
+```
+
+This does not:
+
+```sh
+# call 1, foreground: write the brief
+cat > reviews/queue/pr-N/prompt.md <<'PROMPT'
+...
+PROMPT
+
+# call 2, backgrounded: dispatch alone, stdin closed
+codex exec --ephemeral --yolo -m MODEL "$(cat reviews/queue/pr-N/prompt.md)" \
+  < /dev/null > reviews/queue/pr-N/worker.log 2>&1; echo $? > reviews/queue/pr-N/worker.done
+```
+
+Two rules. **Write the brief in its own foreground call**, then dispatch in a separate
+backgrounded one — a heredoc sharing a backgrounded command with the dispatch leaves stdin in a
+state the launched process waits on forever. And **always redirect stdin from `/dev/null`**, so a
+process that consults it gets EOF instead of a socket that never closes.
+
+Check liveness by CPU time, not by elapsed time or the sentinel's absence:
+
+```sh
+ps -eo pid,etimes,time,args | grep "[c]odex exec"
+```
+
+`00:00:00` in the `time` column after minutes of `etimes` means wedged, not thinking. A worker
+that is genuinely reading a large diff accrues CPU within seconds. Check this before reporting a
+worker as still running, and certainly before waiting an hour on one.
