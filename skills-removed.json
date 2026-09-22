@@ -56,6 +56,10 @@
     "postgres": {
       "source": "planetscale/database-skills",
       "sourceType": "github"
+    },
+    "test-driven-development": {
+      "source": "obra/superpowers",
+      "sourceType": "github"
     }
   }
 }
