@@ -1,8 +1,13 @@
 # Monitoring
 
-Event-driven, not polled. Most of this file is failure modes, because **on a watch,
-correctness failures do not announce themselves — they produce silence, or a
-plausible smaller number.** Read it before building anything.
+Event-driven, not polled — **where the harness supports it.** This file assumes you can
+run a background process that outlives a turn and wakes you; if you cannot, see the
+degraded modes in `SKILL.md` and read the rest of this as the shape of the checks rather
+than as a watch you can arm.
+
+Most of this file is failure modes, because **on a watch, correctness failures do not
+announce themselves — they produce silence, or a plausible smaller number.** Read it
+before building anything.
 
 ## What to watch
 

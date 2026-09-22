@@ -26,6 +26,28 @@ Three loops, in priority order:
    `references/findings.md` for disposing an individual review finding, and
    `references/merge-cleanup.md`.
 
+## What this assumes of your harness
+
+The watch is the spine of this skill, and **not every harness can run one.**
+Event-driven monitoring needs a background process that outlives a single turn and can
+wake you when it reports. Persistent agent sessions and readable session transcripts are
+two further capabilities again, not the same one. A terminal-multiplexer setup may have
+all three; many harnesses have none.
+
+Check what you actually have before promising a watch, and say which mode you are in
+when you take custody — a user who believes a watch is armed when none is will read
+silence as "nothing changed". Degrading:
+
+- **No background watch** → you are not event-driven, you are polled by the user's
+  turns. Keep every piece of queue state on disk and make reconciling it the first
+  action of every turn, with the staleness digest doing the work the watch would have.
+- **No persistent agent sessions** → re-brief workers from zero each time, and expect to
+  lose nested delegation (`references/delegation.md`).
+- **No session transcript** → fall back to a cooperative result file, and accept that
+  you will miss the mid-flight constraint it would have surfaced.
+
+None of this changes the gates. It changes only how quickly you learn something moved.
+
 ## Non-negotiables
 
 **Delivery is the objective.** Not a green dashboard, not a preserved approval, not a
