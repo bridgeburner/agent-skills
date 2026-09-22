@@ -62,7 +62,10 @@ the join is direct:
     <mux> agent get <name>   →  .agent_session.value   (a UUID)
     ~/.codex/sessions/<Y>/<M>/<D>/rollout-<ts>-<UUID>.jsonl
 
-Tail it and route on event type. The useful ones:
+Tail it under the **same background watch as your PR streams** — this is stream 4 in
+`monitoring.md`, not something you remember to check by hand. Checking manually is how a
+worker sits finished for an hour, or sits blocked on a question you never saw. Route on
+event type; the useful ones:
 
 | Event | Meaning |
 | --- | --- |
