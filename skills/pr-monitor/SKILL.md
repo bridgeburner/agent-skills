@@ -6,7 +6,12 @@ description: "Shepherd one or more pull requests from work-in-progress to merged
 # pr-monitor
 
 You are a **PR shepherd**. You take custody of a set of pull requests and drive each
-one to merged, or to a named blocker with an owner. Nothing else is success.
+one to merged, or to a named blocker with an owner. Nothing else is success — and a
+blocker named, owned and surfaced *is* the second of those, not a failure.
+
+Custody is not merge authority. Being told to "take over" some PRs gives you the
+objective; it does not give you the right to merge. Ask for that explicitly at intake,
+and until you have it, drive everything to merge-eligible and stop there.
 
 This skill is not tied to any particular project role or tracker layout. Point it at
 existing PRs, or at features that still live in an integration branch, or both. One
@@ -52,8 +57,14 @@ None of this changes the gates. It changes only how quickly you learn something 
 
 **Delivery is the objective.** Not a green dashboard, not a preserved approval, not a
 tidy tracker. A PR that is reviewed, correct and unmerged has not succeeded. When a
-rule and delivery appear to conflict, re-read the rule — it is usually narrower than
-you are applying it.
+*process* rule and delivery appear to conflict — a re-review you feel you owe, a tracker
+you want tidy first — re-read it, because it is usually narrower than you are applying it.
+
+**This never narrows the merge gate.** The gate exists precisely because delivery
+pressure is the force that erodes it, so a rule you are tempted to read narrowly *at the
+moment of merging* is the one to read at full width. In particular it never licenses
+merging past an unretracted changes-requested, a never-run check, or an approval that
+predates a semantic change. Those are blockers to surface by name, not rules to narrow.
 
 **Verify before you act on a claim.** Yours, a delegate's, or the hosting service's.
 Delegated reports are reliable on substance and unreliable on cross-references —
@@ -84,9 +95,15 @@ effort before dispatch; a label is not proof of configuration.
 | Deterministic, verifiable work — conflict resolution, applying a known fix, mechanical reconciliation, merges | **Luna** `gpt-5.6-luna` at `max` |
 | Review, triage, analysis, audit; and less-bounded implementation or design | **Astra** `gpt-6-astra` at `low` |
 
-The user will sometimes ask for a different model or effort — Astra at `xhigh` for a
-deep audit, something lower for a trivial pass. Follow that exactly and record it.
-Do not silently substitute or escalate.
+These are names from one harness, not universal. **If they are unavailable, say so and
+ask which models map to the two lanes** — the lanes are the durable part, the slugs are
+not. Verify an unfamiliar identifier against the harness's own model listing before the
+first dispatch of a session; a slug recalled from memory can be confidently wrong, and a
+rejected model surfaces as a failed run rather than a fallback.
+
+The user will sometimes ask for a different model or effort — a deep audit at high
+effort, something lower for a trivial pass. Follow that exactly and record it. Do not
+silently substitute or escalate.
 
 ## Reporting, and surviving your own session
 
@@ -130,5 +147,6 @@ Ask the user what to take custody of if it is not obvious. Then, per item:
 - **Feature in an integration branch** → carve the boundary, create the child worktree
   and branch, build the PR, then admit it.
 
-Then arm the watch and work the queue. Report what merged, what is blocked, and who
-owns each blocker.
+Then arm the watch — or, if your harness cannot hold one, say so plainly and fall back
+to reconciling from disk at the top of every turn. Work the queue. Report what merged,
+what is blocked, and who owns each blocker.

@@ -37,6 +37,12 @@ blocked on an unresponsive human resurfaces instead of looking healthy.
 a delta. Record the mutation you expect when you close a lease and discard the match,
 or you will dispatch discovery onto your own actions.
 
+**Baseline against what you last acted on, not what you last saw.** Record, per PR, the
+head you actually disposed against, and call something new when it differs from *that*.
+Diffing against whatever the previous poll happened to observe is what makes a watch
+wrong across re-arms, restarts and missed intervals — the one poll you lose is the one
+change you never hear about.
+
 **Your own bookkeeping corrupts staleness.** Measure age from *substantive* events —
 a new head, a submitted review. Not from review requests, which you generate yourself;
 counting those lets your own admin hide a stalled PR.
@@ -68,10 +74,17 @@ lifetime, re-arming is your job; note that there is a blind window between expir
 re-arm. File-backed state makes that window harmless — the next poll still diffs
 against the stored snapshot — which is the main reason to keep state on disk.
 
+**Reconcile after a busy batch.** Several events arrive together, you act on the loud
+ones, and a quiet one gets dropped. No watch can catch this: detection worked, the
+follow-through did not. After any batch of more than two or three events, re-read the
+queue and confirm nothing became actionable without being acted on. It costs one pass.
+
 ## Hosting-service traps
 
 - **A never-run check reads green.** Absent is not failed, so the rollup ignores it.
-  Enumerate contexts; look for zero-run suites, especially from external apps.
+  Enumerate contexts; look for zero-run suites, especially from external apps. That
+  sentence describes the rollup's blindness, not your disposition — at the gate a
+  never-run check blocks exactly as a failure does (`merge-cleanup.md`).
 - **The badge can contradict the gate.** `APPROVED` persists across a semantic push.
   Compare the approval's commit to the current head yourself.
 - **Mergeability can be wrong.** Verify with `git merge-tree --write-tree` against the
