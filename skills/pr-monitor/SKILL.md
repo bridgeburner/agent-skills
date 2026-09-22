@@ -147,6 +147,12 @@ Ask the user what to take custody of if it is not obvious. Then, per item:
 - **Feature in an integration branch** → carve the boundary, create the child worktree
   and branch, build the PR, then admit it.
 
+**What to work first**, when several things are actionable: parents before their
+children, since only a PR based on trunk can merge and every child is waiting on one.
+Then whatever is closest to merge-eligible — finishing one PR is worth more than
+advancing three. A PR blocked on a human costs you nothing to leave sitting, as long as
+the human knows they hold it.
+
 Then arm the watch — or, if your harness cannot hold one, say so plainly and fall back
 to reconciling from disk at the top of every turn. Work the queue. Report what merged,
 what is blocked, and who owns each blocker.

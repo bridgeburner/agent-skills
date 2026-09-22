@@ -53,7 +53,10 @@ branch without dragging the rest along.
 4. **Reconcile only the selected commits there**, and validate the changed product
    path — not just that tests pass.
 5. **Create the PR** using the repository's template and ticket syntax. Read the body
-   back from the live API after creating it.
+   back from the live API after creating it. Find those conventions rather than assuming
+   them: the template file in the repository, the closing keyword other merged PRs use,
+   the merge methods the repository actually permits, and its own worktree tooling. Half
+   an hour of copying a neighbouring PR beats a body the maintainers have to fix.
 6. Then admit it as in Mode A. Your own work does not get less scrutiny for being
    yours; that is exactly when the baseline check gets skipped.
 

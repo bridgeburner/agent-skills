@@ -18,8 +18,14 @@ Verify **immediately before merging**, live. Not from a snapshot taken minutes a
   cannot tell which checks are *required*, read the base branch's protection rules;
   failing that, treat every context that ran on comparable recently-merged PRs as
   required.
-- No outstanding actionable feedback, and no effective changes-requested.
-- Whatever product proof the work required.
+- No outstanding actionable feedback, and no effective changes-requested. A question
+  you escalated and are still waiting on counts as outstanding **if the answer could
+  change the code**. If it could only change a comment or a follow-up ticket, it does
+  not block — say which you decided and why.
+- **Product proof, where the change touches a product path.** Tests passing is not it:
+  exercise the real entry point through to the result a user or consumer actually sees,
+  including the failure that has to stay absent. If the change is internal enough that
+  this means nothing, say so explicitly rather than skipping the line silently.
 
 Then: expected-head guard pinned to the exact SHA, the repository's permitted merge
 method, one merge at a time. Never an admin bypass, never a review dismissal, never
@@ -35,6 +41,10 @@ cannot see from here. On the 403:
     PUT /repos/{owner}/{repo}/pulls/{n}/merge-async
         sha=<exact head>  merge_method=merge  merge_action=direct_merge
     then poll GET /repos/{owner}/{repo}/pulls/{n}/merge-async/{uuid}
+
+**Write that uuid to disk before you poll.** The merge can outlive your turn or your
+session, and without the uuid there is no way to find out whether it landed — you are
+left guessing at a merge you may or may not have performed.
 
 `merge_action` must be `direct_merge` — not `merge_queue`, not `default`. `merge_method`
 is whatever the repository permits; the async endpoint does not relax that policy.

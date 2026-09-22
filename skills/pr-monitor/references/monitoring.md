@@ -16,7 +16,11 @@ Four streams. Fold them into one process if your harness limits concurrent watch
 1. **PR state deltas.** One query per poll covering the whole allowlist. Track: state,
    draft, mergeable, review decision, base, head, check rollup, comment/review/thread
    counts, and **requested reviewers**. Emit only changed fields.
-2. **Staleness digest.** Once a day, for anything unchanged past a threshold.
+2. **Staleness digest.** For anything unchanged past a threshold. Drive it from stored
+   timestamps, not from a timer — record when you last reported, and emit when that is
+   older than your interval or a PR has newly crossed the threshold. A timer is a
+   property of a running process, so an agent woken by turns rather than by a watch
+   cannot use one, and "once a day" then means nothing.
 3. **Work inbox**, if producers hand you work by writing a file.
 4. **Your delegated agents** — see `delegation.md`. This is the one people forget, and
    agents then sit finished and unnoticed.
@@ -78,6 +82,10 @@ against the stored snapshot — which is the main reason to keep state on disk.
 ones, and a quiet one gets dropped. No watch can catch this: detection worked, the
 follow-through did not. After any batch of more than two or three events, re-read the
 queue and confirm nothing became actionable without being acted on. It costs one pass.
+
+**Watch the API budget on a big queue.** Enumerating every check on every PR each pass
+is fine for five PRs and not for fifty. Fetch the cheap summary for the whole allowlist,
+and go deep only on what changed or what you are about to merge.
 
 ## Hosting-service traps
 
