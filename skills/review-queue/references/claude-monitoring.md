@@ -56,9 +56,11 @@ such as the configured review requests and the review count, and emit again when
 those change. An unchanged ineligible PR then stays quiet without going blind to
 the change that would qualify it.
 
-Separate terminal exclusions from recoverable ones. A PR that has picked up an
-approval can no longer qualify under a no-current-approval filter, so drop it
-from tracking rather than re-emitting each time its review count moves. A missing
+Separate terminal exclusions from recoverable ones. A candidate that picks up an
+approval before admission can no longer qualify under a no-current-approval
+filter, so drop it from candidate tracking rather than re-emitting each time its
+review count moves. This applies to candidates only: an admitted PR is watched
+through an approval by anyone else, because the filter is an admission-time test. A missing
 review request is recoverable, because one can be added at any time, so keep
 watching that. Filtering the terminal cases in the poll and leaving the
 judgement calls to the coordinator keeps the event stream worth reading. Keep the

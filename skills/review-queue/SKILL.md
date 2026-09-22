@@ -94,6 +94,13 @@ counts for discovery unless dismissed or superseded by that reviewer's changes
 request. Do not substitute aggregate review decisions, CI, or review requests
 for actual approval history.
 
+The no-current-approval filter is an admission-time test. It decides whether to
+start a review, because another reviewer's approval makes ours least valuable
+before we have invested in it. Once a PR is admitted, an approval from anyone
+else does not retire it: the reasoning is already paid for and our findings are
+still real, so finish the review, publish what it finds, and approve under the
+usual rules if no P0/P1 remains.
+
 Read title/body and enough context to explain each candidate. Return one line
 per PR in PR-number order:
 `[#123 — Title](URL) — one-sentence description of the change and its purpose.`
@@ -201,7 +208,8 @@ change was seen.
 
 Add PRs explicitly selected by the user, avoiding duplicates. Verify any admission
 filters, including direct versus team review requests and approvals by anyone.
-Keep approved PRs active until merged or closed. Move merged/closed PRs to the
+Keep approved PRs active until merged or closed, whoever approved them; an
+approval by someone else after admission is not a reason to retire a PR. Move merged/closed PRs to the
 appropriate history section with findings and final disposition intact; merging
 does not prove an issue was fixed. Retire other PRs only at the user's request.
 Do not merge or implement fixes under this role. Start a continuous watch or a
