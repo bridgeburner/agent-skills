@@ -66,7 +66,9 @@ the join is direct:
 a name pattern silently drops the next one you name differently, and a dropped worker
 looks exactly like a quiet one. Enumerate what the runtime reports and watch all of it —
 noise from a worker you did not care about costs one line; missing one costs the hours it
-sat finished. Key your read offsets by session rather than by name, or reusing a name
+sat finished. If your runtime groups agents — a workspace, a project, a session — scope
+the watch to *your* group rather than to a list of names. That keeps other people's
+workers out without reintroducing the filter that loses your own. Key your read offsets by session rather than by name, or reusing a name
 makes you skip the new session's opening lines. Have it announce which workers it has
 picked up, so coverage is something you can see instead of assume.
 
