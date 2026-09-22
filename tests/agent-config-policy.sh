@@ -27,7 +27,7 @@ for harness in .claude .codex; do
     [[ ! -L "$test_home/$harness/skills/architect" ]]
     [[ ! -e "$test_home/$harness/skills/test-driven-development" ]]
     [[ ! -L "$test_home/$harness/skills/test-driven-development" ]]
-    for skill in better-goal better-review claude-spawn codex-cli gwsctx desloppify pr-monitor; do
+    for skill in better-goal better-review codex-cli gwsctx desloppify pr-monitor; do
         installed="$test_home/$harness/skills/$skill"
         [[ -L "$installed" && -f "$installed/SKILL.md" ]]
         cmp "$repo_root/skills/$skill/SKILL.md" "$installed/SKILL.md"

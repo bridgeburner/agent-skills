@@ -20,7 +20,7 @@ These live in `skills/` and are symlinked into `~/.claude/skills/` and `~/.codex
 
 **Engineering workflow:** `better-goal`, `better-review`, `review-queue`, `pr-monitor`
 
-**Utilities:** `codex-cli`, `gwsctx`, `claude-spawn`, `desloppify`
+**Utilities:** `codex-cli`, `gwsctx`, `desloppify`
 
 `review-queue` is portable. Its harness-variable behavior lives in `skills/review-queue/references/claude-monitoring.md`, loaded only by a harness that can hold a background watch and publish its own private pages. Keep the shared core in `SKILL.md`; do not fork the skill per harness.
 
