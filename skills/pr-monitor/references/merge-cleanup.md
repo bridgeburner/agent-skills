@@ -26,7 +26,8 @@ documented fallback is the asynchronous endpoint:
         sha=<exact head>  merge_method=merge  merge_action=direct_merge
     then poll GET /repos/{owner}/{repo}/pulls/{n}/merge-async/{uuid}
 
-`merge_action` must be `direct_merge` — not `merge_queue`, not `default`.
+`merge_action` must be `direct_merge` — not `merge_queue`, not `default`. `merge_method`
+is whatever the repository permits; the async endpoint does not relax that policy.
 
 ## Approval and mechanical reconciliation
 
@@ -65,11 +66,13 @@ Order matters — verify, then destroy:
    assume disposability.
 4. **Close the agent session.**
 5. **Remove the worktree and branches**, and prune stale remote-tracking refs.
-6. **Archive the tracker** — everything except its evidence directory — with a durable
-   summary: delivery pins, what was removed, where the substantive record now lives,
-   and any deferred follow-up. Verify the archive exists, *then* delete the evidence,
-   never the reverse. Say plainly in the summary that those files are gone so nobody
-   cites them as available. Leave a retired pointer at the old path so links resolve.
+6. **Archive this PR's record** — the per-item brief, lease and result, not the
+   queue-wide tracker, which outlives every individual PR. Write a durable summary:
+   delivery pins, what was removed, where the substantive record now lives, and any
+   deferred follow-up. Verify the archive exists, *then* delete the evidence, never the
+   reverse. Say plainly in the summary that those files are gone so nobody cites them
+   as available. Leave a retired pointer at the old path so links resolve, and drop the
+   PR from the active allowlist so the watch stops carrying it.
 7. **Reclaim scratch build directories.** Long builds leave large caches, often outside
    the worktree. They survive the cleanup that should have taken them and accumulate
    until the disk fills. Verify nothing holds them — count matching processes properly,

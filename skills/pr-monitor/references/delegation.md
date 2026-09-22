@@ -11,7 +11,10 @@ item's worktree. If your harness manages agent sessions (Herdr does), use it:
     <mux> tab create --workspace <ws> --cwd <worktree> --label "#<pr>" --no-focus
     <mux> agent start pr<n> --kind codex --pane <root_pane> -- \
       -m <model> -c model_reasoning_effort=<effort> <sandbox flags>
-    <mux> agent prompt pr<n> "Read <brief path> and follow it exactly." --wait
+    <mux> agent prompt pr<n> "Read <brief path> and follow it exactly."
+
+Prompt and return. Do not block on a wait-for-settled flag — see below for why it
+lies. You learn the agent finished from its transcript, not from the dispatch call.
 
 Two reasons this beats spawning a fresh process per task:
 
@@ -45,9 +48,16 @@ Tail it and route on event type. The useful ones:
 | `inter_agent_communication_metadata` | its sub-agents are active |
 
 This is strictly better than the alternatives because it is **involuntary** — the agent
-cannot forget to write it — **structured**, **complete** rather than curated, and
-durable across restarts. It surfaces the class of message that otherwise disappears:
-not a failure, not a completion, but a material constraint hit mid-flight.
+cannot forget to write it — **structured**, and **complete** rather than curated. It
+surfaces the class of message that otherwise disappears: not a failure, not a
+completion, but a material constraint hit mid-flight.
+
+**Re-resolve the session id every poll; never pin the path.** The file is durable, but
+the *binding* is not: restart an agent and it opens a new session with a new UUID, so a
+tailer pinned to yesterday's path keeps reading a file nobody writes to any more. It
+reports nothing and errors never — the silent-failure signature from `monitoring.md`,
+in the one watch whose whole job is to break silence. Resolve name → session → path on
+each pass, and treat the id changing as an event in itself.
 
 Keep a separate check for the session *disappearing*, which the transcript cannot show:
 a closed session simply stops appending, and closed-by-the-user is indistinguishable

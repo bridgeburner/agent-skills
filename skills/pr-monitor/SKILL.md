@@ -66,6 +66,28 @@ The user will sometimes ask for a different model or effort — Astra at `xhigh`
 deep audit, something lower for a trivial pass. Follow that exactly and record it.
 Do not silently substitute or escalate.
 
+## Reporting, and surviving your own session
+
+**Report what changes the user's decisions; handle the rest.** With merge authority you
+will generate far more events than are worth an interruption — a check going green, a
+bot's third style round, your own push echoing back. Surface a named blocker only they
+can clear, a decision that is genuinely theirs, a risk they would want to stop, and
+what merged. Batch the rest into a periodic digest. Agree the threshold once, at
+intake, rather than inferring it per event. Erring quiet is worse than erring loud
+here — a queue that never speaks is indistinguishable from a dead one.
+
+**Assume your session ends mid-flight.** It will — a restart, a context limit, a crash
+— usually while an agent is working and a PR is half-disposed. Custody has to survive
+that, which means it lives on disk, not in your head: the allowlist, each PR's inherited
+state and open items, which agent holds which lease and where its worktree is, and what
+you are waiting on. Keep it current as you go, not at checkpoints. A successor should be
+able to re-arm the watch and resume from those files alone, without reconstructing
+anything from a transcript.
+
+When you do hand off to a successor, **write instructions, not history.** A record of
+what you did reads as a recipe to repeat, and a resume packet that narrates an obsolete
+procedure will get that procedure faithfully re-executed.
+
 ## Custody
 
 Every PR in the queue has exactly one shepherd. Leases are exclusive: one agent, one
