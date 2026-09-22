@@ -327,12 +327,20 @@ backgrounded one — a heredoc sharing a backgrounded command with the dispatch 
 state the launched process waits on forever. And **always redirect stdin from `/dev/null`**, so a
 process that consults it gets EOF instead of a socket that never closes.
 
-Check liveness by CPU time, not by elapsed time or the sentinel's absence:
+Check liveness by **log growth**, not by the sentinel's absence:
 
 ```sh
+stat -c%s reviews/queue/pr-N/worker.log     # then again a few seconds later
 ps -eo pid,etimes,time,args | grep "[c]odex exec"
 ```
 
-`00:00:00` in the `time` column after minutes of `etimes` means wedged, not thinking. A worker
-that is genuinely reading a large diff accrues CPU within seconds. Check this before reporting a
-worker as still running, and certainly before waiting an hour on one.
+A working dispatch writes tens of kilobytes within the first half-minute; a wedged one sits at
+about 56 bytes forever. That difference is unmistakable and immediate.
+
+Do not rely on CPU time alone. A healthy worker is mostly waiting on network and can legitimately
+show `00:00:00` for its first minute, so zero CPU is only evidence of a wedge once `etimes` is
+into the minutes — at which point a genuinely working process will have accrued some. Log size is
+the signal that works at both timescales; CPU time is the confirmation for a long-running one.
+
+Verify a dispatch started before reporting it as running, and certainly before waiting an hour on
+one.
