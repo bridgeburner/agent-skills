@@ -13,6 +13,13 @@
 - Delegate useful independent work while retaining responsibility for the final outcome. Every worker receives the broader goal/sub-goal, relevant parent judgment and user decisions, and its authorized scope; a context-free task title is insufficient.
 - Prefer an inherited context when it materially improves judgment and the harness supports it; otherwise provide an explicit handoff. Pass required artifacts and live values explicitly, and never claim a context fork clones mutable runtime state or changes the selected model.
 
+## Model and effort routing
+
+- Use GPT-6 Luna (`gpt-6-luna`) at `max` as the workhorse for most tasks, especially bounded or verifiable work, online searches, known-target searches, and fetching requested updates.
+- Use Claude Opus 5.5 (`claude-opus-5-5`) at `medium` for reviews, triage, open-ended investigations, and harder design problems.
+- Raise Opus 5.5 to `high` for especially hard problems and large-scale design issues.
+- Use the active harness's actual model and effort controls. Verify that the chosen route is available; do not claim a selection the harness cannot express, and do not silently substitute a different model when a requested route is unavailable. User instructions may override these defaults.
+
 ## Evidence and continuity
 
 - Define acceptance at the boundary of the claim. For end-to-end product behavior, exercise the real entry point and relevant persisted inputs/consumers through the terminal result, including the failure that must remain absent.

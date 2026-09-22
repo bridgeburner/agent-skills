@@ -65,32 +65,25 @@ queue to satisfy a template.
 
 ## Model and effort preferences
 
-Use the selected model family and the active harness's actual controls. Default
-most tasks to **Astra / low** (`gpt-6-astra`) or **Fable 5.1 / low**
-(`claude-fable-5-1`). Increase effort for ambiguity, consequence, or failed
-evidence; being a coordinator does not by itself require escalation.
+Follow the user-level model policy and the active harness's actual controls.
+GPT-6 Luna at max is the workhorse for most tasks, particularly bounded or
+verifiable work, online searches, known-target searches, and fetching requested
+updates. Use Claude Opus 5.5 at medium for reviews, triage, open-ended
+investigations, and harder design problems. Use Opus 5.5 at high for especially
+hard problems and large-scale design issues.
 
-| Task | Astra | Fable 5.1 |
-|---|---|---|
-| Most work with clear scope | low | low |
-| Substantial judgment or interacting concerns | medium | medium |
-| Difficult or consequential reasoning | high | high |
-| Hardest work requiring further effort | high | xhigh, then max as justified |
+| Task | Model and effort |
+|---|---|
+| Most routine work; bounded or verifiable work; online or known-target search; fetching requested updates | GPT-6 Luna (`gpt-6-luna`) / max |
+| Reviews, triage, open-ended investigations, harder design problems | Claude Opus 5.5 (`claude-opus-5-5`) / medium |
+| Especially hard problems and large-scale design issues | Claude Opus 5.5 (`claude-opus-5-5`) / high |
 
-Astra uses low, medium, or high in this workflow. These are user routing
-preferences, not claims that effort levels or model capabilities are equivalent.
-
-For deterministic, well-bounded tasks with explicit inputs, fixed decision rules,
-and a reliable result check, consider these optional routes:
-
-- **Codex:** Luna / max (`gpt-5.6-luna`).
-- **Anthropic:** Opus 4.8 (`claude-opus-4-8`) or Opus 5 (`claude-opus-5`),
-  when available; choose effort using the task and supported harness controls.
-
-These alternatives do not replace the Astra/Fable defaults for open-ended or
-ambiguous work. The worker still receives the strategic context above. Escalate
-when assumptions stop holding or the result cannot be reliably checked. Use
-ordinary commands when they can perform the deterministic operation directly.
+Check that the active harness supports the requested model and effort. On Claude
+Code, the `opus` alias may track the provider's latest Opus model; use the full
+model ID when a pinned Opus 5.5 selection is needed and supported. Do not claim a
+selection the harness cannot express. If a required route is unavailable, report
+that limit rather than silently substituting another model. Use ordinary
+commands when they can perform a deterministic operation directly.
 
 Record the effective model/effort and consequential routing changes with the
 task. Do not claim a model selection the harness cannot express or verify. A

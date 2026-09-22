@@ -111,12 +111,18 @@ same finding, which the coordinator would then publish onto the same thread.
   event ledger when releasing one. A dead worker must not wedge a PR forever.
 
 Delegate through the `codex-cli` skill under the queue's recorded model policy.
-Verify an unfamiliar model identifier against the harness's own model listing or
-current vendor documentation before the first dispatch of a session. A slug
-recalled from memory can be confidently wrong, and a rejected model surfaces as a
-failed run rather than as a fallback, which the main skill already requires you to
-report rather than paper over. A tiered policy routes by the kind of work, not by
-PR size:
+Use GPT-6 Luna/max (`gpt-6-luna`) for bounded, verifiable checks such as known-
+target status fetches, head identity, and merge/close classification. Use Claude
+Opus 5.5/medium (`claude-opus-5-5`) for substantive reviews, triage, and
+open-ended investigation; use Opus 5.5/high for especially hard or large-scale
+design issues. Verify the model identifier and effort against the dispatch
+harness's own model listing or current vendor documentation before the first
+dispatch. A rejected or unsupported route is a limit to report, not a fallback.
+The Codex CLI bridge may only run Opus when its configured provider exposes that
+model and effort. If it cannot, use a Claude Code/Anthropic-compatible worker for
+Opus work or report the route as unavailable; do not send a substantive review
+to Luna merely because that is the Codex dispatcher's available model.
+A tiered policy routes by the kind of work, not by PR size:
 
 - **Deterministic and verifiable** work, where the answer can be checked against
   the source: whether a finding still applies at a new head, merge and close

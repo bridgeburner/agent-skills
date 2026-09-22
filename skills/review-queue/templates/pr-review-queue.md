@@ -9,7 +9,7 @@
 - Discovery filters: ready/non-draft; direct reviewer/team requests, if required
 - Last admission timestamp and PRs: last_admission_at / last_admission_prs
 - Additional user approval conditions:
-- Reviewer model/effort: gpt-6-astra / low
+- Reviewer model/effort: claude-opus-5-5 / medium
 - Dashboard URL, audience, source location, and refresh instructions:
 - Last successful sweep:
 

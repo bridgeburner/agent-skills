@@ -99,14 +99,17 @@ effort before dispatch; a label is not proof of configuration.
 
 | Work | Default |
 | --- | --- |
-| Deterministic, verifiable work — conflict resolution, applying a known fix, mechanical reconciliation, merges | **Luna** `gpt-5.6-luna` at `max` |
-| Review, triage, analysis, audit; and less-bounded implementation or design | **Astra** `gpt-6-astra` at `low` |
+| Most work; bounded or verifiable tasks, known-target searches, fetching updates, conflict resolution, applying a known fix, mechanical reconciliation, merges | **GPT-6 Luna** `gpt-6-luna` at `max` |
+| Reviews, triage, open-ended investigations, harder design problems | **Claude Opus 5.5** `claude-opus-5-5` at `medium` |
+| Especially hard problems and large-scale design issues | **Claude Opus 5.5** `claude-opus-5-5` at `high` |
 
-These are names from one harness, not universal. **If they are unavailable, say so and
-ask which models map to the two lanes** — the lanes are the durable part, the slugs are
-not. Verify an unfamiliar identifier against the harness's own model listing before the
-first dispatch of a session; a slug recalled from memory can be confidently wrong, and a
-rejected model surfaces as a failed run rather than a fallback.
+Verify that the active harness supports the selected model and effort before dispatch.
+On Claude Code, the `opus` alias tracks the provider's latest Opus model; use the full
+`claude-opus-5-5` identifier when pinning version 5.5 and when the provider supports it.
+For a Codex child, use Opus only if its configured provider supports the model ID and
+effort; otherwise route Opus work through a compatible Claude Code/Anthropic worker or
+report that route as unavailable. Do not silently substitute Luna for a substantive
+review or investigation.
 
 The user will sometimes ask for a different model or effort — a deep audit at high
 effort, something lower for a trivial pass. Follow that exactly and record it. Do not

@@ -117,10 +117,14 @@ so a later explicit selection remains recoverable, including older PRs.
 
 ## Review a new PR
 
-Delegate one Astra/low (`gpt-6-astra`, low effort) agent per PR unless the user
-selects another model. A user may instead set a tiered policy that routes by task
-kind rather than one model for every job; record the policy in the queue and
-apply it per dispatch. That PR agent:
+Delegate one Claude Opus 5.5/medium (`claude-opus-5-5`, medium effort) agent per
+PR by default. Use Opus 5.5/high for especially hard problems or large-scale
+design issues within a review. Use GPT-6 Luna/max (`gpt-6-luna`) for bounded,
+verifiable queue checks such as known-target status fetches, head identity, or
+merge/close classification. Follow the user-level model policy, record any
+per-PR override in the queue, and verify the model and effort selected by the
+active harness. If that route is unavailable, report the limit rather than
+silently substituting another model. That PR agent:
 
 1. Reads the PR, relevant specs/tickets, source, and existing discussion. Explains
    the root problem, larger feature, required outcome, and important constraints.
