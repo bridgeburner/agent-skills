@@ -99,9 +99,8 @@ effort before dispatch; a label is not proof of configuration.
 
 | Work | Default |
 | --- | --- |
-| Most work; bounded or verifiable tasks, known-target searches, fetching updates, conflict resolution, applying a known fix, mechanical reconciliation, merges | **GPT-6 Luna** `gpt-6-luna` at `max` |
-| Reviews, triage, open-ended investigations, harder design problems | **Claude Opus 5.5** `claude-opus-5-5` at `medium` |
-| Especially hard problems and large-scale design issues | **Claude Opus 5.5** `claude-opus-5-5` at `high` |
+| Deterministic, verifiable work — conflict resolution, applying a known fix, mechanical reconciliation, merges, bounded implementation with a reliable check | **Luna** `gpt-6-luna` at `max` |
+| Review, triage, analysis, audit; open-ended investigation and design | **Opus 5.5** `claude-opus-5-5` at `medium`; raise to `high` for especially hard problems |
 
 Verify that the active harness supports the selected model and effort before dispatch.
 On Claude Code, the `opus` alias tracks the provider's latest Opus model; use the full
