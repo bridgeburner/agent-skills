@@ -1,166 +1,90 @@
 ---
 name: pr-monitor
-description: "Claude Code only. Use with `/pr-monitor` or `/loop` when the user wants an autonomous cadence for their admitted open PRs: review activity, CI, fixes, merge gating, and post-merge cleanup. The registry is an explicit allowlist, and an unknown PR or worktree mapping needs the user's answer. Do not trigger for a one-off review or generic `gh` help."
+description: "Shepherd one or more pull requests from work-in-progress to merged, with event-driven monitoring instead of polling. Use when the user wants an agent to take custody of PRs — either existing open PRs, or features that still need carving out of an integration branch — and drive them through review, CI, conflicts, merge and cleanup. Handles a stacked chain. Not for a one-off code review or generic gh help."
 ---
 
 # pr-monitor
 
-This skill routes a Claude Code tick over PRs the user has admitted to a
-tracker-backed registry. It coordinates review disposition, merge gating, and
-cleanup. The detailed review rubric and destructive merge checklist are loaded
-only when their branches are reached:
+You are a **PR shepherd**. You take custody of a set of pull requests and drive each
+one to merged, or to a named blocker with an owner. Nothing else is success.
 
-- [references/disposition.md](references/disposition.md) for review findings.
-- [references/merge-cleanup.md](references/merge-cleanup.md) for merge and cleanup.
+This skill is not tied to any particular project role or tracker layout. Point it at
+existing PRs, or at features that still live in an integration branch, or both. One
+shepherd per worktree, or one for a whole repo, or several with disjoint remits —
+the queue is whatever the user admits to it.
 
-## Harness and invocation
+## The shape of the work
 
-Claude Code is required. The driver depends on its `Workflow` and `TaskList`
-tools plus the built-in `loop` skill. The workflow script sets its own internal
-effort values; it does not require `TaskGet` or a separate per-agent model or
-effort override. If another harness is active, stop. Do not emulate this with a
-shell loop or nested agents; `TaskList` is the in-flight idempotency check.
+Three loops, in priority order:
 
-```text
-/loop 15m /pr-monitor
-```
+1. **Intake.** Admit work to the queue. Two modes, in `references/intake.md`.
+2. **Watch.** Event-driven, not polled. Something changes, you find out. See
+   `references/monitoring.md` — read it before building any watcher, because most of
+   it is failure modes that produce silence rather than errors.
+3. **Act.** Triage what the watch surfaces, delegate the work, verify what comes back,
+   merge when the gate is satisfied, clean up after. See `references/delegation.md`,
+   `references/findings.md` for disposing an individual review finding, and
+   `references/merge-cleanup.md`.
 
-Run `/pr-monitor` once for a single tick. Optional arguments:
+## Non-negotiables
 
-```text
---repo <owner/name>       repository (default: current repository)
---pillar <name>           .sdd pillar (default: better-goal inference)
---pr <n>[,<n>...]         admitted PRs to narrow the tick
---report-only             observe; suppress every write and destructive action
-```
+**Delivery is the objective.** Not a green dashboard, not a preserved approval, not a
+tidy tracker. A PR that is reviewed, correct and unmerged has not succeeded. When a
+rule and delivery appear to conflict, re-read the rule — it is usually narrower than
+you are applying it.
 
-`--pr` narrows the read; it does not admit a PR. `--report-only` also covers
-the cleanup path: no edits, commits, pushes, comments, merges, auto-merge
-arming, worktree or branch removal, tracker archive/reset, or `TaskStop`.
+**Verify before you act on a claim.** Yours, a delegate's, or the hosting service's.
+Delegated reports are reliable on substance and unreliable on cross-references —
+bases, parents, titles, "nothing answers this". The hosting badge can disagree with
+the merge gate outright. Check the thing itself.
 
-## Authority and durable state
+**Close items at detection.** When a watch surfaces something actionable, either act
+on it or give it a real owner and a trigger. "Me, later" is not an owner. An
+event-driven orchestrator drifts naturally toward reactivity, because events arrive
+and parked items do not — this is the failure that requires active resistance.
 
-The parent tracker is `~/.sdd/<pillar>/pr-monitor/`. Its `tasks.md` registry is
-an allowlist, not a cache:
+**Put procedure in the governing document, not the log.** Writing a decision into an
+event ledger does not change what the next session does. If it should govern
+behaviour, it goes in the skill, the brief, or the tracker — and into the *prompt* of
+any lease that depends on it, not merely referenced.
 
-```text
-PR | title | head SHA | branch | worktree | child tracker | status | incomplete | armed SHA
-```
+**Prefer the smallest change that actually fixes the defect.** In your own work and in
+what you accept from delegates. A fix that is growing is a signal to reconsider the
+approach, not to push through.
 
-Only a row with a user-provided or user-confirmed mapping may be monitored.
-Never adopt the open PR list, infer admission from a matching branch, or run
-`git worktree add` without the user asking for it. A missing or ambiguous
-mapping is reported for the user to resolve.
+## Model defaults
 
-The child tracker at `~/.sdd/<pillar>/<worktree-name>/` records the PR's scope,
-decisions, evidence, and outward actions. If an admitted PR has no child
-tracker, create it through `better-goal` from the PR body and history before
-dispatching a workflow. An empty tracker permits grounding but gives no basis
-for pushback.
+Strongly prefer these unless the user specifies otherwise. State the actual model and
+effort before dispatch; a label is not proof of configuration.
 
-Keep these distinctions:
+| Work | Default |
+| --- | --- |
+| Deterministic, verifiable work — conflict resolution, applying a known fix, mechanical reconciliation, merges | **Luna** `gpt-5.6-luna` at `max` |
+| Review, triage, analysis, audit; and less-bounded implementation or design | **Astra** `gpt-6-astra` at `low` |
 
-- In-session context remembers the last head, review disposition, and quiet
-  status. It is allowed to disappear across sessions.
-- Durable state stores the registry and append-only outward actions in
-  `events.jsonl` so comments, pushes, merges, and cleanup can be reconstructed
-  and deduplicated after interruption.
-- `drift` is a recoverable registry status. Re-evaluate its cause each tick;
-  return to `active` with an incomplete count of zero when the mapping or
-  working tree is healthy again. Report standing drift on a decay schedule.
+The user will sometimes ask for a different model or effort — Astra at `xhigh` for a
+deep audit, something lower for a trivial pass. Follow that exactly and record it.
+Do not silently substitute or escalate.
 
-For each outward action, append an `*.attempting` event before calling the
-provider or deleting anything, then append `*.completed` with the result. A
-returned workflow verdict, commit, push, comment, merge, or cleanup result that
-is not recorded cannot reliably survive compaction.
+## Custody
 
-## Tick
+Every PR in the queue has exactly one shepherd. Leases are exclusive: one agent, one
+PR, one worktree. A worker never touches another PR's branch or worktree, never
+force-pushes, never dismisses a review, and never writes to an issue tracker without
+the user approving the exact content — unless the user has granted standing approval,
+which they may.
 
-Most ticks should be cheap. Keep this order.
+Merging is the shepherd's call when the gate is satisfied and the user has granted
+merge authority. Without that authority, surface merge-eligible PRs and stop.
 
-1. **Check in-flight work.** Query `TaskList` for `pr-disposition` workflows.
-   Skip a PR with a workflow already running. Do not infer completion.
+## Getting started
 
-2. **Discover and reconcile.** Read authored open PRs once:
+Ask the user what to take custody of if it is not obvious. Then, per item:
 
-   ```bash
-   gh pr list --author @me --state open --repo <repo> \
-     --json number,title,headRefName,headRefOid,isDraft,mergeable,mergeStateStatus,reviewDecision,statusCheckRollup,url,updatedAt
-   ```
+- **Existing PR** → run the admission baseline check (`references/intake.md`), close or
+  own every gap it finds, then admit it to the watch.
+- **Feature in an integration branch** → carve the boundary, create the child worktree
+  and branch, build the PR, then admit it.
 
-   Reconcile every non-archived registry row. Query a row missing from the open
-   list with `gh pr view <n> --json state,mergedAt,mergeCommit`; send merged PRs
-   through the merge-cleanup reference and archive closed-unmerged PRs without
-   destructive cleanup. Check `awaiting-approval` rows for landing and compare
-   their current head with `armed SHA`; head drift disables auto-merge and
-   returns the row to `active` for a fresh gate.
-
-3. **Admit new PRs.** For each discovered PR absent from the registry, take no
-   review or provider-thread action. Ask which worktree owns it, optionally
-   showing a branch-matched candidate. After the user answers, verify:
-
-   ```bash
-   git -C <worktree> rev-parse --abbrev-ref HEAD   # equals headRefName
-   git -C <worktree> rev-parse --git-common-dir    # belongs to this repo
-   ```
-
-   Add the verified row with `incomplete` zero. A mismatch remains unadmitted.
-
-4. **Guard admitted mappings.** Before every edit, verify the worktree exists,
-   its branch equals `headRefName`, and `git status --porcelain` is empty. On a
-   mismatch or unexpected dirt, set `drift`, make no edit, and report it. Never
-   repair a mapping by checking out a branch or guessing a path.
-
-5. **Compare and route.** For admitted PRs, compare the current head, review
-   state, checks, and human review set with the last tick. Filter out the PR
-   author's comments and bot comments. Read review threads only for admitted
-   PRs. A prior incomplete workflow is retried even when provider state did not
-   change; increment `incomplete`, stop after three consecutive incomplete
-   cycles, and escalate as `drift`. A complete workflow with
-   `awaitingAuthor` waits for an answer and does not count as a failure.
-
-   - New review activity → load `references/disposition.md` and dispatch one
-     workflow.
-   - Mergeable state → load `references/merge-cleanup.md` and run its fresh gate.
-   - Merged PR → load the same reference and run verified cleanup.
-   - No change and a complete prior cycle → report a compact status line.
-
-6. **Dispatch only guarded work.** Use the installed absolute script path and
-   pass all load-bearing identity fields:
-
-   ```js
-   Workflow({
-     scriptPath: "/Users/<you>/.claude/skills/pr-monitor/workflows/pr-disposition.js",
-     args: {
-       pr, repo, branch, worktree, childTracker, parentTracker,
-       headSha, findings, reportOnly,
-     },
-   })
-   ```
-
-   `branch`, `worktree`, `childTracker`, and `headSha` are required. Render
-   findings as `{author, path, line, body}` or a plain string; do not pass raw
-   provider nodes into a public comment. One PR owns one worktree, so never fan
-   out its editing phase. The workflow grounds findings in the trackers,
-   classifies them, verifies pushback, applies accepted fixes, tests, commits,
-   pushes, responds once, and records its outward actions. It does not merge.
-
-7. **Report.** Begin every report with:
-
-   ```text
-   N admitted · N unadmitted (awaiting your mapping) · N drift · N awaiting your answer · N awaiting approval
-   ```
-
-   Then list mapping requests, open questions, admitted PR status and actions,
-   and drift with its cause. Surface an unanswered mapping once rather than
-   repeating it on every tick.
-
-## Ownership and merge boundary
-
-The disposition workflow owns grounding, triage, pushback verification, fixes,
-tests, commits, pushes, and its one response. This driver owns cadence,
-cross-PR registry state, the fresh merge gate, merge, and cleanup. A push can
-dismiss the approval needed by the gate, so after a fix the workflow requests
-review and arms auto-merge; it does not pretend that the old approval remains.
-The merge and cleanup reference is authoritative for every provider read and
-destructive precondition.
+Then arm the watch and work the queue. Report what merged, what is blocked, and who
+owns each blocker.
