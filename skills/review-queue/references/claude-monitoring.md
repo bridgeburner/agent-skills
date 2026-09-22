@@ -258,3 +258,35 @@ Content identity is settled by **blob SHAs** on the files a finding actually cit
 not the whole change. That is the step that carries an approval to a new head. When #1157 was
 rebased on 2026-09-21 the aggregates matched *and* the two script blobs were compared; the blob
 check is what made the conclusion sound, so do not read that episode as evidence the shortcut works.
+
+## Never establish a "what main does" fact from the working tree
+
+The local checkout is not main. It is main as of whenever it was last pulled, and in an active
+repository that drifts fast — during one overnight session this checkout fell **315 commits and
+two days** behind while PRs merged every few minutes. Every `grep`, `sed` and `find` against the
+working tree answers a question about the past.
+
+This matters because the tree is the cheapest thing to read, so it is what you reach for by
+reflex when a review needs a fact about current behaviour: does this caller still exist, is this
+path gitignored, does that test cover this, is the field already in the manifest. Those answers
+go straight into published findings.
+
+Use the remote for any claim about a live branch:
+
+```sh
+gh api -H "Accept: application/vnd.github.raw" \
+  "repos/OWNER/REPO/contents/PATH?ref=main"        # one file, no checkout needed
+git fetch origin main -q && git show origin/main:PATH   # then local tools work on it
+```
+
+The same applies to a PR head: read it at `?ref=<head sha>`, never from a branch you happen to
+have checked out.
+
+**The tell, and it is easy to miss.** When your local read contradicts the PR description, the
+reflex is to doubt the author. Doubt the checkout first. A PR body saying a fixture has nine
+frames while your tree shows eight is not an author error; it is almost always you reading a
+stale file, and the author looking at what they just changed. Check `git rev-list --count
+HEAD..origin/main` before you write that finding down.
+
+If a review already went out on a local read, re-verify it against the remote rather than hoping.
+Two findings published that way survived the check — that was luck, not method.
