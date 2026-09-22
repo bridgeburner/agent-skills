@@ -246,10 +246,15 @@ gh api "repos/OWNER/REPO/compare/main...<head>" \
 ```
 
 Against the **base branch name**, not the old head, this gives the PR's own diff through its merge
-base. Compare those aggregates with the same numbers from the previous head: near-identical totals
-with the same file count mean the branch absorbed its base and its own content did not change, so a
-review at the earlier head still applies. Only when the aggregates move do you need the file list,
-and then you want it for the PR's own diff rather than the head-to-head walk.
+base. Compare those aggregates with the same numbers from the previous head.
 
-Blob SHAs remain the way to prove a specific file is untouched. Use them for the two or three files
-a finding actually cites, not for every file in the change.
+**Aggregates triage; they never prove equivalence.** Equal totals and an equal file count are
+consistent with content having changed — additions and deletions can move between files, or cancel.
+Matching aggregates mean *this is probably a rebase, go check*; they are not the check. Differing
+aggregates are conclusive in the other direction: something changed, and you need the file list for
+the PR's own diff rather than the head-to-head walk.
+
+Content identity is settled by **blob SHAs** on the files a finding actually cites — two or three,
+not the whole change. That is the step that carries an approval to a new head. When #1157 was
+rebased on 2026-09-21 the aggregates matched *and* the two script blobs were compared; the blob
+check is what made the conclusion sound, so do not read that episode as evidence the shortcut works.
