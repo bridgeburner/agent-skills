@@ -62,6 +62,14 @@ the join is direct:
     <mux> agent get <name>   →  .agent_session.value   (a UUID)
     ~/.codex/sessions/<Y>/<M>/<D>/rollout-<ts>-<UUID>.jsonl
 
+**Cover every worker, not the names you expect.** A watcher that filters agents through
+a name pattern silently drops the next one you name differently, and a dropped worker
+looks exactly like a quiet one. Enumerate what the runtime reports and watch all of it —
+noise from a worker you did not care about costs one line; missing one costs the hours it
+sat finished. Key your read offsets by session rather than by name, or reusing a name
+makes you skip the new session's opening lines. Have it announce which workers it has
+picked up, so coverage is something you can see instead of assume.
+
 Tail it under the **same background watch as your PR streams** — this is stream 4 in
 `monitoring.md`, not something you remember to check by hand. Checking manually is how a
 worker sits finished for an hour, or sits blocked on a question you never saw. Route on
