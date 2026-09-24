@@ -65,18 +65,12 @@ queue to satisfy a template.
 
 ## Model and effort preferences
 
-Follow the user-level model policy and the active harness's actual controls.
-GPT-6 Luna at max is the workhorse for most tasks, particularly bounded or
-verifiable work, online searches, known-target searches, and fetching requested
-updates. Use Claude Opus 5.5 at medium for reviews, triage, open-ended
-investigations, and harder design problems. Use Opus 5.5 at high for especially
-hard problems and large-scale design issues.
-
-| Task | Model and effort |
-|---|---|
-| Most routine work; bounded or verifiable work; online or known-target search; fetching requested updates | GPT-6 Luna (`gpt-6-luna`) / max |
-| Reviews, triage, open-ended investigations, harder design problems | Claude Opus 5.5 (`claude-opus-5-5`) / medium |
-| Especially hard problems and large-scale design issues | Claude Opus 5.5 (`claude-opus-5-5`) / high |
+Follow the model routing and the "Agent invocation" launch forms in the
+user-level `AGENTS.md` (`~/.agents/AGENTS.md`), within the active harness's
+actual controls. In short: GPT-6 Luna (`gpt-6-luna`) at max for most bounded or
+verifiable work; Claude Opus 5.5 (`claude-opus-5-5`) at medium for reviews,
+triage, open-ended investigations, and harder design, raised to high for the
+hardest problems.
 
 Check that the active harness supports the requested model and effort. On Claude
 Code, the `opus` alias may track the provider's latest Opus model; use the full

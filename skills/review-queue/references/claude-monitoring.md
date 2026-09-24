@@ -314,7 +314,7 @@ The cause was the dispatch shape, not the command. This wedges:
 cd .../reviews/queue && cat > pr-N/prompt.md <<'PROMPT'
 ...
 PROMPT
-cd ... && codex exec --ephemeral --yolo -m MODEL "$(cat reviews/queue/pr-N/prompt.md)" > worker.log 2>&1
+cd ... && codex exec --ephemeral --yolo -m MODEL -c model_reasoning_effort=EFFORT "$(cat reviews/queue/pr-N/prompt.md)" > worker.log 2>&1
 ```
 
 This does not:
@@ -326,7 +326,7 @@ cat > reviews/queue/pr-N/prompt.md <<'PROMPT'
 PROMPT
 
 # call 2, backgrounded: dispatch alone, stdin closed
-codex exec --ephemeral --yolo -m MODEL "$(cat reviews/queue/pr-N/prompt.md)" \
+codex exec --ephemeral --yolo -m MODEL -c model_reasoning_effort=EFFORT "$(cat reviews/queue/pr-N/prompt.md)" \
   < /dev/null > reviews/queue/pr-N/worker.log 2>&1; echo $? > reviews/queue/pr-N/worker.done
 ```
 

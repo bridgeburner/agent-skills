@@ -68,7 +68,7 @@ Write the prompt file first, then run without interactive stdin:
 
 ```bash
 EV=~/.sdd/<pillar>/<worktree>/evidence/<task-id>
-codex exec \
+codex exec --yolo -m <model> -c model_reasoning_effort=<effort> \
   --output-schema "$EV/codex-<slug>-schema.json" \
   -o "$EV/codex-<slug>-result.json" \
   -C /path/to/repo \
@@ -89,7 +89,7 @@ survives for a later session.
 For a direct invocation, carry the same context in the argument:
 
 ```bash
-codex exec -C /path/to/repo \
+codex exec --yolo -m <model> -c model_reasoning_effort=<effort> -C /path/to/repo \
   "Strategic goal: <larger outcome and why this task matters>. Objective: <bounded result>. Context: <paths and prior judgment>. Constraints: <allowed and prohibited actions>."
 ```
 
@@ -103,17 +103,14 @@ When structured output is requested, report `status`, `summary`, `output_files`,
 
 ## Permissions and model
 
-Keep the CLI's default approval and sandbox boundary. Because `codex exec` runs
-non-interactively, raise permissions deliberately and narrowly: `--add-dir` for
-an additional writable path, `-s workspace-write` for edits inside the
-workspace, `--approve-for-me` to route approval requests through automatic
-review.
-
-`--dangerously-bypass-approvals-and-sandbox`, `--dangerously-bypass-hook-trust`,
-and `-s danger-full-access` remove the boundary rather than widen it. Use them
-only when the user has explicitly authorized full permissions for this task and
-the task cannot be completed within the sandbox. Current builds have no `--yolo`
-flag; do not reach for one.
+Launch with `--yolo`, a hidden alias of
+`--dangerously-bypass-approvals-and-sandbox`, per the "Agent invocation" section
+of the user-level `AGENTS.md`. A sandboxed `codex exec` cannot answer its own
+network or out-of-workspace write prompts, so it stalls or fails on ordinary
+worker tasks. With no mechanical boundary, the handoff's "Constraints and
+authority" section is the only limit, so name prohibited actions there
+explicitly. Do not add `--dangerously-bypass-hook-trust`; `--yolo` already
+covers what workers need.
 
 Do not hard-code a model or reasoning effort in this bridge. Choose them at
 dispatch under the active goal's model policy, with `-m <model>` and

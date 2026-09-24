@@ -20,6 +20,19 @@
 - Raise Opus 5.5 to `high` for especially hard problems and large-scale design issues.
 - Use the active harness's actual model and effort controls. Verify that the chosen route is available; do not claim a selection the harness cannot express, and do not silently substitute a different model when a requested route is unavailable. User instructions may override these defaults.
 
+## Agent invocation
+
+Launch Claude Code and Codex workers without permission prompts or sandbox: `--dangerously-skip-permissions` for Claude Code, `--yolo` for Codex (a hidden alias of `--dangerously-bypass-approvals-and-sandbox`). Workers then have no mechanical boundary, so each handoff must state its authority and prohibited actions (for example no apply, deploy, merge, push to protected branches, or Linear writes without confirmation), and workers follow them as instructions. Pass model and effort explicitly on every launch.
+
+| | Headless one-shot | Interactive in Herdr |
+|---|---|---|
+| Claude Code | `claude -p --model claude-opus-5-5 --effort medium --dangerously-skip-permissions "<prompt>" </dev/null` | `herdr agent start <name> --kind claude --pane <pane> -- --model claude-opus-5-5 --effort medium --dangerously-skip-permissions` |
+| Codex | `codex exec -C <dir> -m gpt-6-luna -c model_reasoning_effort=max --yolo "<prompt>" </dev/null` | `herdr agent start <name> --kind codex --pane <pane> -- -m gpt-6-luna -c model_reasoning_effort=max --yolo` |
+
+- Herdr: create the pane first with `herdr tab create --workspace <ws> --cwd <worktree> --label <label>`, then send work with `herdr agent prompt <name> "Read <brief path> and follow it exactly."`. A worker in the current worktree may split the current tab; each worker in its own worktree gets its own tab. Close worker tabs once results are saved.
+- Headless: write the brief to a file in a separate foreground call, then dispatch with stdin from `/dev/null`; a heredoc sharing a backgrounded command with the dispatch can leave the child waiting on stdin forever.
+- Swap model and effort per the routing above. If the parent harness's permission check blocks a bypass launch, report it rather than silently launching a weaker worker.
+
 ## Evidence and continuity
 
 - Define acceptance at the boundary of the claim. For end-to-end product behavior, exercise the real entry point and relevant persisted inputs/consumers through the terminal result, including the failure that must remain absent.

@@ -124,7 +124,8 @@ verifiable queue checks such as known-target status fetches, head identity, or
 merge/close classification. Follow the user-level model policy, record any
 per-PR override in the queue, and verify the model and effort selected by the
 active harness. If that route is unavailable, report the limit rather than
-silently substituting another model. That PR agent:
+silently substituting another model. Launch it with the forms in the user-level
+`AGENTS.md` under "Agent invocation". That PR agent:
 
 1. Reads the PR, relevant specs/tickets, source, and existing discussion. Explains
    the root problem, larger feature, required outcome, and important constraints.

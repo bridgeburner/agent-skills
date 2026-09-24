@@ -95,7 +95,9 @@ approach, not to push through.
 ## Model defaults
 
 Strongly prefer these unless the user specifies otherwise. State the actual model and
-effort before dispatch; a label is not proof of configuration.
+effort before dispatch; a label is not proof of configuration. Launch forms
+(headless or Herdr, with the no-prompt flags) are in the user-level `AGENTS.md`
+(`~/.agents/AGENTS.md`) under "Agent invocation".
 
 | Work | Default |
 | --- | --- |

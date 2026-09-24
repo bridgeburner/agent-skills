@@ -17,8 +17,12 @@ item's worktree. If your harness manages agent sessions (Herdr does), use it:
 
     <mux> tab create --workspace <ws> --cwd <worktree> --label "#<pr>" --no-focus
     <mux> agent start pr<n> --kind codex --pane <root_pane> -- \
-      -m <model> -c model_reasoning_effort=<effort> <sandbox flags>
+      -m <model> -c model_reasoning_effort=<effort> --yolo
     <mux> agent prompt pr<n> "Read <brief path> and follow it exactly."
+
+For a Claude worker use `--kind claude -- --model <model> --effort <effort>
+--dangerously-skip-permissions`. The full reference, including headless forms, is
+in the user-level `AGENTS.md` under "Agent invocation".
 
 Prompt and return. Do not block on a wait-for-settled flag — see below for why it
 lies. You learn the agent finished from its transcript, not from the dispatch call.
